@@ -9,7 +9,7 @@ type Variant =
   | "onLight"
   | "onDark"
   | "onCard";
-type Size = "md" | "sm";
+type Size = "lg" | "md" | "sm";
 
 const base =
   "inline-flex items-center justify-center gap-2.5 rounded-[2px] border text-[11px] uppercase tracking-[0.14em] " +
@@ -17,6 +17,7 @@ const base =
   "active:scale-[0.985] disabled:pointer-events-none disabled:opacity-45";
 
 const sizes: Record<Size, string> = {
+  lg: "px-8 py-[18px] text-[12px] tracking-[0.16em]",
   md: "px-[26px] py-[15px]",
   sm: "px-[18px] py-3 text-[10px]",
 };
