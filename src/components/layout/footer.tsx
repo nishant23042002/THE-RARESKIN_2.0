@@ -2,19 +2,11 @@ import Link from "next/link";
 import { Container } from "@/components/ui/container";
 import { Logo } from "@/components/ui/logo";
 import { PaymentMarks, IndiaFlag } from "@/components/ui/payment-marks";
-import { fragranceList } from "@/lib/products";
+import { getCatalogNav } from "@/server/data/catalog";
 
-const COLUMNS: { title: string; links: { label: string; href: string }[] }[] = [
-  {
-    title: "Shop",
-    links: [
-      ...fragranceList.map((f) => ({
-        label: f.name,
-        href: `/fragrances/${f.slug}`,
-      })),
-      { label: "Discovery Set", href: "/discovery-set" },
-    ],
-  },
+type Column = { title: string; links: { label: string; href: string }[] };
+
+const STATIC_COLUMNS: Column[] = [
   {
     title: "Discover",
     links: [
@@ -42,8 +34,23 @@ const COLUMNS: { title: string; links: { label: string; href: string }[] }[] = [
   },
 ];
 
-export function Footer() {
+export async function Footer() {
   const year = new Date().getFullYear();
+  const nav = await getCatalogNav();
+
+  const COLUMNS: Column[] = [
+    {
+      title: "Shop",
+      links: [
+        ...nav.map((f) => ({
+          label: f.name,
+          href: `/fragrances/${f.slug}`,
+        })),
+        { label: "Discovery Set", href: "/discovery-set" },
+      ],
+    },
+    ...STATIC_COLUMNS,
+  ];
 
   return (
     <footer className="overflow-hidden border-t border-line bg-bg">

@@ -1,67 +1,42 @@
 /**
- * Product catalogue — the single source of truth for the storefront.
+ * Static source data for the initial seed — the "Campaign" prototype catalogue.
  *
- * Ported from the "Campaign" prototype's `FRAG` object. When a real backend
- * (Shopify / Razorpay) is wired in, this module becomes the adapter's output
- * shape; nothing else in the UI should hold product copy.
- *
- * No fabricated claims: longevity / sillage figures are marked indicative and
- * stay that way until real wear tests exist.
+ * This is the ONLY place the hardcoded catalogue still lives, and only
+ * `scripts/seed.ts` reads it. The application reads everything from MongoDB via
+ * `@/server/data/catalog`. Editing copy or price here does nothing to a running
+ * store — use `pnpm catalog set …` or the admin.
  */
 
-export type FragranceSlug = "aurevan" | "orvelis" | "vayren";
-
-export interface FragranceImages {
-  /** full-bleed campaign / hero scene */
-  hero: string;
-  /** packshot on a plain ground */
-  flat: string;
-  /** carton or lifestyle */
-  box: string;
-}
-
-export interface Fragrance {
-  slug: FragranceSlug;
-  /** display name, e.g. "AURÉVAN" */
+export interface SeedFragrance {
+  slug: "aurevan" | "orvelis" | "vayren";
   name: string;
-  /** "ऑ-रे-व्हान · aw-ray-vahn" */
   pronunciation: string;
-  /** "The Quiet Confidence" */
   title: string;
   poem: string;
-  /** short line for the impression marquee */
   impression: string;
   mood: [string, string, string];
   notes: string[];
   notesByPhase: { arrive: string; linger: string; stay: string };
-  /** 0–4, indicative only */
   longevity: 0 | 1 | 2 | 3 | 4;
   sillage: string;
   wearOccasion: string;
-  /** the liquid colour, hex */
   juice: string;
-  /** css reference for the fragrance accent */
   accent: string;
-  /** card background gradient */
   ground: string;
-  /** readable text colour on `ground` */
   onGround: string;
-  /** button-fill text colour on `ground` */
   onGroundInverse: string;
+  /** rupees */
   price: number;
+  /** rupees */
   mrp: number;
   volumeMl: number;
-  images: FragranceImages;
 }
 
-export const PRICE = 799;
-export const MRP = 1199;
+export const SEED_PRICE = 799;
+export const SEED_MRP = 1199;
 
-/** canonical display order */
-export const ORDER: FragranceSlug[] = ["aurevan", "orvelis", "vayren"];
-
-const FRAGRANCES: Record<FragranceSlug, Fragrance> = {
-  aurevan: {
+export const SEED_FRAGRANCES: SeedFragrance[] = [
+  {
     slug: "aurevan",
     name: "AURÉVAN",
     pronunciation: "ऑ-रे-व्हान · aw-ray-vahn",
@@ -83,16 +58,11 @@ const FRAGRANCES: Record<FragranceSlug, Fragrance> = {
     ground: "linear-gradient(158deg, #f4efe2, #e7ddc5 56%, #d9cfb8)",
     onGround: "#2b271f",
     onGroundInverse: "#f6f1e6",
-    price: PRICE,
-    mrp: MRP,
+    price: SEED_PRICE,
+    mrp: SEED_MRP,
     volumeMl: 50,
-    images: {
-      hero: "/images/aurevan/hero.jpg",
-      flat: "/images/aurevan/flat.jpg",
-      box: "/images/aurevan/box.jpg",
-    },
   },
-  orvelis: {
+  {
     slug: "orvelis",
     name: "ORVÉLIS",
     pronunciation: "ऑर-वे-लिस · or-vay-lis",
@@ -114,16 +84,11 @@ const FRAGRANCES: Record<FragranceSlug, Fragrance> = {
     ground: "linear-gradient(158deg, #f3e5c8, #e7cf9d 54%, #d6b673)",
     onGround: "#2a2012",
     onGroundInverse: "#f7edd7",
-    price: PRICE,
-    mrp: MRP,
+    price: SEED_PRICE,
+    mrp: SEED_MRP,
     volumeMl: 50,
-    images: {
-      hero: "/images/orvelis/hero.jpg",
-      flat: "/images/orvelis/flat.jpg",
-      box: "/images/orvelis/box.jpg",
-    },
   },
-  vayren: {
+  {
     slug: "vayren",
     name: "VAYRÉN",
     pronunciation: "वे-रेन · vay-ren",
@@ -145,18 +110,13 @@ const FRAGRANCES: Record<FragranceSlug, Fragrance> = {
     ground: "linear-gradient(158deg, #3d2f24, #281f16 56%, #150d07)",
     onGround: "#ecdcc3",
     onGroundInverse: "#241c16",
-    price: PRICE,
-    mrp: MRP,
+    price: SEED_PRICE,
+    mrp: SEED_MRP,
     volumeMl: 50,
-    images: {
-      hero: "/images/vayren/hero.jpg",
-      flat: "/images/vayren/flat.jpg",
-      box: "/images/vayren/box.jpg",
-    },
   },
-};
+];
 
-export const DISCOVERY_SET = {
+export const SEED_DISCOVERY_SET = {
   slug: "discovery-set",
   name: "Discovery Set",
   headline: "Meet all three. Keep the one that becomes yours.",
@@ -167,23 +127,3 @@ export const DISCOVERY_SET = {
   perVialMl: 10,
   vialCount: 3,
 } as const;
-
-export const fragranceList: Fragrance[] = ORDER.map((slug) => FRAGRANCES[slug]);
-
-export function isFragranceSlug(value: string): value is FragranceSlug {
-  return value in FRAGRANCES;
-}
-
-export function getFragrance(slug: FragranceSlug): Fragrance {
-  return FRAGRANCES[slug];
-}
-
-/** the other two, in canonical order — used for "you might also like" */
-export function relatedFragrances(slug: FragranceSlug): Fragrance[] {
-  return fragranceList.filter((f) => f.slug !== slug);
-}
-
-/** format paise-free INR the way the brand writes it: ₹799 */
-export function formatINR(amount: number): string {
-  return `₹${amount.toLocaleString("en-IN")}`;
-}

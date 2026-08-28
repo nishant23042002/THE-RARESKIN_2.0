@@ -9,30 +9,32 @@ import { PdpGallery } from "@/components/product/pdp-gallery";
 import { Accordion } from "@/components/ui/accordion";
 import { PdpReviews } from "@/components/product/pdp-reviews";
 import { cn } from "@/lib/cn";
+import { formatINR } from "@/lib/catalog";
 import { SITE, absoluteUrl } from "@/lib/site";
 import { breadcrumbJsonLd } from "@/lib/seo";
 import {
-  ORDER,
-  getFragrance,
-  isFragranceSlug,
-  relatedFragrances,
-  formatINR,
-} from "@/lib/products";
+  getFragranceBySlug,
+  getFragranceSlugs,
+  getRelatedFragrances,
+} from "@/server/data/catalog";
 
-export const dynamicParams = false;
+// A newly-activated product renders on first request; unknown slugs 404.
+export const dynamicParams = true;
 
-export function generateStaticParams() {
-  return ORDER.map((slug) => ({ slug }));
+export async function generateStaticParams() {
+  const slugs = await getFragranceSlugs();
+  return slugs.map((slug) => ({ slug }));
 }
 
 export async function generateMetadata({
   params,
 }: PageProps<"/fragrances/[slug]">): Promise<Metadata> {
   const { slug } = await params;
-  if (!isFragranceSlug(slug)) return {};
-  const f = getFragrance(slug);
-  const title = `${f.name} — ${f.title}`;
-  const description = `${f.name} Extrait de Parfum. ${f.poem}`;
+  const f = await getFragranceBySlug(slug);
+  if (!f) return {};
+  const title = f.seo.metaTitle ?? `${f.name} — ${f.title}`;
+  const description =
+    f.seo.metaDescription ?? `${f.name} Extrait de Parfum. ${f.poem}`;
   return {
     title,
     description,
@@ -110,12 +112,17 @@ export default async function FragrancePage({
   params,
 }: PageProps<"/fragrances/[slug]">) {
   const { slug } = await params;
-  if (!isFragranceSlug(slug)) notFound();
+  const f = await getFragranceBySlug(slug);
+  if (!f) notFound();
 
-  const f = getFragrance(slug);
-  const related = relatedFragrances(slug);
+  const related = await getRelatedFragrances(slug);
 
   const url = absoluteUrl(`/fragrances/${slug}`);
+  const availability = f.available
+    ? f.stock > 0
+      ? "https://schema.org/InStock"
+      : "https://schema.org/PreOrder"
+    : "https://schema.org/OutOfStock";
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Product",
@@ -135,7 +142,7 @@ export default async function FragrancePage({
       "@type": "Offer",
       price: String(f.price),
       priceCurrency: SITE.currency,
-      availability: "https://schema.org/PreOrder",
+      availability,
       url,
       priceValidUntil: "2027-03-31",
       seller: { "@type": "Organization", name: SITE.legalName },
@@ -187,7 +194,7 @@ export default async function FragrancePage({
           className="mt-[clamp(20px,3vw,34px)] grid gap-[clamp(28px,4vw,60px)] pb-[clamp(48px,8vw,90px)] lg:grid-cols-2 lg:items-start"
           style={{ "--frag": f.accent } as CSSProperties}
         >
-          <PdpGallery slug={slug} name={f.name} />
+          <PdpGallery slug={f.slug} name={f.name} />
 
           <div>
             <h1 className="text-[clamp(2rem,4.4vw,2.9rem)] font-light tracking-[0.1em]">

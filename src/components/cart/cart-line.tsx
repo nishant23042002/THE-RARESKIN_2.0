@@ -6,7 +6,7 @@ import { Mark } from "@/components/ui/mark";
 import { gsap } from "@/lib/gsap";
 import { useCart } from "@/components/providers/cart-provider";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
-import { getFragrance, formatINR } from "@/lib/products";
+import { FRAGRANCE_PALETTE, formatINR } from "@/lib/catalog";
 import type { CartLine } from "@/lib/cart";
 
 /**
@@ -21,7 +21,7 @@ export function CartLineRow({ line }: { line: CartLine }) {
   const rowRef = useRef<HTMLLIElement>(null);
   const [leaving, setLeaving] = useState(false);
 
-  const f = line.fragrance ? getFragrance(line.fragrance) : null;
+  const f = line.fragrance ? FRAGRANCE_PALETTE[line.fragrance] : null;
   const juice = f?.juice ?? "#8a8074";
 
   const wash = f

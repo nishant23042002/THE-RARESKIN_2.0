@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Plain CommonJS Node scripts run outside the bundler / TS project.
+    "migrations/**",
+    "migrate-mongo-config.js",
   ]),
 ]);
 

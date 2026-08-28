@@ -1,5 +1,5 @@
 import { cn } from "@/lib/cn";
-import { getFragrance, type FragranceSlug } from "@/lib/products";
+import { FRAGRANCE_PALETTE, type FragranceSlug } from "@/lib/catalog";
 
 /**
  * Vector stand-in for the real flacon photography: clear rectangular bottle,
@@ -22,8 +22,8 @@ export function Flacon({
   volume?: boolean;
   className?: string;
 }) {
-  const f = getFragrance(fragrance);
-  const ink = f.onGround;
+  const f = FRAGRANCE_PALETTE[fragrance];
+  const ink = f.ink;
   const showLabel = label || volume;
 
   return (

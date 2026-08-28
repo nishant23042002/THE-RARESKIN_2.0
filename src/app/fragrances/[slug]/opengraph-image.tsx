@@ -1,13 +1,15 @@
 import { ImageResponse } from "next/og";
-import { ORDER, getFragrance, isFragranceSlug } from "@/lib/products";
+import { notFound } from "next/navigation";
+import { getFragranceBySlug, getFragranceSlugs } from "@/server/data/catalog";
 
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 export const alt = "THE RARESKIN Extrait de Parfum";
-export const dynamicParams = false;
+export const dynamicParams = true;
 
-export function generateStaticParams() {
-  return ORDER.map((slug) => ({ slug }));
+export async function generateStaticParams() {
+  const slugs = await getFragranceSlugs();
+  return slugs.map((slug) => ({ slug }));
 }
 
 export default async function Image({
@@ -16,7 +18,8 @@ export default async function Image({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const f = getFragrance(isFragranceSlug(slug) ? slug : "aurevan");
+  const f = await getFragranceBySlug(slug);
+  if (!f) notFound();
 
   return new ImageResponse(
     (

@@ -13,6 +13,7 @@ import { CartBar } from "@/components/cart/cart-bar";
 import { SvgDefs } from "@/components/ui/svg-defs";
 import { SITE } from "@/lib/site";
 import { organizationJsonLd } from "@/lib/seo";
+import { getCatalogNav } from "@/server/data/catalog";
 import "./globals.css";
 
 const jost = Jost({
@@ -58,7 +59,9 @@ export const viewport: Viewport = {
   themeColor: "#f2f1ed",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const nav = await getCatalogNav();
+
   return (
     <html lang="en-IN" className={`${jost.variable} ${newsreader.variable}`}>
       <body>
@@ -81,7 +84,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <NavToneProvider>
               <div className="fixed inset-x-0 top-0 z-50">
                 <AnnouncementBar />
-                <Header />
+                <Header nav={nav} />
               </div>
               {children}
               <Footer />

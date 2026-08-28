@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Flacon } from "@/components/ui/flacon";
 import { Carousel } from "@/components/ui/carousel";
 import { cn } from "@/lib/cn";
-import type { FragranceSlug } from "@/lib/products";
+import type { FragranceSlug } from "@/lib/catalog";
 
 /**
  * PDP gallery — a draggable frame with dots, plus a thumbnail strip. Placeholder

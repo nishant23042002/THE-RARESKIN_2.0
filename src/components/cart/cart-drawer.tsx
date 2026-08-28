@@ -7,7 +7,7 @@ import { useCart } from "@/components/providers/cart-provider";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { Button } from "@/components/ui/button";
 import { Mark } from "@/components/ui/mark";
-import { formatINR } from "@/lib/products";
+import { formatINR } from "@/lib/catalog";
 import { commerce } from "@/lib/commerce";
 import { CartLineRow } from "./cart-line";
 

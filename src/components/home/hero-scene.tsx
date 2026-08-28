@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { getFragrance, type FragranceSlug } from "@/lib/products";
+import { FRAGRANCE_PALETTE, type FragranceSlug } from "@/lib/catalog";
 
 interface HeroArt {
   theme: "light" | "dark";
@@ -69,7 +69,7 @@ export const HERO_ART: Record<FragranceSlug, HeroArt> = {
  */
 export function HeroScene({ fragrance }: { fragrance: FragranceSlug }) {
   const art = HERO_ART[fragrance];
-  const juice = getFragrance(fragrance).juice;
+  const juice = FRAGRANCE_PALETTE[fragrance].juice;
 
   return (
     <div

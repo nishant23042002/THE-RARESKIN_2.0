@@ -6,7 +6,7 @@ import { useLenis } from "lenis/react";
 import { gsap } from "@/lib/gsap";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { Logo } from "@/components/ui/logo";
-import { fragranceList } from "@/lib/products";
+import type { CatalogNavItem } from "@/lib/catalog";
 
 const MORE_LINKS = [
   { label: "Why Extrait", href: "/#why" },
@@ -25,9 +25,11 @@ const MORE_LINKS = [
 export function SiteMenu({
   open,
   onClose,
+  nav,
 }: {
   open: boolean;
   onClose: () => void;
+  nav: CatalogNavItem[];
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -142,7 +144,7 @@ export function SiteMenu({
         <p className="mb-3.5 text-[9px] uppercase tracking-[0.2em] text-ink-3">
           The Three
         </p>
-        {fragranceList.map((f) => (
+        {nav.map((f) => (
           <Link
             key={f.slug}
             href={`/fragrances/${f.slug}`}

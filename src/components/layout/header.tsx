@@ -7,7 +7,7 @@ import { MenuIcon } from "@/components/ui/menu-icon";
 import { useScrolled } from "@/hooks/use-scrolled";
 import { useCart } from "@/components/providers/cart-provider";
 import { useNavTone } from "@/components/providers/nav-tone";
-import { fragranceList } from "@/lib/products";
+import type { CatalogNavItem } from "@/lib/catalog";
 import { SiteMenu } from "./site-menu";
 
 /**
@@ -16,7 +16,7 @@ import { SiteMenu } from "./site-menu";
  * asks for; once the page is scrolled it goes frosted + ink and condenses.
  * The state change rides one long quint-out curve (`--ease-nav`), Polène-style.
  */
-export function Header() {
+export function Header({ nav }: { nav: CatalogNavItem[] }) {
   const scrolled = useScrolled();
   const { tone } = useNavTone();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -77,7 +77,7 @@ export function Header() {
           className="site-header__index hidden lg:block"
         >
           <div className="mx-auto flex max-w-[1500px] items-center justify-center gap-[clamp(18px,3vw,46px)] px-5 sm:px-10 xl:px-[72px]">
-            {fragranceList.map((f) => (
+            {nav.map((f) => (
               <Link
                 key={f.slug}
                 href={`/fragrances/${f.slug}`}
@@ -101,7 +101,11 @@ export function Header() {
         </nav>
       </header>
 
-      <SiteMenu open={menuOpen} onClose={() => setMenuOpen(false)} />
+      <SiteMenu
+        open={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        nav={nav}
+      />
     </>
   );
 }

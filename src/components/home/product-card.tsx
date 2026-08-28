@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { CSSProperties } from "react";
 import { Flacon } from "@/components/ui/flacon";
 import { AddToBagButton } from "@/components/cart/add-to-bag-button";
-import { formatINR, type Fragrance } from "@/lib/products";
+import { formatINR, type Fragrance } from "@/lib/catalog";
 
 /**
  * One oversized fragrance card in the full-bleed 3-up collection grid. The

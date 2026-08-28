@@ -1,4 +1,4 @@
-import type { FragranceSlug } from "@/lib/products";
+import type { FragranceSlug } from "@/lib/catalog";
 
 /**
  * A bag line. Callers pass display data at add-time (name/price snapshot), so

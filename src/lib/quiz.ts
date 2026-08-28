@@ -1,4 +1,4 @@
-import { ORDER, type FragranceSlug } from "./products";
+import { ORDER, type FragranceSlug } from "./catalog";
 
 /**
  * The "which one is yours" quiz — three questions, each option votes for one

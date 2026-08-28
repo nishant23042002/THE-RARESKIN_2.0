@@ -3,7 +3,7 @@
 import { useRef } from "react";
 import { gsap, useGSAP } from "@/lib/gsap";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
-import { fragranceList } from "@/lib/products";
+import type { Fragrance } from "@/lib/catalog";
 
 /**
  * Slow single-line band between the hero and the collection. One seamless loop:
@@ -12,18 +12,12 @@ import { fragranceList } from "@/lib/products";
  * in the product cards below. Keeps moving on hover; a hidden tab freezes it
  * for free because rAF stops. Static under reduced motion.
  */
-const LINES = [
-  "Scents that stay with you",
-  ...fragranceList.map((f) => f.impression),
-  "Different by design",
-];
-
-function Group() {
+function Group({ lines }: { lines: string[] }) {
   // `pr-14` carries the trailing rhythm so the two groups butt together with
   // the same gap they use internally — keeps `xPercent: -50` a clean seam.
   return (
     <div className="flex flex-none gap-14 pr-14">
-      {LINES.map((line) => (
+      {lines.map((line) => (
         <span key={line} className="flex flex-none items-center gap-14">
           <span className="serif-italic text-[clamp(1.15rem,2.4vw,1.9rem)] whitespace-nowrap opacity-90">
             {line}
@@ -37,10 +31,20 @@ function Group() {
   );
 }
 
-export function ImpressionMarquee() {
+export function ImpressionMarquee({
+  fragrances,
+}: {
+  fragrances: Fragrance[];
+}) {
   const rootRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   const reduced = useReducedMotion();
+
+  const lines = [
+    "Scents that stay with you",
+    ...fragrances.map((f) => f.impression),
+    "Different by design",
+  ];
 
   useGSAP(
     () => {
@@ -64,8 +68,8 @@ export function ImpressionMarquee() {
       className="overflow-hidden border-y border-line bg-w4 py-6 text-w0"
     >
       <div ref={trackRef} className="flex w-max will-change-transform">
-        <Group />
-        <Group />
+        <Group lines={lines} />
+        <Group lines={lines} />
       </div>
     </div>
   );

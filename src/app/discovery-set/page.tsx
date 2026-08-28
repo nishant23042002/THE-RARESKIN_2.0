@@ -1,55 +1,70 @@
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { Container } from "@/components/ui/container";
 import { PageIntro } from "@/components/layout/page-intro";
 import { DiscoverySet } from "@/components/home/discovery-set";
-import { DISCOVERY_SET, formatINR } from "@/lib/products";
+import { formatINR } from "@/lib/catalog";
 import { pageMeta } from "@/lib/seo";
+import { getFragrances, getDiscoverySet } from "@/server/data/catalog";
 
-export const metadata = pageMeta({
-  title: "The Discovery Set",
-  description: DISCOVERY_SET.detail,
-  path: "/discovery-set",
-});
+export async function generateMetadata(): Promise<Metadata> {
+  const set = await getDiscoverySet();
+  return pageMeta({
+    title: "The Discovery Set",
+    description:
+      set?.seo.metaDescription ??
+      set?.detail ??
+      "Three 10 ml extraits, credited back in full toward your first bottle.",
+    path: "/discovery-set",
+  });
+}
 
-const STEPS = [
-  {
-    n: "01",
-    h: "Order the set",
-    p: `Three ${DISCOVERY_SET.perVialMl} ml extraits — ${formatINR(
-      DISCOVERY_SET.price,
-    )}, the full-size formula, not a diluted sample.`,
-  },
-  {
-    n: "02",
-    h: "Live with all three",
-    p: "A week or two each. Notice which one you reach for without thinking about it.",
-  },
-  {
-    n: "03",
-    h: "Buy your 50 ml",
-    p: `The ${formatINR(
-      DISCOVERY_SET.price,
-    )} comes off in full — your first full bottle is effectively the set for free.`,
-  },
-];
+export default async function DiscoverySetPage() {
+  const [set, fragrances] = await Promise.all([
+    getDiscoverySet(),
+    getFragrances(),
+  ]);
+  if (!set) notFound();
 
-export default function DiscoverySetPage() {
+  const steps = [
+    {
+      n: "01",
+      h: "Order the set",
+      p: `Three ${set.perVialMl} ml extraits — ${formatINR(
+        set.price,
+      )}, the full-size formula, not a diluted sample.`,
+    },
+    {
+      n: "02",
+      h: "Live with all three",
+      p: "A week or two each. Notice which one you reach for without thinking about it.",
+    },
+    {
+      n: "03",
+      h: "Buy your 50 ml",
+      p: `The ${formatINR(
+        set.creditRupees,
+      )} comes off in full — your first full bottle is effectively the set for free.`,
+    },
+  ];
+
   return (
     <main id="main">
       <PageIntro
         eyebrow="The set"
         crumb={{ name: "Discovery Set", path: "/discovery-set" }}
         title="The Discovery Set"
-        lede={`Three ${DISCOVERY_SET.perVialMl} ml extraits, credited back in full toward your first bottle.`}
+        lede={`Three ${set.perVialMl} ml extraits, credited back in full toward your first bottle.`}
       />
 
-      <DiscoverySet />
+      <DiscoverySet set={set} fragrances={fragrances} />
 
       <Container className="max-w-[980px] py-[clamp(48px,9vw,110px)]">
         <h2 className="eyebrow mb-[clamp(24px,4vw,40px)]">
           How the credit works
         </h2>
         <ol className="grid gap-9 sm:grid-cols-3">
-          {STEPS.map((s) => (
+          {steps.map((s) => (
             <li key={s.n}>
               <p className="serif text-[1.5rem] leading-none text-ink-3">
                 {s.n}

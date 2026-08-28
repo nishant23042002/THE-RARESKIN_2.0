@@ -7,11 +7,11 @@ import { Flacon } from "@/components/ui/flacon";
 import { AddToBagButton } from "@/components/cart/add-to-bag-button";
 import { cn } from "@/lib/cn";
 import { QUIZ, tallyWinner } from "@/lib/quiz";
-import { getFragrance, formatINR, type FragranceSlug } from "@/lib/products";
+import { formatINR, type Fragrance, type FragranceSlug } from "@/lib/catalog";
 
 const STEPS = QUIZ.length; // 3 questions; step === STEPS -> result
 
-export function Quiz() {
+export function Quiz({ fragrances }: { fragrances: Fragrance[] }) {
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<FragranceSlug[]>([]);
   const [stageH, setStageH] = useState<number>();
@@ -48,7 +48,9 @@ export function Quiz() {
   }
 
   const winner = step === STEPS ? tallyWinner(answers) : null;
-  const match = winner ? getFragrance(winner) : null;
+  const match = winner
+    ? (fragrances.find((f) => f.slug === winner) ?? null)
+    : null;
   const filled = step >= STEPS ? STEPS : step + 1;
 
   return (

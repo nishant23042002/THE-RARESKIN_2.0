@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Carousel } from "@/components/ui/carousel";
 import { Reveal } from "@/components/ui/reveal";
 import { cn } from "@/lib/cn";
-import type { Fragrance } from "@/lib/products";
+import type { Fragrance } from "@/lib/catalog";
 
 function Star({ filled, className }: { filled?: boolean; className?: string }) {
   return (

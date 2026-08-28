@@ -1,14 +1,14 @@
 import type { MetadataRoute } from "next";
 import { absoluteUrl } from "@/lib/site";
-import { ORDER } from "@/lib/products";
+import { getFragranceSlugs } from "@/server/data/catalog";
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
 
   const primary = ["/", "/discovery-set"];
   const secondary = ["/the-idea", "/faq", "/contact"];
   const legal = ["/shipping", "/returns", "/privacy", "/terms"];
-  const pdp = ORDER.map((slug) => `/fragrances/${slug}`);
+  const pdp = (await getFragranceSlugs()).map((slug) => `/fragrances/${slug}`);
 
   const entry = (
     path: string,

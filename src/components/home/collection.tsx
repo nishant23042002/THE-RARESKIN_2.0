@@ -5,7 +5,7 @@ import Link from "next/link";
 import { gsap, useGSAP, ScrollTrigger } from "@/lib/gsap";
 import { Container } from "@/components/ui/container";
 import { ProductCard } from "./product-card";
-import { fragranceList } from "@/lib/products";
+import type { Fragrance } from "@/lib/catalog";
 
 /**
  * The collection: a full-bleed 3-up grid of oversized fragrance cards with 6px
@@ -14,7 +14,7 @@ import { fragranceList } from "@/lib/products";
  * each card arrives, not all at once), and a single light sheen sweeps across
  * each card the first time it lands. Reduced motion: everything just present.
  */
-export function Collection() {
+export function Collection({ fragrances }: { fragrances: Fragrance[] }) {
   const sectionRef = useRef<HTMLElement>(null);
 
   useGSAP(
@@ -90,7 +90,7 @@ export function Collection() {
       </Container>
 
       <div className="grid flex-1 grid-cols-1 gap-1.5 max-sm:content-start sm:grid-cols-3 sm:grid-rows-1">
-        {fragranceList.map((f, i) => (
+        {fragrances.map((f, i) => (
           <ProductCard key={f.slug} fragrance={f} index={i} />
         ))}
       </div>

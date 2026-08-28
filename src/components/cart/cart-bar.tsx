@@ -5,7 +5,7 @@ import { Flacon } from "@/components/ui/flacon";
 import { Mark } from "@/components/ui/mark";
 import { useCart } from "@/components/providers/cart-provider";
 import { useScrolled } from "@/hooks/use-scrolled";
-import { formatINR, isFragranceSlug } from "@/lib/products";
+import { formatINR, isFragranceSlug } from "@/lib/catalog";
 import { cn } from "@/lib/cn";
 
 /**

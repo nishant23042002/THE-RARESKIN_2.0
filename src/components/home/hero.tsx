@@ -6,14 +6,14 @@ import { gsap, useGSAP } from "@/lib/gsap";
 import { useNavTone } from "@/components/providers/nav-tone";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { Button } from "@/components/ui/button";
-import { fragranceList } from "@/lib/products";
+import type { Fragrance } from "@/lib/catalog";
 import { HeroScene, HERO_ART } from "./hero-scene";
 
-const SLIDES = fragranceList; // the three
 const AUTOPLAY_S = 6;
 const DRAG_THRESHOLD = 0.16; // fraction of a slide width to commit a change
 
-export function Hero() {
+export function Hero({ fragrances }: { fragrances: Fragrance[] }) {
+  const SLIDES = fragrances; // the three, from the catalogue
   const sectionRef = useRef<HTMLElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   const progressRef = useRef<gsap.core.Tween | null>(null);
@@ -30,19 +30,20 @@ export function Hero() {
   const { setTone } = useNavTone();
   const reduced = useReducedMotion();
 
+  const count = fragrances.length;
   const goTo = useCallback(
     (i: number, { wrap = true } = {}) => {
       const track = trackRef.current;
       if (!track) return;
       const n = wrap
-        ? ((i % SLIDES.length) + SLIDES.length) % SLIDES.length
-        : Math.max(0, Math.min(SLIDES.length - 1, i));
+        ? ((i % count) + count) % count
+        : Math.max(0, Math.min(count - 1, i));
       track.scrollTo({
         left: n * track.clientWidth,
         behavior: reduced ? "auto" : "smooth",
       });
     },
-    [reduced],
+    [reduced, count],
   );
 
   // active slide — read from scroll position (paused mid-drag)
@@ -76,8 +77,9 @@ export function Hero() {
 
   // header tone follows the active slide; reset when leaving the page
   useEffect(() => {
-    setTone(HERO_ART[SLIDES[active].slug].theme === "dark" ? "light" : "dark");
-  }, [active, setTone]);
+    const slug = SLIDES[active]?.slug;
+    if (slug) setTone(HERO_ART[slug].theme === "dark" ? "light" : "dark");
+  }, [active, setTone, SLIDES]);
   useEffect(() => () => setTone("dark"), [setTone]);
 
   const setPaused = useCallback((paused: boolean) => {
@@ -232,7 +234,8 @@ export function Hero() {
     }
   }
 
-  const activeTheme = HERO_ART[SLIDES[active].slug].theme;
+  const activeSlug = SLIDES[active]?.slug ?? SLIDES[0]?.slug ?? "aurevan";
+  const activeTheme = HERO_ART[activeSlug].theme;
 
   return (
     <section

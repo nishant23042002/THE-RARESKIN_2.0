@@ -9,6 +9,11 @@ India / INR. Built greenfield from the approved "Campaign" prototype.
 - **Commerce:** front-end-first — a working `localStorage` cart behind a
   provider interface; checkout is a clearly-marked placeholder until a real
   provider (Razorpay) is wired in
+- **Data layer:** MongoDB Atlas + Mongoose, Zod validation shared client/server,
+  Cloudinary for media, `migrate-mongo` migrations. The storefront reads the
+  catalogue (products, prices, copy, SEO) from the database via a `server-only`
+  access layer with tag-based ISR — edits go live without a deploy. See
+  [`docs/data-layer.md`](docs/data-layer.md).
 - **Fonts:** Jost + Newsreader via `next/font/google`
 
 ---
@@ -28,10 +33,24 @@ Other scripts:
 pnpm build          # production build (also runs the TS check)
 pnpm start          # serve the production build
 pnpm lint           # eslint
+pnpm typecheck      # tsc --noEmit
 ```
 
-Copy `.env.example` to `.env.local` if you need to override the site URL or
-start wiring integrations — nothing in it is required to build and run.
+Database (needs `MONGODB_URI` in `.env.local` — see `docs/data-layer.md`):
+
+```bash
+pnpm db:migrate         # apply pending migrations
+pnpm db:migrate:status  # show migration state
+pnpm db:seed            # import the catalogue + settings (idempotent)
+pnpm db:check           # connectivity probe
+pnpm catalog list       # inspect the live catalogue
+pnpm catalog set aurevan price 749   # edit a field + bump the cache
+pnpm revalidate         # refresh the storefront cache on demand
+```
+
+Copy `.env.example` to `.env.local` to wire integrations. The storefront still
+builds and runs with none of it set; the data-layer scripts need at least
+`MONGODB_URI`.
 
 ---
 
@@ -60,7 +79,9 @@ src/
     providers/ SmoothScroll  GsapLenisBridge  NavToneProvider  ScrollbarVar
   hooks/       useScrolled  useReducedMotion
   lib/
-    products.ts            single source of truth for the catalogue + DISCOVERY_SET
+    catalog.ts             isomorphic catalogue DTO types + formatINR + brand palette
+    money.ts               paise <-> rupee helpers — all money is integer paise
+    validation/            Zod schemas shared by client forms and the server
     cart.ts                cart types + reducer + localStorage helpers
     commerce/index.ts      CommerceProvider interface + placeholderProvider
     faq.ts                 FAQ content (also feeds FAQPage JSON-LD)
@@ -68,6 +89,16 @@ src/
     seo.ts                 pageMeta() + Organization / BreadcrumbList JSON-LD
     site.ts                SITE constants + real CONTACT details
     gsap.ts  motion.ts  cn.ts
+  server/                  server-only — DB, secrets, media (never imported client-side)
+    env.ts                 Zod-validated process.env accessor
+    db/                    cached Mongoose connection + model re-exports
+    models/                Product, MediaAsset, SiteSettings, User, Counter, AuditLog
+    data/catalog.ts        the storefront's catalogue access layer (cached, tagged)
+    cloudinary.ts          signed direct-upload params + delivery URLs
+  app/api/revalidate/      on-demand cache purge (bearer REVALIDATE_SECRET)
+migrations/                versioned, reversible migrate-mongo migrations
+scripts/                   db:seed / db:check / catalog (tsx, load .env via @next/env)
+docs/data-layer.md         how the data layer works + provisioning steps
 public/
   brand/rareskin-wordmark.png     wordmark artwork (rendered as a CSS mask)
   pay/                            vendored card-network SVGs + India flag
@@ -99,8 +130,9 @@ component uses `useGSAP({ scope })` for automatic cleanup. A global
 `gsap.matchMedia()` cover reduced motion.
 
 **Placeholder art.** Bottles and campaign scenes are art-directed SVG
-(`Flacon`, `HeroScene`). Real photography drops into `public/images/<slug>/`
-and the `images.hero|flat|box` slots in `products.ts` / `PdpGallery`.
+(`Flacon`, `HeroScene`). Real photography is uploaded to Cloudinary through the
+admin and stored on each product's `media` field; the DAL then serves those
+URLs in place of the `/images/<slug>/…` fallbacks.
 
 ---
 
@@ -138,10 +170,12 @@ the payload and return `{ ok: true }` without delivering anything. Replace the
 
 ### Product photography
 
-Drop images into `public/images/<slug>/hero.jpg` etc., then swap the `<Flacon>`
-placeholders in `components/product/pdp-gallery.tsx` and
-`components/home/hero-scene.tsx` for `next/image`. The layout is already built
-around the final aspect ratios.
+Upload packshots / campaign images through the admin (Phase G) — they land in
+Cloudinary and attach to a product's `media` field, and the catalogue DAL
+serves them automatically. Until then the `<Flacon>` / `<HeroScene>` vector
+placeholders stand in, sized to the final aspect ratios; swap them for
+`next/image` in `components/product/pdp-gallery.tsx` and
+`components/home/hero-scene.tsx` once real assets exist.
 
 ---
 
