@@ -88,6 +88,15 @@
     text-decoration: none;
   }
 
+  /* Tailwind v4 preflight no longer sets this; every interactive control gets it */
+  button:not(:disabled),
+  [role="button"],
+  [role="tab"],
+  summary,
+  label[for] {
+    cursor: pointer;
+  }
+
   ::selection {
     background: var(--color-ink);
     color: var(--color-w0);

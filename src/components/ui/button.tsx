@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
-type Variant = "solid" | "ghost" | "onLight" | "onDark";
+type Variant = "solid" | "ghost" | "onLight" | "onDark" | "onCard";
 type Size = "md" | "sm";
 
 const base =
@@ -17,12 +17,18 @@ const sizes: Record<Size, string> = {
 
 const variants: Record<Variant, string> = {
   solid: "border-cta bg-cta text-w0 hover:bg-black",
+  // tint the fill on hover instead of swapping colours — never hides the label
   ghost:
-    "border-current bg-transparent text-current opacity-80 hover:bg-current hover:text-bg hover:opacity-100",
+    "border-current bg-transparent text-current opacity-80 hover:bg-current/10 hover:opacity-100",
   onLight:
     "border-white/60 bg-transparent text-white hover:border-white hover:bg-white hover:text-ink",
   onDark:
     "border-ink/40 bg-transparent text-ink hover:border-ink hover:bg-ink hover:text-w0",
+  // primary CTA sitting on a per-fragrance card — solid in the fragrance's own
+  // ink, inverts on hover. Both states are explicit (no currentColor swap that
+  // would collapse fill and text to the same colour).
+  onCard:
+    "border-[var(--txt)] bg-[var(--txt)] text-[var(--txt-inv)] hover:bg-[var(--txt-inv)] hover:text-[var(--txt)]",
 };
 
 type StyleProps = { variant?: Variant; size?: Size; className?: string; children: ReactNode };

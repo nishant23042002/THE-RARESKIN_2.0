@@ -185,7 +185,11 @@ export function Hero() {
       track.setPointerCapture(e.pointerId);
       track.classList.add("is-dragging");
     }
-    track.scrollLeft = d.startScroll - d.dx;
+    // follow the pointer, but never past the immediate neighbour — a long
+    // drag still only ever commits to one slide.
+    const w = track.clientWidth || 1;
+    const offset = Math.max(-w, Math.min(w, d.dx));
+    track.scrollLeft = d.startScroll - offset;
   }
 
   function endDrag(e: React.PointerEvent) {
@@ -201,8 +205,9 @@ export function Hero() {
       return;
     }
     track.releasePointerCapture?.(e.pointerId);
-    const w = track.clientWidth;
+    const w = track.clientWidth || 1;
     const from = Math.round(d.startScroll / w);
+    // exactly one step, whatever the drag distance
     const step =
       d.dx <= -w * DRAG_THRESHOLD ? 1 : d.dx >= w * DRAG_THRESHOLD ? -1 : 0;
     // scroll to the target while snap is still off (so mandatory snap can't
