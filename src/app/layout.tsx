@@ -12,6 +12,7 @@ import { CartToast } from "@/components/cart/cart-toast";
 import { CartBar } from "@/components/cart/cart-bar";
 import { SvgDefs } from "@/components/ui/svg-defs";
 import { SITE } from "@/lib/site";
+import { organizationJsonLd } from "@/lib/seo";
 import "./globals.css";
 
 const jost = Jost({
@@ -61,6 +62,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en-IN" className={`${jost.variable} ${newsreader.variable}`}>
       <body>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(organizationJsonLd),
+          }}
+        />
         <a
           href="#main"
           className="sr-only rounded-[2px] bg-cta px-4 py-2.5 text-w0 focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:z-[999]"
