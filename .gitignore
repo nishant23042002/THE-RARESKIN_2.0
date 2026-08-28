@@ -50,6 +50,10 @@ next-env.d.ts
 # Claude Code tooling (preview launch config, local settings)
 /.claude/
 
+# AI-agent instruction files (Next regenerates AGENTS.md on `next dev`)
+/AGENTS.md
+/CLAUDE.md
+
 # design exploration — local visual reference only (see design-explorations/README.md)
 /design-explorations/
 
