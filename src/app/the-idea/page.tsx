@@ -123,7 +123,7 @@ export default function OurStoryPage() {
                 key={p}
                 className="flex items-baseline gap-4 border-b border-line py-4"
               >
-                <span className="serif text-[1.1rem] leading-none text-ink-3/70">
+                <span className="serif text-[1.1rem] leading-none text-ink-3">
                   {`0${i + 1}`}
                 </span>
                 <span className="text-[1.05rem]">{p}</span>

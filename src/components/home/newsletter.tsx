@@ -38,7 +38,7 @@ export function Newsletter() {
   return (
     <section id="letter" className="bg-w4 text-w0">
       <Container className="py-[clamp(72px,12vw,130px)] text-center">
-        <span className="eyebrow text-w0/50">The Letter</span>
+        <span className="eyebrow text-w0/68">The Letter</span>
         <h2 className="serif-italic mx-2 mt-3.5 mb-2 text-[clamp(1.7rem,3.8vw,2.6rem)]">
           One note when something new arrives.
         </h2>
@@ -74,7 +74,7 @@ export function Newsletter() {
                 if (status === "error") setStatus("idle");
               }}
               disabled={status === "submitting"}
-              className="flex-1 bg-transparent px-1 py-3 text-[14px] text-w0 placeholder:text-w0/45 focus:outline-none disabled:opacity-60"
+              className="flex-1 bg-transparent px-1 py-3 text-[14px] text-w0 placeholder:text-w0/65 focus:outline-none disabled:opacity-60"
             />
             <button
               type="submit"

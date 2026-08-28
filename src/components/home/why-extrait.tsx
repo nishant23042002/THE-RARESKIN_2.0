@@ -69,7 +69,7 @@ export function WhyExtrait() {
               key={pt.n}
               className="grid grid-cols-[auto_1fr] gap-x-5 py-[clamp(24px,3.4vw,40px)] sm:gap-x-8"
             >
-              <span className="serif text-[clamp(1.6rem,2.4vw,2.1rem)] leading-none text-ink-3/70">
+              <span className="serif text-[clamp(1.6rem,2.4vw,2.1rem)] leading-none text-ink-3">
                 {pt.n}
               </span>
               <div>

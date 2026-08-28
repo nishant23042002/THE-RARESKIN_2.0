@@ -23,7 +23,7 @@ export function DiscoverySet() {
     >
       <Container className="grid gap-[clamp(40px,7vw,72px)] py-[clamp(48px,9vw,104px)] min-[940px]:grid-cols-[1.05fr_0.95fr] min-[940px]:items-center min-[940px]:gap-20">
         <Reveal>
-          <span className="eyebrow mb-3.5 block text-w0/50">The Discovery Set</span>
+          <span className="eyebrow mb-3.5 block text-w0/68">The Discovery Set</span>
           <h2 className="max-w-[20ch] text-[clamp(2rem,5vw,3.1rem)]">
             {DISCOVERY_SET.headline}
           </h2>
@@ -34,10 +34,10 @@ export function DiscoverySet() {
           <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-5">
             <span className="text-[clamp(1.15rem,2.2vw,1.45rem)]">
               {formatINR(DISCOVERY_SET.price)}
-              <s className="ml-2 text-[0.72em] opacity-40">
+              <s className="ml-2 text-[0.72em] opacity-60">
                 {formatINR(DISCOVERY_SET.mrp)}
               </s>
-              <span className="mt-2 block text-[10px] tracking-[0.13em] text-w0/50 uppercase">
+              <span className="mt-2 block text-[10px] tracking-[0.13em] text-w0/68 uppercase">
                 {DISCOVERY_SET.vialCount} &times; {DISCOVERY_SET.perVialMl} ml
                 &middot; credited to your first bottle
               </span>
@@ -55,7 +55,7 @@ export function DiscoverySet() {
             />
           </div>
 
-          <p className="mt-6 text-[9.5px] tracking-[0.06em] text-w0/35 uppercase">
+          <p className="mt-6 text-[9.5px] tracking-[0.06em] text-w0/60 uppercase">
             One credit per customer &middot; COD available &middot; Free shipping
             across India &middot; [placeholder terms]
           </p>
@@ -75,10 +75,10 @@ export function DiscoverySet() {
               </span>
               <figcaption className="flex flex-col gap-1.5">
                 <span className="text-[0.92rem] tracking-[0.12em]">{f.name}</span>
-                <span className="text-[8px] tracking-[0.18em] text-w0/45 uppercase">
+                <span className="text-[8px] tracking-[0.18em] text-w0/65 uppercase">
                   {f.mood[0]}
                 </span>
-                <span className="text-[8px] tracking-[0.1em] text-w0/35">
+                <span className="text-[8px] tracking-[0.1em] text-w0/60">
                   {DISCOVERY_SET.perVialMl} ml
                 </span>
               </figcaption>

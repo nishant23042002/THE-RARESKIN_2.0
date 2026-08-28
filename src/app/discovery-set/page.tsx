@@ -51,7 +51,7 @@ export default function DiscoverySetPage() {
         <ol className="grid gap-9 sm:grid-cols-3">
           {STEPS.map((s) => (
             <li key={s.n}>
-              <p className="serif text-[1.5rem] leading-none text-ink-3/70">
+              <p className="serif text-[1.5rem] leading-none text-ink-3">
                 {s.n}
               </p>
               <h3 className="mt-2.5 text-[1.05rem]">{s.h}</h3>

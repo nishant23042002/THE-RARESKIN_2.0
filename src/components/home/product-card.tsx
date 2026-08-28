@@ -67,16 +67,16 @@ export function ProductCard({
         <h3 className="text-[clamp(1.5rem,2.4vw,2.3rem)] leading-[0.95] tracking-[0.12em]">
           {f.name}
         </h3>
-        <p className="mt-2.5 text-[9px] tracking-[0.15em] uppercase opacity-60">
+        <p className="mt-2.5 text-[9px] tracking-[0.15em] uppercase opacity-75">
           {f.mood.join(" · ")}
         </p>
-        <p className="mt-2 text-[8.5px] leading-[1.9] tracking-[0.08em] uppercase opacity-50">
+        <p className="mt-2 text-[8.5px] leading-[1.9] tracking-[0.08em] uppercase opacity-65">
           {f.notes.join(" · ")}
         </p>
         <div className="mt-[clamp(16px,2vw,24px)] flex flex-col items-start gap-3.5">
           <span className="text-[12px] tracking-[0.06em]">
             {formatINR(f.price)}
-            <s className="ml-2 text-[10px] opacity-45">{formatINR(f.mrp)}</s>
+            <s className="ml-2 text-[10px] opacity-60">{formatINR(f.mrp)}</s>
           </span>
           <AddToBagButton
             sku={f.slug}

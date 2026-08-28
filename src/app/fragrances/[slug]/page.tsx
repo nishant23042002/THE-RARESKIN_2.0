@@ -199,10 +199,12 @@ export default async function FragrancePage({
             <p className="mt-1 text-[10px] tracking-[0.24em] text-ink-3 uppercase">
               Extrait de Parfum
             </p>
-            <p
-              className="mt-4 text-[11px] tracking-[0.18em] uppercase"
-              style={{ color: f.accent }}
-            >
+            <p className="mt-4 inline-flex items-center gap-2 text-[11px] tracking-[0.18em] text-ink-2 uppercase">
+              <span
+                aria-hidden
+                className="size-1.5 rounded-full"
+                style={{ background: f.accent }}
+              />
               {f.title}
             </p>
             <p className="serif-italic mt-3.5 max-w-[40ch] text-[1.15rem] leading-[1.5] text-ink-2">

@@ -19,7 +19,7 @@ const MESSAGES: ReactNode[] = [
   <>
     <b className="font-normal">Launch offer</b>
     <span className="mx-2 text-gilt">₹799</span>
-    <s className="opacity-40">₹1,199</s>
+    <s className="opacity-65">₹1,199</s>
   </>,
   <>Free shipping across India</>,
   <>Cash on delivery available</>,
@@ -93,6 +93,7 @@ export function AnnouncementBar() {
   return (
     <div
       ref={barRef}
+      role="region"
       aria-label="Announcement"
       onPointerEnter={() => {
         pausedRef.current = true;

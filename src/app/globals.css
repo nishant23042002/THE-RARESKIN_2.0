@@ -20,7 +20,8 @@
   --color-surface-2: #eceae4;
   --color-ink: #232120;
   --color-ink-2: #6b6963;
-  --color-ink-3: #9a988f;
+  /* was #9a988f — darkened so quiet labels clear WCAG AA (4.5:1) on --color-bg */
+  --color-ink-3: #6c6960;
   --color-line: #dedcd5;
   --color-line-2: #cfcdc6;
   --color-cta: #17140f;
