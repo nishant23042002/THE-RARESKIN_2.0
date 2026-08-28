@@ -3,7 +3,7 @@
 import { useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { Logo } from "@/components/ui/logo";
-import { Mark } from "@/components/ui/mark";
+import { MenuIcon } from "@/components/ui/menu-icon";
 import { useScrolled } from "@/hooks/use-scrolled";
 import { useCart } from "@/components/providers/cart-provider";
 import { useNavTone } from "@/components/providers/nav-tone";
@@ -38,10 +38,11 @@ export function Header() {
               onClick={() => setMenuOpen(true)}
               aria-haspopup="dialog"
               aria-expanded={menuOpen}
-              className="nav-underline group inline-flex items-center gap-2 py-1 text-[10.5px] tracking-[0.16em] uppercase"
+              aria-label="Open menu"
+              className="group inline-flex items-center gap-2.5 py-2 text-[10.5px] tracking-[0.16em] uppercase"
             >
-              <Mark className="w-3 transition-transform duration-300 ease-[var(--ease-brand)] group-hover:-translate-y-0.5" />
-              Index
+              <MenuIcon />
+              <span className="hidden sm:inline">Menu</span>
             </button>
           </div>
 
