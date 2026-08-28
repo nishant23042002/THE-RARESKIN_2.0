@@ -1,0 +1,152 @@
+@import "tailwindcss";
+
+/* ==========================================================================
+   THE RARESKIN — design tokens
+   Warm greyscale monochrome; chroma appears only where a fragrance does.
+   Ported 1:1 from the "Campaign" prototype. Single, deliberate light theme.
+   ========================================================================== */
+
+@theme {
+  /* greyscale ramp */
+  --color-w0: #fafaf7;
+  --color-w1: #efeeea;
+  --color-w2: #cfcdc6;
+  --color-w3: #7c7a74;
+  --color-w4: #2c2a26;
+
+  /* surfaces + ink */
+  --color-bg: #f2f1ed;
+  --color-surface: #fafaf7;
+  --color-surface-2: #eceae4;
+  --color-ink: #232120;
+  --color-ink-2: #6b6963;
+  --color-ink-3: #9a988f;
+  --color-line: #dedcd5;
+  --color-line-2: #cfcdc6;
+  --color-cta: #17140f;
+
+  /* per-fragrance accents (index dots, focus rings, spec bars) */
+  --color-aurevan: #a89a7c;
+  --color-orvelis: #bc862f;
+  --color-vayren: #6a4630;
+
+  /* type */
+  --font-sans: var(--font-jost), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-serif: var(--font-newsreader), Georgia, "Times New Roman", serif;
+
+  /* motion */
+  --ease-brand: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+@layer base {
+  :root {
+    --header-h: 60px;
+    --announce-h: 34px;
+    --index-h: 40px;
+    color-scheme: light;
+  }
+
+  * {
+    min-width: 0;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-bg);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-weight: 300;
+    font-size: 1rem;
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    overflow-x: hidden;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-weight: 300;
+    line-height: 1.04;
+    letter-spacing: -0.016em;
+    text-wrap: balance;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  ::selection {
+    background: var(--color-ink);
+    color: var(--color-w0);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 2px;
+    border-radius: 1px;
+  }
+
+  body.is-locked {
+    overflow: hidden;
+  }
+}
+
+@layer components {
+  /* small uppercase kicker used across the site */
+  .eyebrow {
+    font-size: 0.656rem;
+    letter-spacing: 0.26em;
+    text-transform: uppercase;
+    color: var(--color-ink-3);
+    font-weight: 400;
+  }
+
+  .serif {
+    font-family: var(--font-serif);
+    font-weight: 300;
+  }
+
+  .serif-italic {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 300;
+  }
+}
+
+/* Lenis owns smooth scrolling; keep native behaviour instant so the two
+   never fight. Under reduced-motion Lenis is disabled and this still holds. */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+
+.lenis.lenis-stopped {
+  overflow: clip;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
