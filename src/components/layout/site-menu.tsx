@@ -119,14 +119,17 @@ export function SiteMenu({
     <dialog
       ref={dialogRef}
       aria-label="Menu"
-      className="m-0 h-dvh max-h-none w-screen max-w-none overflow-hidden border-0 bg-transparent p-0 text-ink backdrop:bg-transparent"
+      className="fixed inset-0 m-0 h-dvh max-h-none w-[calc(100vw+var(--sbw,0px))] max-w-none overflow-hidden border-0 bg-transparent p-0 text-ink backdrop:bg-transparent"
     >
       <div
         ref={panelRef}
         className="menu-panel flex h-full flex-col bg-bg px-6 pt-6 pb-[calc(24px+env(safe-area-inset-bottom))] will-change-transform"
       >
         <div className="mb-11 flex items-center justify-between">
-          <Logo className="w-[clamp(112px,32vw,132px)] text-ink" />
+          <Logo
+            className="text-ink"
+            style={{ width: "clamp(112px, 32vw, 132px)", maxWidth: "132px" }}
+          />
           <button
             type="button"
             onClick={onClose}

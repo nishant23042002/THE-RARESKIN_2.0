@@ -50,8 +50,13 @@ export function Header() {
             href="/"
             aria-label="THE RARESKIN, home"
             className="site-header__wordmark justify-self-center"
+            style={{
+              display: "block",
+              width: "clamp(104px, 26vw, 140px)",
+              maxWidth: "140px",
+            }}
           >
-            <Logo className="w-[clamp(104px,26vw,140px)]" />
+            <Logo className="w-full" />
           </Link>
 
           <div className="justify-self-end">

@@ -129,7 +129,7 @@ export function CartDrawer() {
     <dialog
       ref={dialogRef}
       aria-label="The bag"
-      className="m-0 h-dvh max-h-none w-screen max-w-none overflow-hidden border-0 bg-transparent p-0 backdrop:bg-transparent"
+      className="fixed inset-0 m-0 h-dvh max-h-none w-[calc(100vw+var(--sbw,0px))] max-w-none overflow-hidden border-0 bg-transparent p-0 backdrop:bg-transparent"
     >
       <div
         ref={scrimRef}

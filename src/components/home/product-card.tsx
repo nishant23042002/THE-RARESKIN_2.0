@@ -29,7 +29,7 @@ export function ProductCard({
           "--txt-inv": f.onGroundInverse,
         } as CSSProperties
       }
-      className="group relative isolate flex min-h-[500px] flex-col justify-between overflow-hidden p-[clamp(20px,2.2vw,32px)] max-[640px]:aspect-[4/5] max-[640px]:min-h-0 min-[1000px]:aspect-[3/4] min-[1000px]:min-h-0"
+      className="group relative isolate flex h-full min-h-[440px] flex-col justify-between overflow-hidden p-[clamp(20px,2.4vw,34px)] max-sm:aspect-[4/5] max-sm:h-auto max-sm:min-h-0"
     >
       <span
         data-sheen

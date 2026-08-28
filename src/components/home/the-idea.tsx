@@ -12,7 +12,7 @@ export function TheIdea() {
   return (
     <section
       id="idea"
-      className="scroll-mt-[calc(var(--announce-h)+var(--header-h)+16px)] bg-bg py-[clamp(64px,11vw,132px)]"
+      className="flex min-h-svh flex-col justify-center scroll-mt-[calc(var(--announce-h)+var(--header-h)+16px)] bg-bg py-[clamp(56px,10vw,112px)]"
     >
       <Container>
         <div className="grid gap-x-16 gap-y-8 md:grid-cols-[1.2fr_1fr] md:items-start">

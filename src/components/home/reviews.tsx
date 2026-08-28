@@ -11,7 +11,7 @@ function Star() {
 
 export function Reviews() {
   return (
-    <section className="border-t border-line py-[clamp(72px,13vw,160px)]">
+    <section className="flex min-h-svh flex-col justify-center border-t border-line py-[clamp(56px,10vw,112px)]">
       <Container>
         <Reveal className="mb-[clamp(36px,6vw,60px)]">
           <span className="eyebrow mb-3 block">In their words</span>

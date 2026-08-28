@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { cn } from "@/lib/cn";
 import { Wordmark } from "./wordmark";
 
@@ -11,25 +11,35 @@ const ASPECT = "1487 / 331";
 /**
  * The RARESKIN wordmark — the artwork rendered as a `currentColor` CSS mask, so
  * it inverts ink <-> cream with the header tone and scales on the compositor
- * (no per-frame mask re-fit). The mask renders straight from SSR, so there is
- * no load-swap flash; the hidden probe only trips the Jost text fallback if the
- * asset genuinely fails.
+ * (no per-frame mask re-fit). It renders straight from SSR, so there is no
+ * load-swap flash.
  *
- * Size comes from the caller's `w-[...]`; scaling is done by the parent's
- * `transform`, never by changing this box.
+ * Sizing is the caller's job (`w-*` / inline width on the wrapper). The span
+ * carries its own inline `display:block` + `max-width:100%` so a missing utility
+ * layer (HMR, a CSS chunk race) can never let it balloon past its box. The
+ * genuine-asset-missing fallback is probed with a detached `Image()` — there is
+ * no real <img> in the tree that could paint at native size if a class drops.
  */
 export function Logo({
   className,
+  style,
   title = "THE RARESKIN",
 }: {
   className?: string;
+  style?: CSSProperties;
   title?: string;
 }) {
   const [failed, setFailed] = useState(false);
 
+  useEffect(() => {
+    const probe = new Image();
+    probe.onerror = () => setFailed(true);
+    probe.src = SRC;
+  }, []);
+
   if (failed) {
     return (
-      <span className={cn("inline-flex text-[13px]", className)}>
+      <span className={cn("inline-flex text-[13px]", className)} style={style}>
         <Wordmark />
       </span>
     );
@@ -40,29 +50,21 @@ export function Logo({
       role="img"
       aria-label={title}
       className={cn("block", className)}
-      style={
-        {
-          aspectRatio: ASPECT,
-          backgroundColor: "currentColor",
-          WebkitMaskImage: `url(${SRC})`,
-          maskImage: `url(${SRC})`,
-          WebkitMaskSize: "contain",
-          maskSize: "contain",
-          WebkitMaskRepeat: "no-repeat",
-          maskRepeat: "no-repeat",
-          WebkitMaskPosition: "center",
-          maskPosition: "center",
-        } as CSSProperties
-      }
-    >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={SRC}
-        alt=""
-        aria-hidden
-        className="hidden"
-        onError={() => setFailed(true)}
-      />
-    </span>
+      style={{
+        display: "block",
+        maxWidth: "100%",
+        aspectRatio: ASPECT,
+        backgroundColor: "currentColor",
+        WebkitMaskImage: `url(${SRC})`,
+        maskImage: `url(${SRC})`,
+        WebkitMaskSize: "contain",
+        maskSize: "contain",
+        WebkitMaskRepeat: "no-repeat",
+        maskRepeat: "no-repeat",
+        WebkitMaskPosition: "center",
+        maskPosition: "center",
+        ...style,
+      }}
+    />
   );
 }

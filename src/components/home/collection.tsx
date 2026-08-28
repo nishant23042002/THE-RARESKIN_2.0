@@ -69,8 +69,12 @@ export function Collection() {
   );
 
   return (
-    <section ref={sectionRef} id="shop" className="pt-[clamp(40px,6vw,72px)]">
-      <Container className="border-t border-line pt-[clamp(16px,2vw,24px)] pb-[clamp(20px,3vw,34px)]">
+    <section
+      ref={sectionRef}
+      id="shop"
+      className="flex min-h-svh flex-col pt-[calc(var(--header-h)+clamp(8px,2vw,24px))]"
+    >
+      <Container className="border-t border-line pt-[clamp(16px,2vw,24px)] pb-[clamp(18px,2.6vw,30px)]">
         <p className="eyebrow mb-[clamp(10px,1.4vw,16px)]">The Collection</p>
         <div className="flex flex-wrap items-baseline justify-between gap-x-10 gap-y-2">
           <h2 className="max-w-[44ch] text-[clamp(1.35rem,2.4vw,2.05rem)] leading-[1.12] tracking-[-0.01em] text-balance">
@@ -85,7 +89,7 @@ export function Collection() {
         </div>
       </Container>
 
-      <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-3">
+      <div className="grid flex-1 grid-cols-1 gap-1.5 max-sm:content-start sm:grid-cols-3 sm:grid-rows-1">
         {fragranceList.map((f, i) => (
           <ProductCard key={f.slug} fragrance={f} index={i} />
         ))}

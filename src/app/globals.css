@@ -50,6 +50,8 @@
     --header-h: 66px;
     --announce-h: 34px;
     --index-h: 38px;
+    /* classic-scrollbar width, published by <ScrollbarVar>; 0 until it mounts */
+    --sbw: 0px;
     color-scheme: light;
   }
 
@@ -59,6 +61,9 @@
 
   html {
     -webkit-text-size-adjust: 100%;
+    /* Always reserve the scrollbar's space so locking scroll (drawer / menu /
+       Lenis stop) can't reflow the page sideways. */
+    scrollbar-gutter: stable;
   }
 
   body {
@@ -301,8 +306,10 @@ html.lenis body {
   overscroll-behavior: contain;
 }
 
+/* `hidden` (not `clip`) so `scrollbar-gutter: stable` keeps reserving the
+   gutter while Lenis is stopped — otherwise the page shifts as the bar goes. */
 .lenis.lenis-stopped {
-  overflow: clip;
+  overflow: hidden;
 }
 
 @media (prefers-reduced-motion: reduce) {

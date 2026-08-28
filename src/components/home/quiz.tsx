@@ -54,9 +54,9 @@ export function Quiz() {
   return (
     <section
       id="quiz"
-      className="scroll-mt-[calc(var(--announce-h)+var(--header-h)+16px)] border-t border-line"
+      className="flex min-h-svh flex-col justify-center scroll-mt-[calc(var(--announce-h)+var(--header-h)+16px)] border-t border-line"
     >
-      <Container className="grid gap-[clamp(36px,6vw,60px)] py-[clamp(64px,12vw,140px)] lg:grid-cols-[0.82fr_1.18fr] lg:items-start lg:gap-20">
+      <Container className="grid gap-[clamp(36px,6vw,60px)] py-[clamp(48px,9vw,104px)] lg:grid-cols-[0.82fr_1.18fr] lg:items-start lg:gap-20">
         <div>
           <span className="eyebrow mb-3.5 block">Not sure which</span>
           <h2 className="text-[clamp(1.9rem,4.4vw,2.9rem)]">

@@ -3,8 +3,10 @@ import { Jost, Newsreader } from "next/font/google";
 import { SmoothScroll } from "@/components/providers/smooth-scroll";
 import { CartProvider } from "@/components/providers/cart-provider";
 import { NavToneProvider } from "@/components/providers/nav-tone";
+import { ScrollbarVar } from "@/components/providers/scrollbar-var";
 import { AnnouncementBar } from "@/components/layout/announcement-bar";
 import { Header } from "@/components/layout/header";
+import { Footer } from "@/components/layout/footer";
 import { CartDrawer } from "@/components/cart/cart-drawer";
 import { CartToast } from "@/components/cart/cart-toast";
 import { SvgDefs } from "@/components/ui/svg-defs";
@@ -65,6 +67,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           Skip to content
         </a>
         <SvgDefs />
+        <ScrollbarVar />
         <CartProvider>
           <SmoothScroll>
             <NavToneProvider>
@@ -73,6 +76,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
                 <Header />
               </div>
               {children}
+              <Footer />
             </NavToneProvider>
             <CartDrawer />
             <CartToast />

@@ -19,9 +19,9 @@ export function DiscoverySet() {
   return (
     <section
       id="discovery"
-      className="scroll-mt-[calc(var(--announce-h)+var(--header-h)+16px)] border-y border-ink bg-w4 text-w0"
+      className="flex min-h-svh flex-col justify-center scroll-mt-[calc(var(--announce-h)+var(--header-h)+16px)] border-y border-ink bg-w4 text-w0"
     >
-      <Container className="grid gap-[clamp(40px,7vw,72px)] py-[clamp(64px,12vw,140px)] min-[940px]:grid-cols-[1.05fr_0.95fr] min-[940px]:items-center min-[940px]:gap-20">
+      <Container className="grid gap-[clamp(40px,7vw,72px)] py-[clamp(48px,9vw,104px)] min-[940px]:grid-cols-[1.05fr_0.95fr] min-[940px]:items-center min-[940px]:gap-20">
         <Reveal>
           <span className="eyebrow mb-3.5 block text-w0/50">The Discovery Set</span>
           <h2 className="max-w-[20ch] text-[clamp(2rem,5vw,3.1rem)]">
