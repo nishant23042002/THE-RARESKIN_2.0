@@ -2,7 +2,13 @@ import Link from "next/link";
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
-type Variant = "solid" | "ghost" | "onLight" | "onDark" | "onCard";
+type Variant =
+  | "solid"
+  | "solidLight"
+  | "ghost"
+  | "onLight"
+  | "onDark"
+  | "onCard";
 type Size = "md" | "sm";
 
 const base =
@@ -17,6 +23,8 @@ const sizes: Record<Size, string> = {
 
 const variants: Record<Variant, string> = {
   solid: "border-cta bg-cta text-w0 hover:bg-black",
+  // solid white — a primary CTA sitting on a dark ground
+  solidLight: "border-w0 bg-w0 text-cta hover:bg-white hover:border-white",
   // tint the fill on hover instead of swapping colours — never hides the label
   ghost:
     "border-current bg-transparent text-current opacity-80 hover:bg-current/10 hover:opacity-100",

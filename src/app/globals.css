@@ -225,6 +225,45 @@
     display: none;
   }
 
+  /* ---- quiz: one stage, panels cross-fade + slide, height animates to the
+     active panel so the card never jumps ---- */
+  .quiz-stage {
+    position: relative;
+    overflow: hidden;
+    transition: height 0.42s var(--ease-out-strong);
+  }
+  .quiz-panel {
+    position: absolute;
+    inset: 0 0 auto 0;
+    opacity: 0;
+    transform: translateX(26px);
+    pointer-events: none;
+    transition:
+      opacity 0.32s ease,
+      transform 0.42s var(--ease-out-strong);
+  }
+  .quiz-panel[data-result="true"] {
+    transform: scale(0.965);
+  }
+  .quiz-panel[data-active="true"] {
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+  }
+
+  .quiz-opt::before {
+    content: "";
+    inline-size: 9px;
+    block-size: 9px;
+    border-radius: 9999px;
+    border: 1px solid var(--color-ink-3);
+    flex: none;
+    transition: background-color 0.18s ease;
+  }
+  .quiz-opt:hover::before {
+    background-color: var(--color-ink-3);
+  }
+
   /* underline-draw on nav links (Polène-style) */
   .nav-underline {
     position: relative;
