@@ -63,7 +63,7 @@ export function WhyExtrait() {
           </Reveal>
         </div>
 
-        <Reveal className="divide-y divide-line border-t border-ink">
+        <Reveal className="divide-y divide-line border-t border-line">
           {POINTS.map((pt) => (
             <div
               key={pt.n}

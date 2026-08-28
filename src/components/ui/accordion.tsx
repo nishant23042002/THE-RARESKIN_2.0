@@ -1,21 +1,27 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useId, useState, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
-type Item = { q: string; a: string };
+export type AccordionItem = { q: string; a: ReactNode };
 
 /**
- * PDP "Details" — one panel open at a time. Height animates via the
- * `grid-template-rows: 0fr -> 1fr` technique on a plain element (no <details>,
- * whose UA `display:none` is what made it snap open). The + turns to ×.
+ * One panel open at a time. Height animates via `grid-template-rows: 0fr -> 1fr`
+ * (no <details>, whose UA `display:none` snaps it open). The + turns to ×.
+ * The full answer is always in the DOM, so crawlers see it regardless of state.
  */
-export function PdpAccordion({ items }: { items: Item[] }) {
+export function Accordion({
+  items,
+  className,
+}: {
+  items: AccordionItem[];
+  className?: string;
+}) {
   const [open, setOpen] = useState<number | null>(null);
   const baseId = useId();
 
   return (
-    <div>
+    <div className={className}>
       {items.map((it, i) => {
         const isOpen = open === i;
         const panelId = `${baseId}-${i}`;
@@ -27,13 +33,13 @@ export function PdpAccordion({ items }: { items: Item[] }) {
                 aria-expanded={isOpen}
                 aria-controls={panelId}
                 onClick={() => setOpen(isOpen ? null : i)}
-                className="flex w-full items-center justify-between gap-4 py-[15px] text-left text-[12px] tracking-[0.06em] uppercase"
+                className="flex w-full items-center justify-between gap-5 py-[clamp(14px,2vw,18px)] text-left text-[13.5px] leading-[1.4]"
               >
-                {it.q}
+                <span>{it.q}</span>
                 <span
                   aria-hidden
                   className={cn(
-                    "relative block size-3 shrink-0 transition-transform duration-300 ease-[var(--ease-out-strong)] motion-reduce:transition-none",
+                    "relative mt-0.5 block size-3 shrink-0 transition-transform duration-300 ease-[var(--ease-out-strong)] motion-reduce:transition-none",
                     isOpen && "rotate-45",
                   )}
                 >
@@ -56,9 +62,9 @@ export function PdpAccordion({ items }: { items: Item[] }) {
               )}
             >
               <div className="overflow-hidden">
-                <p className="max-w-[52ch] pb-4 text-[13px] leading-[1.7] text-ink-2">
-                  {it.a}
-                </p>
+                <div className="max-w-[64ch] pb-[clamp(14px,2vw,18px)] text-[13.5px] leading-[1.8] text-ink-2 [&_a:hover]:text-ink [&_a]:underline [&_a]:decoration-line-2 [&_a]:underline-offset-2">
+                  {typeof it.a === "string" ? <p>{it.a}</p> : it.a}
+                </div>
               </div>
             </div>
           </div>

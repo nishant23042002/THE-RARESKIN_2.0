@@ -61,7 +61,7 @@ export function ImpressionMarquee() {
     <div
       ref={rootRef}
       aria-hidden
-      className="overflow-hidden border-y border-ink bg-w4 py-6 text-w0"
+      className="overflow-hidden border-y border-line bg-w4 py-6 text-w0"
     >
       <div ref={trackRef} className="flex w-max will-change-transform">
         <Group />

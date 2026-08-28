@@ -1,7 +1,7 @@
+import Link from "next/link";
 import { Container } from "@/components/ui/container";
 import { Mark } from "@/components/ui/mark";
 import { PageIntro } from "@/components/layout/page-intro";
-import { TheIdea } from "@/components/home/the-idea";
 import { pageMeta } from "@/lib/seo";
 
 export const metadata = pageMeta({
@@ -60,6 +60,7 @@ export default function OurStoryPage() {
     <main id="main">
       <PageIntro
         eyebrow="THE RARESKIN"
+        crumb={{ name: "Our Story", path: "/the-idea" }}
         title="Our Story"
         lede="A brand born from ambition, setbacks, and the belief that a scent should keep telling your story long after you’ve left the room."
       />
@@ -136,10 +137,15 @@ export default function OurStoryPage() {
               expectations.
             </span>
           </p>
+
+          <Link
+            href="/#shop"
+            className="nav-underline mt-[clamp(28px,5vw,48px)] inline-flex items-center gap-2 text-[11px] tracking-[0.14em] text-ink uppercase"
+          >
+            See the three extraits <span aria-hidden>&rarr;</span>
+          </Link>
         </Container>
       </section>
-
-      <TheIdea />
     </main>
   );
 }

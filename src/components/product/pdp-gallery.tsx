@@ -70,7 +70,7 @@ export function PdpGallery({
             className={cn(
               "grid aspect-square flex-1 place-items-center rounded-[2px] border transition-colors",
               i === active
-                ? "border-ink"
+                ? "border-ink-2"
                 : "border-line hover:border-line-2",
             )}
             style={{ background: FRAME_BG }}

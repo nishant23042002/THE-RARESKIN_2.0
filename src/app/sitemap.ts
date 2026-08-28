@@ -6,7 +6,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();
 
   const primary = ["/", "/discovery-set"];
-  const secondary = ["/the-idea", "/contact"];
+  const secondary = ["/the-idea", "/faq", "/contact"];
   const legal = ["/shipping", "/returns", "/privacy", "/terms"];
   const pdp = ORDER.map((slug) => `/fragrances/${slug}`);
 

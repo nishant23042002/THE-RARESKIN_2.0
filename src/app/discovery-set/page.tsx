@@ -37,6 +37,7 @@ export default function DiscoverySetPage() {
     <main id="main">
       <PageIntro
         eyebrow="The set"
+        crumb={{ name: "Discovery Set", path: "/discovery-set" }}
         title="The Discovery Set"
         lede={`Three ${DISCOVERY_SET.perVialMl} ml extraits, credited back in full toward your first bottle.`}
       />

@@ -6,10 +6,11 @@ import { Container } from "@/components/ui/container";
 import { Flacon } from "@/components/ui/flacon";
 import { AddToBagButton } from "@/components/cart/add-to-bag-button";
 import { PdpGallery } from "@/components/product/pdp-gallery";
-import { PdpAccordion } from "@/components/product/pdp-accordion";
+import { Accordion } from "@/components/ui/accordion";
 import { PdpReviews } from "@/components/product/pdp-reviews";
 import { cn } from "@/lib/cn";
 import { SITE, absoluteUrl } from "@/lib/site";
+import { breadcrumbJsonLd } from "@/lib/seo";
 import {
   ORDER,
   getFragrance,
@@ -114,21 +115,37 @@ export default async function FragrancePage({
   const f = getFragrance(slug);
   const related = relatedFragrances(slug);
 
+  const url = absoluteUrl(`/fragrances/${slug}`);
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Product",
     name: `${f.name} Extrait de Parfum`,
     description: `${f.name} — ${f.title}. ${f.poem}`,
-    brand: { "@type": "Brand", name: SITE.name },
-    category: "Fragrance",
+    sku: slug,
+    brand: { "@type": "Brand", name: SITE.name, logo: absoluteUrl("/icon") },
+    category: "Fragrance > Extrait de Parfum",
+    image: `${url}/opengraph-image`,
+    url,
+    additionalProperty: [
+      { "@type": "PropertyValue", name: "Concentration", value: "Extrait de Parfum" },
+      { "@type": "PropertyValue", name: "Volume", value: `${f.volumeMl} ml` },
+      { "@type": "PropertyValue", name: "Notes", value: f.notes.join(", ") },
+    ],
     offers: {
       "@type": "Offer",
       price: String(f.price),
       priceCurrency: SITE.currency,
       availability: "https://schema.org/PreOrder",
-      url: absoluteUrl(`/fragrances/${slug}`),
+      url,
+      priceValidUntil: "2027-03-31",
+      seller: { "@type": "Organization", name: SITE.legalName },
     },
   };
+
+  const breadcrumbJson = breadcrumbJsonLd([
+    { name: "Fragrances", path: "/#shop" },
+    { name: f.name, path: `/fragrances/${slug}` },
+  ]);
 
   const phases = [
     ["Arrive", f.notesByPhase.arrive],
@@ -144,6 +161,10 @@ export default async function FragrancePage({
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJson) }}
       />
 
       <Container className="max-w-[1280px]">
@@ -209,7 +230,7 @@ export default async function FragrancePage({
                   Size
                 </span>
                 <div className="flex gap-2">
-                  <span className="rounded-[2px] border border-ink bg-bg px-4 py-2.5 text-[12px]">
+                  <span className="rounded-[2px] border border-ink-2 bg-bg px-4 py-2.5 text-[12px]">
                     50 ml
                   </span>
                   <span className="rounded-[2px] border border-line-2 px-4 py-2.5 text-[12px] text-ink-3">
@@ -311,7 +332,7 @@ export default async function FragrancePage({
               <h2 className="mb-1 text-[10.5px] font-normal tracking-[0.16em] text-ink-3 uppercase">
                 Details
               </h2>
-              <PdpAccordion items={DETAILS} />
+              <Accordion items={DETAILS} />
             </section>
           </div>
         </div>

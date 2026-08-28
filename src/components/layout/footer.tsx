@@ -26,6 +26,7 @@ const COLUMNS: { title: string; links: { label: string; href: string }[] }[] = [
   {
     title: "Help",
     links: [
+      { label: "FAQ", href: "/faq" },
       { label: "Shipping", href: "/shipping" },
       { label: "Returns", href: "/returns" },
       { label: "Contact", href: "/contact" },
@@ -45,7 +46,7 @@ export function Footer() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="overflow-hidden border-t border-ink bg-bg">
+    <footer className="overflow-hidden border-t border-line bg-bg">
       <Container className="border-b border-line pt-[clamp(48px,8vw,104px)] pb-[clamp(28px,5vw,56px)]">
         <Logo
           className="w-full text-ink"

@@ -34,7 +34,7 @@ export function TheIdea() {
 
         <Reveal
           delay={0.1}
-          className="mt-[clamp(44px,7vw,88px)] border-t border-ink"
+          className="mt-[clamp(44px,7vw,88px)] border-t border-line"
         >
           {TRIAD.map((t) => (
             <div

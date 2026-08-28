@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { SITE, absoluteUrl } from "./site";
+import { SITE, CONTACT, absoluteUrl } from "./site";
 
 /**
  * One place to build page metadata so every route gets a canonical URL and
@@ -33,14 +33,52 @@ export function pageMeta({
   };
 }
 
+/** BreadcrumbList for a leaf page — helps answer engines place the page. */
+export function breadcrumbJsonLd(
+  trail: { name: string; path: string }[],
+) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { name: "Home", path: "/" },
+      ...trail,
+    ].map((c, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      name: c.name,
+      item: absoluteUrl(c.path),
+    })),
+  };
+}
+
 /** Site-wide Organization schema, emitted once in the root layout. */
 export const organizationJsonLd = {
   "@context": "https://schema.org",
   "@type": "Organization",
   name: SITE.name,
+  legalName: SITE.legalName,
   url: SITE.url,
   description: SITE.description,
   slogan: SITE.tagline,
   logo: absoluteUrl("/brand/rareskin-wordmark.png"),
+  email: CONTACT.email,
+  telephone: CONTACT.phone,
+  address: {
+    "@type": "PostalAddress",
+    streetAddress: CONTACT.address,
+    addressLocality: CONTACT.locality,
+    addressRegion: CONTACT.region,
+    postalCode: CONTACT.postalCode,
+    addressCountry: CONTACT.country,
+  },
+  contactPoint: {
+    "@type": "ContactPoint",
+    contactType: "customer support",
+    email: CONTACT.email,
+    telephone: CONTACT.phone,
+    areaServed: "IN",
+    availableLanguage: ["en", "hi", "mr"],
+  },
   areaServed: { "@type": "Country", name: SITE.region },
 } as const;
