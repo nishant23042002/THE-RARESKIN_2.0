@@ -9,12 +9,10 @@ import { ScrollTrigger } from "@/lib/gsap";
  * scrolling under reduced motion). Shared by the announcement bar (collapse)
  * and the header (condense).
  */
-export function useScrolled(threshold = 4): boolean {
+export function useScrolled(threshold = 40): boolean {
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
-    setScrolled(window.scrollY > threshold);
-
     const st = ScrollTrigger.create({
       start: threshold,
       // a real range [threshold, maxScroll] so `isActive` stays true the whole
@@ -24,7 +22,13 @@ export function useScrolled(threshold = 4): boolean {
       onToggle: (self) => setScrolled(self.isActive),
     });
 
-    return () => st.kill();
+    // seed the initial value on the next frame (deferred, not a sync setState)
+    const raf = requestAnimationFrame(() => setScrolled(st.isActive));
+
+    return () => {
+      cancelAnimationFrame(raf);
+      st.kill();
+    };
   }, [threshold]);
 
   return scrolled;

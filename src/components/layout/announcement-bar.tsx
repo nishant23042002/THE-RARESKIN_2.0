@@ -82,8 +82,8 @@ export function AnnouncementBar() {
       gsap.to(bar, {
         height: scrolled ? 0 : open,
         opacity: scrolled ? 0 : 1,
-        duration: reduced ? 0 : 0.4,
-        ease: "power2.inOut",
+        duration: reduced ? 0 : 0.7,
+        ease: "power4.out",
         overwrite: "auto",
       });
     },

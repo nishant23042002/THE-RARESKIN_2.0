@@ -1,7 +1,7 @@
 /**
- * One hidden SVG sprite of shared gradients / filters / glyphs, rendered once
- * near the top of <body>. Flacons, the campaign bottle and icon marks reference
- * these by id (`url(#glass)`, `<use href="#cbtl">`, etc.).
+ * One hidden SVG sprite of shared gradients / filters, rendered once near the
+ * top of <body>. The flacon and the campaign bottle reference these by id
+ * (`url(#glass)`, `<use href="#cbtl">`).
  */
 export function SvgDefs() {
   return (
@@ -13,34 +13,6 @@ export function SvgDefs() {
       style={{ position: "absolute", width: 0, height: 0, overflow: "hidden" }}
     >
       <defs>
-        <path
-          id="rs-mark"
-          d="M1 7 L6 1.4 L11 7"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={1.4}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        <path
-          id="rs-arrow-right"
-          d="M1 6 L11 6 M7 2 L11 6 L7 10"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={1.4}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        <path
-          id="rs-arrow-left"
-          d="M11 6 L1 6 M5 2 L1 6 L5 10"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={1.4}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-
         <linearGradient id="glass" x1="0" y1="0" x2="1" y2="0">
           <stop offset="0" stopColor="#ffffff" stopOpacity="0.7" />
           <stop offset="0.12" stopColor="#ffffff" stopOpacity="0" />

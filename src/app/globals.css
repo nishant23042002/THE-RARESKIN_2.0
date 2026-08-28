@@ -41,13 +41,15 @@
   --ease-brand: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
   --ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
+  /* long, quint-out settle for the header state change (Polène-style) */
+  --ease-nav: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @layer base {
   :root {
-    --header-h: 60px;
+    --header-h: 66px;
     --announce-h: 34px;
-    --index-h: 40px;
+    --index-h: 38px;
     color-scheme: light;
   }
 
@@ -121,6 +123,94 @@
     font-family: var(--font-serif);
     font-style: italic;
     font-weight: 300;
+  }
+
+  /* ---- header: transparent over the hero, frosted once scrolled ----
+     Everything that moves on scroll is GPU-friendly: the frost is an opacity
+     crossfade of a pre-composited layer (backdrop-filter set once, never
+     transitioned), the wordmark scales via transform, only `color` tweens on
+     the main thread (cheap). */
+  .site-header {
+    position: relative;
+    isolation: isolate;
+    color: var(--color-ink);
+    transition: color 0.35s ease;
+  }
+  .site-header > * {
+    position: relative;
+    z-index: 1;
+  }
+  .site-header[data-tone="light"] {
+    color: var(--color-w0);
+  }
+  .site-header[data-scrolled="true"] {
+    color: var(--color-ink);
+  }
+
+  .site-header::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background-color: color-mix(in srgb, var(--color-w0) 74%, transparent);
+    -webkit-backdrop-filter: blur(12px) saturate(1.35);
+    backdrop-filter: blur(12px) saturate(1.35);
+    border-bottom: 1px solid var(--color-line);
+    opacity: 0;
+    transition: opacity 0.6s var(--ease-nav);
+    pointer-events: none;
+  }
+  .site-header[data-scrolled="true"]::before {
+    opacity: 1;
+  }
+
+  .site-header__row {
+    height: var(--header-h);
+  }
+
+  .site-header__wordmark {
+    transform-origin: center;
+    transition: transform 0.6s var(--ease-nav);
+    will-change: transform;
+  }
+  .site-header[data-scrolled="true"] .site-header__wordmark {
+    transform: scale(0.84);
+  }
+
+  .site-header__index {
+    height: var(--index-h);
+    overflow: hidden;
+    border-top: 1px solid color-mix(in srgb, currentColor 18%, transparent);
+    transition:
+      height 0.6s var(--ease-nav),
+      opacity 0.35s ease,
+      border-color 0.5s var(--ease-nav);
+  }
+  .site-header[data-scrolled="true"] .site-header__index {
+    height: 0;
+    opacity: 0;
+    border-top-color: transparent;
+  }
+
+  /* underline-draw on nav links (Polène-style) */
+  .nav-underline {
+    position: relative;
+  }
+  .nav-underline::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -3px;
+    height: 1px;
+    background: var(--underline-color, currentColor);
+    transform: scaleX(0);
+    transform-origin: right;
+    transition: transform 0.45s var(--ease-nav);
+  }
+  .nav-underline:hover::after {
+    transform: scaleX(1);
+    transform-origin: left;
   }
 }
 

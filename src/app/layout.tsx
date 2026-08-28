@@ -1,7 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import { Jost, Newsreader } from "next/font/google";
 import { SmoothScroll } from "@/components/providers/smooth-scroll";
+import { CartProvider } from "@/components/providers/cart-provider";
+import { NavToneProvider } from "@/components/providers/nav-tone";
 import { AnnouncementBar } from "@/components/layout/announcement-bar";
+import { Header } from "@/components/layout/header";
 import { SvgDefs } from "@/components/ui/svg-defs";
 import { SITE } from "@/lib/site";
 import "./globals.css";
@@ -60,10 +63,17 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           Skip to content
         </a>
         <SvgDefs />
-        <SmoothScroll>
-          <AnnouncementBar />
-          {children}
-        </SmoothScroll>
+        <CartProvider>
+          <SmoothScroll>
+            <NavToneProvider>
+              <div className="fixed inset-x-0 top-0 z-50">
+                <AnnouncementBar />
+                <Header />
+              </div>
+              {children}
+            </NavToneProvider>
+          </SmoothScroll>
+        </CartProvider>
       </body>
     </html>
   );
