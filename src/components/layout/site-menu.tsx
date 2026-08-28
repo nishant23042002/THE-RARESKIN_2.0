@@ -3,7 +3,7 @@
 import { useEffect, useRef, type CSSProperties } from "react";
 import Link from "next/link";
 import { useLenis } from "lenis/react";
-import { gsap, useGSAP } from "@/lib/gsap";
+import { gsap } from "@/lib/gsap";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { Logo } from "@/components/ui/logo";
 import { fragranceList } from "@/lib/products";
@@ -16,10 +16,11 @@ const MORE_LINKS = [
 ];
 
 /**
- * Full-screen overlay nav opened by the header's "Index" button (every
- * breakpoint). Native <dialog> + showModal() gives the focus trap, ESC and
- * inert background; a single paused GSAP timeline plays / reverses so open and
- * close stay interruptible.
+ * Full-screen overlay nav opened by the header's menu button (every breakpoint).
+ * Native <dialog> + showModal() gives the focus trap, ESC and inert background.
+ * The panel is parked off-screen by CSS (`.menu-panel`) from first paint so it
+ * can never flash at rest; fresh GSAP tweens run on each open / close, with
+ * `killTweensOf` keeping rapid toggles interruptible.
  */
 export function SiteMenu({
   open,
@@ -30,47 +31,52 @@ export function SiteMenu({
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
-  const tlRef = useRef<gsap.core.Timeline | null>(null);
   const reduced = useReducedMotion();
   const lenis = useLenis();
 
-  // build the timeline once, panel parked off-screen
-  useGSAP(
-    () => {
-      const panel = panelRef.current;
-      if (!panel) return;
-      const items = panel.querySelectorAll<HTMLElement>("[data-stagger]");
+  useEffect(() => {
+    if (open) lenis?.stop();
+    else lenis?.start();
+  }, [open, lenis]);
 
-      gsap.set(panel, { yPercent: -101 });
-      gsap.set(items, { opacity: 0, y: 14 });
-
-      const tl = gsap.timeline({ paused: true });
-      tl.to(panel, { yPercent: 0, duration: 0.7, ease: "power4.out" });
-      tl.to(
-        items,
-        { opacity: 1, y: 0, duration: 0.55, stagger: 0.055, ease: "power3.out" },
-        "-=0.42",
-      );
-      tlRef.current = tl;
-    },
-    { scope: dialogRef },
-  );
-
-  // drive open / close
   useEffect(() => {
     const dlg = dialogRef.current;
-    const tl = tlRef.current;
-    if (!dlg || !tl) return;
+    const panel = panelRef.current;
+    if (!dlg || !panel) return;
+    const items = panel.querySelectorAll<HTMLElement>("[data-stagger]");
 
     if (open) {
       if (!dlg.open) dlg.showModal();
       document.body.classList.add("is-locked");
-      lenis?.stop();
+
+      // hand GSAP a clean model of the parked state (`y:0` clears the pixel
+      // offset the browser baked into the matrix from the CSS `%` park).
+      gsap.set(panel, { yPercent: -101, y: 0 });
+
       if (reduced) {
-        tl.progress(1).pause();
+        gsap.set(panel, { yPercent: 0 });
+        gsap.set(items, { autoAlpha: 1, y: 0 });
         return;
       }
-      tl.timeScale(1).play();
+
+      gsap.to(panel, {
+        yPercent: 0,
+        duration: 0.7,
+        ease: "power4.out",
+        overwrite: "auto",
+      });
+      gsap.fromTo(
+        items,
+        { autoAlpha: 0, y: 14 },
+        {
+          autoAlpha: 1,
+          y: 0,
+          duration: 0.55,
+          stagger: 0.055,
+          ease: "power3.out",
+          delay: 0.12,
+        },
+      );
       return;
     }
 
@@ -79,25 +85,23 @@ export function SiteMenu({
     const finish = () => {
       dlg.close();
       document.body.classList.remove("is-locked");
-      lenis?.start();
     };
 
-    // nothing to animate back (reduced motion, or closed before the open
-    // animation ever advanced) — just shut it.
-    if (reduced || tl.time() === 0) {
-      tl.pause(0);
+    if (reduced) {
+      gsap.set(panel, { yPercent: -101, y: 0 });
       finish();
       return;
     }
 
-    tl.timeScale(1.7);
-    tl.eventCallback("onReverseComplete", finish);
-    tl.reverse();
-
-    // safety net: never leave the overlay stuck open if the callback misfires
-    const guard = window.setTimeout(finish, 700);
-    return () => window.clearTimeout(guard);
-  }, [open, reduced, lenis]);
+    gsap.to(panel, {
+      yPercent: -101,
+      y: 0,
+      duration: 0.45,
+      ease: "power3.in",
+      overwrite: "auto",
+      onComplete: finish,
+    });
+  }, [open, reduced]);
 
   // animate out on native ESC / backdrop cancel instead of snapping shut
   useEffect(() => {
@@ -115,14 +119,14 @@ export function SiteMenu({
     <dialog
       ref={dialogRef}
       aria-label="Menu"
-      className="m-0 h-dvh max-h-none w-screen max-w-none border-0 bg-transparent p-0 text-ink backdrop:bg-transparent"
+      className="m-0 h-dvh max-h-none w-screen max-w-none overflow-hidden border-0 bg-transparent p-0 text-ink backdrop:bg-transparent"
     >
       <div
         ref={panelRef}
-        className="flex h-full flex-col bg-bg px-6 pt-6 pb-[calc(24px+env(safe-area-inset-bottom))] will-change-transform"
+        className="menu-panel flex h-full flex-col bg-bg px-6 pt-6 pb-[calc(24px+env(safe-area-inset-bottom))] will-change-transform"
       >
         <div className="mb-11 flex items-center justify-between">
-          <Logo className="w-[132px] text-ink" />
+          <Logo className="w-[clamp(112px,32vw,132px)] text-ink" />
           <button
             type="button"
             onClick={onClose}

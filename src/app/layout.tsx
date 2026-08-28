@@ -5,6 +5,8 @@ import { CartProvider } from "@/components/providers/cart-provider";
 import { NavToneProvider } from "@/components/providers/nav-tone";
 import { AnnouncementBar } from "@/components/layout/announcement-bar";
 import { Header } from "@/components/layout/header";
+import { CartDrawer } from "@/components/cart/cart-drawer";
+import { CartToast } from "@/components/cart/cart-toast";
 import { SvgDefs } from "@/components/ui/svg-defs";
 import { SITE } from "@/lib/site";
 import "./globals.css";
@@ -72,6 +74,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               </div>
               {children}
             </NavToneProvider>
+            <CartDrawer />
+            <CartToast />
           </SmoothScroll>
         </CartProvider>
       </body>

@@ -192,6 +192,23 @@
     border-top-color: transparent;
   }
 
+  /* ---- overlays: parked off-screen from first paint so they can never flash
+     at rest before JS runs. GSAP overrides these via inline style. ---- */
+  .drawer-scrim {
+    opacity: 0;
+    visibility: hidden;
+  }
+  .drawer-panel {
+    transform: translateX(101%);
+    box-shadow: -28px 0 70px -20px rgba(20, 16, 12, 0.22);
+  }
+  .menu-panel {
+    transform: translateY(-101%);
+  }
+  .menu-panel [data-stagger] {
+    opacity: 0;
+  }
+
   /* underline-draw on nav links (Polène-style) */
   .nav-underline {
     position: relative;

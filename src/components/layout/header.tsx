@@ -51,7 +51,7 @@ export function Header() {
             aria-label="THE RARESKIN, home"
             className="site-header__wordmark justify-self-center"
           >
-            <Logo className="w-[146px] sm:w-[160px]" />
+            <Logo className="w-[clamp(104px,26vw,140px)]" />
           </Link>
 
           <div className="justify-self-end">
