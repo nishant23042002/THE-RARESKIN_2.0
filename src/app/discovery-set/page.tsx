@@ -61,9 +61,17 @@ export default function DiscoverySetPage() {
             </li>
           ))}
         </ol>
-        <p className="mt-9 text-[11px] tracking-[0.03em] text-ink-3">
-          One credit per customer, applied to a first 50 ml purchase. Discovery
-          Set is non-refundable once opened. [Placeholder terms.]
+        <p className="mt-9 text-[11px] leading-[1.7] tracking-[0.03em] text-ink-3">
+          One credit per customer, applied automatically to your first 50 ml
+          purchase and not combinable with other offers. The Discovery Set is
+          non-refundable once any vial is opened. See{" "}
+          <a
+            href="/returns"
+            className="underline decoration-line-2 underline-offset-2 hover:text-ink"
+          >
+            Returns
+          </a>{" "}
+          for full details.
         </p>
       </Container>
     </main>

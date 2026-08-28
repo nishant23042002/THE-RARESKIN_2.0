@@ -98,11 +98,11 @@ const DETAILS = [
   },
   {
     q: "What’s in the box",
-    a: "One 50 ml Extrait de Parfum in the THE RARESKIN flacon, in a recyclable outer carton. [Placeholder]",
+    a: "One 50 ml Extrait de Parfum in the THE RARESKIN flacon, inside a recyclable outer carton with a short card on how to wear it.",
   },
   {
     q: "Shipping & returns",
-    a: "Dispatched in 24–48 hours, shipped across India with cash on delivery available. Unopened bottles can be returned within [X] days. [Placeholder policy]",
+    a: "Free shipping across India, dispatched within 24–48 hours, cash on delivery available. Unopened bottles can be returned within 7 days; opened bottles only if faulty or damaged. Full detail on the Shipping and Returns pages.",
   },
 ];
 

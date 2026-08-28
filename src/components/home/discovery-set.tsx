@@ -57,7 +57,7 @@ export function DiscoverySet() {
 
           <p className="mt-6 text-[9.5px] tracking-[0.06em] text-w0/60 uppercase">
             One credit per customer &middot; COD available &middot; Free shipping
-            across India &middot; [placeholder terms]
+            across India
           </p>
         </Reveal>
 

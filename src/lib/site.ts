@@ -1,15 +1,19 @@
 /**
  * Site-wide constants. Canonical URL lives here so metadata, sitemap and
- * JSON-LD all read from one place — change the domain once.
+ * JSON-LD all read from one place — set NEXT_PUBLIC_SITE_URL in the env to
+ * override the default domain.
  */
+const SITE_URL = (
+  process.env.NEXT_PUBLIC_SITE_URL || "https://therareskin.com"
+).replace(/\/+$/, "");
+
 export const SITE = {
   name: "THE RARESKIN",
   shortName: "RARESKIN",
   tagline: "Scents that stay with you.",
   description:
     "THE RARESKIN. Three Extrait de Parfum, made to become part of how people remember you. Different by design.",
-  // TODO: confirm production domain with the client.
-  url: "https://therareskin.com",
+  url: SITE_URL,
   locale: "en_IN",
   currency: "INR",
   region: "India",
