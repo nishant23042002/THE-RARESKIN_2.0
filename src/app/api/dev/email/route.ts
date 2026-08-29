@@ -45,25 +45,37 @@ export async function GET(request: Request) {
         { status: 400 },
       );
     }
+    // ?only=order-confirmed → send just that one (for a real-delivery check)
+    const only = url.searchParams.get("only");
     const wiped = await EmailMessage.deleteMany({ orderNumber: order });
 
-    await notifyOrderConfirmed(order);
-    await notifyOrderPlacedCod(order);
-    await notifyPaymentFailed(order, "the bank declined the transaction");
-    await notifyOrderCancelled(
-      order,
-      "Payment wasn't completed within 30 minutes.",
-    );
-    await notifyRefundProcessed({
-      orderNumber: order,
-      providerRefundId: `rfnd_test_${Date.now().toString(36)}`,
-      refundIndex: 0,
-      amountPaise: 79900,
-      reason: "returned unopened within 7 days",
-      fullRefund: false,
-    });
-    await notifyOrderStatus(order, "shipped");
-    await notifyOrderStatus(order, "delivered");
+    if (!only || only === "order-confirmed") await notifyOrderConfirmed(order);
+    if (!only || only === "order-placed-cod") await notifyOrderPlacedCod(order);
+    if (!only || only === "payment-failed") {
+      await notifyPaymentFailed(order, "the bank declined the transaction");
+    }
+    if (!only || only === "order-cancelled") {
+      await notifyOrderCancelled(
+        order,
+        "Payment wasn't completed within 30 minutes.",
+      );
+    }
+    if (!only || only === "refund-processed") {
+      await notifyRefundProcessed({
+        orderNumber: order,
+        providerRefundId: `rfnd_test_${Date.now().toString(36)}`,
+        refundIndex: 0,
+        amountPaise: 79900,
+        reason: "returned unopened within 7 days",
+        fullRefund: false,
+      });
+    }
+    if (!only || only === "order-shipped") {
+      await notifyOrderStatus(order, "shipped");
+    }
+    if (!only || only === "order-delivered") {
+      await notifyOrderStatus(order, "delivered");
+    }
 
     const drained = await drainOutbox({ limit: 100 });
     return NextResponse.json({
