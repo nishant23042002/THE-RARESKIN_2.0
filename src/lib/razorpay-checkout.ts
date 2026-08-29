@@ -80,6 +80,11 @@ export async function openRazorpayCheckout(
 
   return new Promise<CheckoutOutcome>((resolve) => {
     let settled = false;
+    // A failed attempt does NOT close Razorpay's window — it swaps to a "try
+    // another method" screen. We hold this and only settle the promise when the
+    // window is actually dismissed, so the caller doesn't restore the drawer
+    // on top of a still-open payment window.
+    let lastError: string | null = null;
     const done = (o: CheckoutOutcome) => {
       if (settled) return;
       settled = true;
@@ -97,14 +102,20 @@ export async function openRazorpayCheckout(
       notes: { orderNumber: input.orderNumber },
       theme: { color: "#17140f" },
       handler: (payload) => done({ status: "success", payload }),
-      modal: { ondismiss: () => done({ status: "dismissed" }), escape: true },
+      modal: {
+        ondismiss: () =>
+          done(
+            lastError
+              ? { status: "failed", message: lastError }
+              : { status: "dismissed" },
+          ),
+        escape: true,
+      },
     });
     rzp.on("payment.failed", (e) => {
       const err = e as { error?: { description?: string } };
-      done({
-        status: "failed",
-        message: err.error?.description ?? "The payment could not be completed.",
-      });
+      lastError =
+        err.error?.description ?? "The payment could not be completed.";
     });
     rzp.open();
   });

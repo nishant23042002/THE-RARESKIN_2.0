@@ -52,6 +52,15 @@ src/lib/razorpay-checkout.ts     client — loads checkout.js on demand, opens t
 vercel.json                      the cron schedules
 ```
 
+**Drawer / overlay layering.** The checkout drawer is a top-layer
+`<dialog showModal()>`, which paints above any z-indexed element — so before
+opening Razorpay the panel calls `suspendModal()` (drops the drawer to a
+non-modal `show()`), and `resumeModal()` once the payment window is gone. A
+*failed* attempt does **not** close Razorpay's window (it swaps to a "try
+another method" screen), so `openRazorpayCheckout` holds the failure and only
+resolves on the real `ondismiss` — otherwise the drawer would restore on top of
+the still-open retry screen.
+
 ## Non-negotiables (all enforced)
 
 - **Signature verification** on the callback (`HMAC-SHA256(order_id|payment_id,

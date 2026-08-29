@@ -101,13 +101,23 @@ function Field({
   );
 }
 
-type Step = 1 | 2 | 3;
+function isNewAddrComplete(a: typeof emptyAddress): boolean {
+  return (
+    a.name.trim().length >= 2 &&
+    /^\+?[0-9\s-]{10,14}$/.test(a.phone) &&
+    a.line1.trim().length >= 4 &&
+    a.city.trim().length >= 2 &&
+    Boolean(a.state) &&
+    /^[1-9]\d{5}$/.test(a.pincode)
+  );
+}
 
 /**
- * The checkout, living inside the bag drawer. An always-visible order review up
- * top (what you're buying, what it costs, why to trust it), then contact →
- * delivery → payment. The server settles every number; on success the drawer
- * slides to confirmation.
+ * Express checkout, living inside the bag drawer. **One screen, not a wizard:**
+ * an always-visible order review, the default delivery address shown as a card
+ * (tap "Change" to pick another or add one), the receipt email pre-filled, and
+ * a single Pay button. A first-time shopper types their address once; every
+ * return trip is review → pay. The server settles every number.
  */
 export function CheckoutPanel() {
   const { status, user, openSignIn } = useAuth();
@@ -125,25 +135,27 @@ export function CheckoutPanel() {
     [cartLines],
   );
 
-  const [step, setStep] = useState<Step>(1);
-  const [contact, setContact] = useState({ name: "", email: "" });
-  const [nameTouched, setNameTouched] = useState(false);
+  // contact — the name always comes from the chosen delivery address; only the
+  // receipt email is ever entered here, and only when we don't already know it.
+  const [email, setEmail] = useState("");
   const [emailTouched, setEmailTouched] = useState(false);
-  const [contactErr, setContactErr] = useState<{ name?: string; email?: string }>(
-    {},
-  );
+  const [emailEditing, setEmailEditing] = useState(false);
+  const [emailErr, setEmailErr] = useState<string | null>(null);
 
   const [saved, setSaved] = useState<SavedAddress[]>([]);
   const [addressMode, setAddressMode] = useState<"saved" | "new">("new");
   const [savedId, setSavedId] = useState<string | null>(null);
   const [addr, setAddr] = useState({ ...emptyAddress });
   const [addrErr, setAddrErr] = useState<Record<string, string>>({});
+  /** the address block is expanded into its picker / form */
+  const [editingAddress, setEditingAddress] = useState(false);
 
   const [method, setMethod] = useState<PaymentMethod>("razorpay");
   const [couponOpen, setCouponOpen] = useState(false);
   const [couponInput, setCouponInput] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
   const [useCredit, setUseCredit] = useState(false);
+  const [noteOpen, setNoteOpen] = useState(false);
   const [note, setNote] = useState("");
 
   const [quote, setQuote] = useState<CheckoutQuoteResponse | null>(null);
@@ -165,9 +177,8 @@ export function CheckoutPanel() {
       : `${Date.now()}-${Math.random().toString(36).slice(2)}`,
   );
 
-  // Prefill from the account once signed in — including the receipt email,
-  // which we pull from the account or the default saved address so it never
-  // has to be typed twice.
+  // Prefill from the account once signed in — the default address becomes the
+  // delivery card, its email (or the account email) becomes the receipt.
   useEffect(() => {
     if (status !== "authed" || !user) return;
     let cancelled = false;
@@ -183,20 +194,20 @@ export function CheckoutPanel() {
         const list = data.ok && data.addresses ? data.addresses : [];
         const def = list.find((a) => a.isDefault) ?? list[0];
         if (cancelled) return;
-        setContact((c) => ({
-          name: c.name || user.name || def?.name || "",
-          email: c.email || user.email || def?.email || "",
-        }));
+        setEmail((e) => e || def?.email || user.email || "");
         if (list.length) {
           setSaved(list);
           setAddressMode("saved");
           setSavedId(def!.id);
+          setEditingAddress(false);
+        } else {
+          setAddressMode("new");
+          setEditingAddress(true);
         }
       } catch {
-        setContact((c) => ({
-          name: c.name || user.name || "",
-          email: c.email || user.email || "",
-        }));
+        setEmail((e) => e || user.email || "");
+        setAddressMode("new");
+        setEditingAddress(true);
       }
     })();
     return () => {
@@ -207,16 +218,16 @@ export function CheckoutPanel() {
   const chosen =
     addressMode === "saved" ? saved.find((a) => a.id === savedId) : null;
   const activePincode = chosen ? chosen.pincode : addr.pincode;
+  /** the contact name for the order — never typed twice, it's the delivery name */
+  const contactName = (chosen?.name ?? addr.name).trim();
 
-  /** Pick a saved address; adopt its name + email as the contact / receipt
-   *  fields unless the shopper has already typed their own. */
+  /** Pick a saved address; adopt its email for the receipt unless one was typed,
+   *  and collapse the picker. */
   function pickSavedAddress(a: SavedAddress) {
     setAddressMode("saved");
     setSavedId(a.id);
-    setContact((c) => ({
-      name: nameTouched ? c.name : a.name || c.name,
-      email: emailTouched ? c.email : a.email || c.email,
-    }));
+    if (!emailTouched) setEmail((e) => a.email || e);
+    setEditingAddress(false);
   }
 
   const fetchQuote = useCallback(async () => {
@@ -318,19 +329,16 @@ export function CheckoutPanel() {
   }
 
   // ── derived ─────────────────────────────────────────────────────────
-  const contactSummary = `${contact.name || "—"}${
-    contact.email ? ` · ${contact.email}` : ""
-  }`;
-  const addressSummary = chosen
-    ? `${chosen.line1}, ${chosen.city} ${chosen.pincode}`
-    : addr.line1
-      ? `${addr.line1}, ${addr.city} ${addr.pincode}`
-      : "—";
-
   const service = quote?.serviceability ?? null;
   const pinBlocked =
     Boolean(service) && !service!.serviceable && service!.reason !== "malformed";
   const total = quote?.pricing.grandTotalPaise ?? null;
+
+  const emailValid = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim());
+  const addressResolved =
+    addressMode === "saved" ? Boolean(savedId) : isNewAddrComplete(addr);
+  const canPay =
+    Boolean(quote) && !quoting && !pinBlocked && addressResolved && emailValid;
 
   const reviewLines: QuoteLine[] =
     quote?.lines ??
@@ -359,14 +367,6 @@ export function CheckoutPanel() {
     Math.max(0, mrpTotalPaise - itemsPaise) +
     (quote?.pricing.discountPaise ?? 0);
 
-  function validateContact() {
-    const e: typeof contactErr = {};
-    if (contact.name.trim().length < 2) e.name = "Enter your full name.";
-    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(contact.email))
-      e.email = "Enter a valid email for the receipt.";
-    setContactErr(e);
-    return Object.keys(e).length === 0;
-  }
   function validateAddress() {
     if (addressMode === "saved") return Boolean(savedId);
     const e: Record<string, string> = {};
@@ -397,13 +397,25 @@ export function CheckoutPanel() {
     if (code.length >= 3) setAppliedCoupon(code);
   }
 
-  function advance() {
-    if (step === 1) {
-      if (validateContact()) setStep(2);
+  /** The one action: validate what's on screen, then place + pay. */
+  function onPay() {
+    setPlaceError(null);
+    setEmailErr(null);
+    if (!emailValid) {
+      setEmailErr("Enter a valid email for the receipt.");
+      setEmailEditing(true);
       return;
     }
-    if (step === 2) {
-      if (validateAddress()) setStep(3);
+    if (addressMode === "new" && !validateAddress()) {
+      setEditingAddress(true);
+      return;
+    }
+    if (addressMode === "saved" && !savedId) {
+      setEditingAddress(true);
+      return;
+    }
+    if (pinBlocked) {
+      setEditingAddress(true);
       return;
     }
     void placeOrder();
@@ -417,9 +429,9 @@ export function CheckoutPanel() {
     const body: Record<string, unknown> = {
       items,
       contact: {
-        name: contact.name.trim(),
+        name: contactName,
         phone: user.phone,
-        email: contact.email.trim().toLowerCase(),
+        email: email.trim().toLowerCase(),
       },
       method,
       billingSameAsShipping: true,
@@ -434,14 +446,14 @@ export function CheckoutPanel() {
       const phoneE164 = normalizeIndianMobile(addr.phone);
       if (!phoneE164) {
         setAddrErr((e) => ({ ...e, phone: "Enter a valid Indian mobile number" }));
-        setStep(2);
+        setEditingAddress(true);
         return;
       }
       body.newAddress = {
         label: addr.label || undefined,
         name: addr.name.trim(),
         phone: phoneE164,
-        email: contact.email.trim().toLowerCase() || undefined,
+        email: email.trim().toLowerCase() || undefined,
         line1: addr.line1.trim(),
         line2: addr.line2 || undefined,
         landmark: addr.landmark || undefined,
@@ -475,7 +487,7 @@ export function CheckoutPanel() {
           data.code === "address-required" ||
           data.code === "not-serviceable"
         ) {
-          setStep(2);
+          setEditingAddress(true);
         }
       }
     } catch {
@@ -582,17 +594,13 @@ export function CheckoutPanel() {
   }
 
   const footerLabel =
-    step === 1
-      ? "Continue to delivery"
-      : step === 2
-        ? "Continue to payment"
-        : placing || paying
-          ? method === "cod"
-            ? "Placing your order…"
-            : "Opening secure payment…"
-          : method === "cod"
-            ? "Place order"
-            : "Pay securely";
+    placing || paying
+      ? method === "cod"
+        ? "Placing your order…"
+        : "Opening secure payment…"
+      : method === "cod"
+        ? "Place order"
+        : "Pay securely";
 
   return (
     <>
@@ -687,7 +695,7 @@ export function CheckoutPanel() {
 
             <div className="!mt-3 flex items-baseline justify-between border-t border-line pt-3">
               <dt className="text-[10.5px] font-medium tracking-[0.16em] text-ink-3 uppercase">
-                {step === 3 && quote ? "Amount to pay" : "Total"}
+                {quote ? "Amount to pay" : "Total"}
               </dt>
               <dd className="serif text-[1.5rem] tabular-nums text-ink">
                 {quote
@@ -723,65 +731,61 @@ export function CheckoutPanel() {
           </div>
         </section>
 
-        {/* ── steps ──────────────────────────────────────────────── */}
-        <div className="divide-y divide-line">
-          <StepBlock
-            n={1}
-            title="Contact"
-            done={step > 1}
-            open={step === 1}
-            summary={contactSummary}
-            onEdit={() => setStep(1)}
-          >
-            <div className="space-y-4">
-              <Field
-                label="Full name"
-                required
-                autoComplete="name"
-                value={contact.name}
-                error={contactErr.name}
-                onChange={(v) => {
-                  setNameTouched(true);
-                  setContact((c) => ({ ...c, name: v }));
-                }}
-              />
-              <Field
-                label="Email for the receipt"
-                type="email"
-                inputMode="email"
-                required
-                autoComplete="email"
-                value={contact.email}
-                error={contactErr.email}
-                onChange={(v) => {
-                  setEmailTouched(true);
-                  setContact((c) => ({ ...c, email: v }));
-                }}
-              />
-              <p className="text-[11.5px] leading-relaxed text-ink-3">
-                Order updates by SMS to{" "}
-                <span className="text-ink-2">
-                  {user ? maskPhone(user.phone) : "your number"}
-                </span>
-                {chosen &&
-                (contact.name === chosen.name || contact.email === chosen.email)
-                  ? "; carried over from your saved address — edit if needed."
-                  : "."}
-              </p>
-            </div>
-          </StepBlock>
+        {/* ── deliver to ─────────────────────────────────────────── */}
+        <section className="border-b border-line bg-surface px-6 py-5">
+          <div className="flex items-center justify-between">
+            <h3 className="text-[11px] font-medium tracking-[0.16em] text-ink uppercase">
+              Deliver to
+            </h3>
+            {!editingAddress && chosen && (
+              <button
+                type="button"
+                onClick={() => setEditingAddress(true)}
+                className="text-[10px] font-medium tracking-[0.12em] text-ink-3 uppercase transition-colors hover:text-ink"
+              >
+                Change
+              </button>
+            )}
+          </div>
 
-          <StepBlock
-            n={2}
-            title="Delivery"
-            done={step > 2}
-            open={step === 2}
-            summary={addressSummary}
-            onEdit={() => setStep(2)}
-          >
-            <div className="space-y-4">
-              {saved.length > 0 && (
-                <div className="space-y-2">
+          {!editingAddress && chosen ? (
+            <div className="mt-3">
+              <p className="text-[13px] leading-relaxed text-ink-2">
+                <span className="text-ink">{chosen.name}</span>
+                {chosen.label ? (
+                  <span className="ml-1.5 text-[9px] font-medium tracking-[0.12em] text-ink-3 uppercase">
+                    {chosen.label}
+                  </span>
+                ) : null}
+                <br />
+                {chosen.line1}
+                {chosen.line2 ? `, ${chosen.line2}` : ""}
+                <br />
+                {chosen.city}, {chosen.state} — {chosen.pincode}
+                <br />
+                {chosen.phone}
+              </p>
+              {service && activePincode === service.pincode && (
+                <p
+                  className={cn(
+                    "mt-2 text-[11.5px]",
+                    service.serviceable ? "text-ok" : "text-error",
+                  )}
+                >
+                  {service.serviceable
+                    ? `Delivers to ${service.region?.state ?? "this area"} · ${
+                        quote?.pricing.shippingPaise === 0
+                          ? "free shipping"
+                          : "shipping calculated"
+                      }`
+                    : "We don’t deliver to this PIN yet — tap Change to use another address."}
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="mt-3.5 space-y-3">
+              {addressMode === "saved" && saved.length > 0 && (
+                <>
                   {saved.map((a) => (
                     <button
                       key={a.id}
@@ -789,7 +793,7 @@ export function CheckoutPanel() {
                       onClick={() => pickSavedAddress(a)}
                       className={cn(
                         "block w-full border px-3.5 py-3 text-left text-[13px] transition-colors",
-                        addressMode === "saved" && savedId === a.id
+                        savedId === a.id
                           ? "border-ink bg-bg"
                           : "border-line hover:border-line-2",
                       )}
@@ -812,19 +816,31 @@ export function CheckoutPanel() {
                     onClick={() => {
                       setAddressMode("new");
                       setSavedId(null);
+                      setAddr({ ...emptyAddress });
                     }}
-                    className={cn(
-                      "text-[10.5px] font-medium tracking-[0.12em] uppercase underline-offset-4 hover:underline",
-                      addressMode === "new" ? "text-ink" : "text-ink-3",
-                    )}
+                    className="text-[10.5px] font-medium tracking-[0.12em] text-ink uppercase underline-offset-4 hover:underline"
                   >
-                    + New address
+                    + Add a new address
                   </button>
-                </div>
+                </>
               )}
 
               {addressMode === "new" && (
                 <div className="space-y-4">
+                  {saved.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAddressMode("saved");
+                        setSavedId(
+                          saved.find((a) => a.isDefault)?.id ?? saved[0]!.id,
+                        );
+                      }}
+                      className="text-[10.5px] font-medium tracking-[0.12em] text-ink-3 uppercase underline-offset-4 hover:text-ink hover:underline"
+                    >
+                      ‹ Use a saved address
+                    </button>
+                  )}
                   <div>
                     <Field
                       label="PIN code"
@@ -917,206 +933,262 @@ export function CheckoutPanel() {
                     onChange={(v) => setAddr((a) => ({ ...a, label: v }))}
                   />
                   <p className="text-[11px] leading-relaxed text-ink-3">
-                    We’ll save this address and email to your account for next
-                    time.
+                    We’ll save this to your account for next time.
                   </p>
                 </div>
+              )}
+
+              {chosen && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (addressMode === "new" && !validateAddress()) return;
+                    setEditingAddress(false);
+                  }}
+                  className="w-full border border-ink bg-bg py-2.5 text-[10.5px] font-medium tracking-[0.14em] text-ink uppercase transition-colors hover:bg-ink hover:text-w0"
+                >
+                  Deliver here
+                </button>
               )}
             </div>
-          </StepBlock>
+          )}
 
-          <StepBlock
-            n={3}
-            title="Payment"
-            done={false}
-            open={step === 3}
-            summary=""
-            onEdit={() => setStep(3)}
-          >
-            <div className="space-y-5">
-              {cartChanged && (
-                <div className="border border-error/40 bg-error/5 px-3.5 py-2.5 text-[12px] text-ink">
-                  <p className="font-medium text-error">Your bag changed</p>
-                  <ul className="mt-1 space-y-0.5 text-ink-2">
-                    {cartChanged.map((w) => (
-                      <li key={w.sku}>
-                        {w.sku}: {w.message}
-                      </li>
-                    ))}
-                  </ul>
-                  <p className="mt-1 text-ink-3">
-                    Review the summary and try again.
-                  </p>
-                </div>
-              )}
-
-              {/* coupon */}
-              <div>
-                {appliedCoupon ? (
-                  <div className="flex items-center justify-between border border-ok/40 bg-ok/5 px-3 py-2.5 text-[12.5px]">
-                    <span className="text-ink">
-                      <span className="tracking-[0.08em]">{appliedCoupon}</span>{" "}
-                      applied
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setAppliedCoupon(null);
-                        setCouponInput("");
-                      }}
-                      className="text-[10px] font-medium tracking-[0.12em] text-ink-3 uppercase hover:text-ink"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ) : couponOpen ? (
-                  <div className="flex gap-2">
-                    <input
-                      value={couponInput}
-                      onChange={(e) =>
-                        setCouponInput(e.target.value.toUpperCase())
-                      }
-                      placeholder="Discount code"
-                      autoFocus
-                      className="w-full border border-line-2 bg-transparent px-3 py-2.5 text-[13px] tracking-[0.06em] uppercase focus:border-ink focus:outline-none"
-                    />
-                    <Button
-                      variant="onDark"
-                      size="sm"
-                      onClick={applyCoupon}
-                      className="shrink-0"
-                    >
-                      Apply
-                    </Button>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setCouponOpen(true)}
-                    className="text-[11px] font-medium tracking-[0.12em] text-ink-2 uppercase underline-offset-4 hover:underline"
-                  >
-                    + Add a discount code
-                  </button>
-                )}
-                {quote?.coupon && quote.coupon.applied === false && (
-                  <p className="mt-1.5 text-[11.5px] text-error">
-                    {quote.coupon.reason}
-                  </p>
-                )}
+          {/* receipt — shown as text once we know it, editable on tap */}
+          <div className="mt-4 border-t border-line pt-3.5">
+            {emailEditing || !email ? (
+              <Field
+                label="Email for the receipt"
+                type="email"
+                inputMode="email"
+                required
+                autoComplete="email"
+                value={email}
+                error={emailErr}
+                onChange={(v) => {
+                  setEmailTouched(true);
+                  setEmailErr(null);
+                  setEmail(v);
+                }}
+              />
+            ) : (
+              <div className="flex items-start justify-between gap-3">
+                <p className="text-[12px] leading-relaxed text-ink-3">
+                  Receipt &amp; updates to{" "}
+                  <span className="text-ink-2">{email}</span>
+                  {user ? (
+                    <>
+                      {" "}
+                      · SMS to{" "}
+                      <span className="text-ink-2">{maskPhone(user.phone)}</span>
+                    </>
+                  ) : null}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setEmailEditing(true)}
+                  className="shrink-0 text-[10px] font-medium tracking-[0.12em] text-ink-3 uppercase transition-colors hover:text-ink"
+                >
+                  Edit
+                </button>
               </div>
+            )}
+          </div>
+        </section>
 
-              {/* store credit */}
-              {quote && quote.storeCreditBalancePaise > 0 && (
-                <label className="flex cursor-pointer items-start gap-2.5 border border-line px-3 py-3">
+        {/* ── payment ────────────────────────────────────────────── */}
+        <section className="space-y-4 px-6 py-5">
+          <h3 className="text-[11px] font-medium tracking-[0.16em] text-ink uppercase">
+            Payment
+          </h3>
+
+          {cartChanged && (
+            <div className="border border-error/40 bg-error/5 px-3.5 py-2.5 text-[12px] text-ink">
+              <p className="font-medium text-error">Your bag changed</p>
+              <ul className="mt-1 space-y-0.5 text-ink-2">
+                {cartChanged.map((w) => (
+                  <li key={w.sku}>
+                    {w.sku}: {w.message}
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-1 text-ink-3">Review the summary and try again.</p>
+            </div>
+          )}
+
+          {/* coupon */}
+          <div>
+            {appliedCoupon ? (
+              <div className="flex items-center justify-between border border-ok/40 bg-ok/5 px-3 py-2.5 text-[12.5px]">
+                <span className="text-ink">
+                  <span className="tracking-[0.08em]">{appliedCoupon}</span>{" "}
+                  applied
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAppliedCoupon(null);
+                    setCouponInput("");
+                  }}
+                  className="text-[10px] font-medium tracking-[0.12em] text-ink-3 uppercase hover:text-ink"
+                >
+                  Remove
+                </button>
+              </div>
+            ) : couponOpen ? (
+              <div className="flex gap-2">
+                <input
+                  value={couponInput}
+                  onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                  placeholder="Discount code"
+                  autoFocus
+                  className="w-full border border-line-2 bg-transparent px-3 py-2.5 text-[13px] tracking-[0.06em] uppercase focus:border-ink focus:outline-none"
+                />
+                <Button
+                  variant="onDark"
+                  size="sm"
+                  onClick={applyCoupon}
+                  className="shrink-0"
+                >
+                  Apply
+                </Button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setCouponOpen(true)}
+                className="text-[11px] font-medium tracking-[0.12em] text-ink-2 uppercase underline-offset-4 hover:underline"
+              >
+                + Discount code
+              </button>
+            )}
+            {quote?.coupon && quote.coupon.applied === false && (
+              <p className="mt-1.5 text-[11.5px] text-error">
+                {quote.coupon.reason}
+              </p>
+            )}
+          </div>
+
+          {/* store credit */}
+          {quote && quote.storeCreditBalancePaise > 0 && (
+            <label className="flex cursor-pointer items-start gap-2.5 border border-line px-3 py-3">
+              <input
+                type="checkbox"
+                checked={useCredit}
+                onChange={(e) => setUseCredit(e.target.checked)}
+                className="mt-0.5 accent-[var(--color-ink)]"
+              />
+              <span className="text-[12.5px] text-ink-2">
+                Use store credit —{" "}
+                <span className="text-ink">
+                  {formatPaise(quote.storeCreditBalancePaise)}
+                </span>{" "}
+                available
+              </span>
+            </label>
+          )}
+
+          {/* method */}
+          <div className="space-y-2">
+            {(["razorpay", "cod"] as PaymentMethod[]).map((m) => {
+              const allowed = !quote || quote.methods.includes(m);
+              return (
+                <label
+                  key={m}
+                  className={cn(
+                    "flex items-start gap-2.5 border px-3 py-3 text-[12.5px]",
+                    !allowed && "opacity-40",
+                    method === m ? "border-ink bg-bg" : "border-line",
+                    allowed ? "cursor-pointer" : "cursor-not-allowed",
+                  )}
+                >
                   <input
-                    type="checkbox"
-                    checked={useCredit}
-                    onChange={(e) => setUseCredit(e.target.checked)}
+                    type="radio"
+                    name="method"
+                    value={m}
+                    checked={method === m}
+                    disabled={!allowed}
+                    onChange={() => setMethod(m)}
                     className="mt-0.5 accent-[var(--color-ink)]"
                   />
-                  <span className="text-[12.5px] text-ink-2">
-                    Use store credit —{" "}
-                    <span className="text-ink">
-                      {formatPaise(quote.storeCreditBalancePaise)}
-                    </span>{" "}
-                    available
+                  <span className="min-w-0 flex-1 text-ink">
+                    {m === "razorpay"
+                      ? "Card · UPI · Netbanking · Wallet"
+                      : "Cash on delivery"}
+                    <span className="mt-0.5 block text-[11px] text-ink-3">
+                      {m === "razorpay"
+                        ? "Google Pay, PhonePe, Paytm and every UPI app. Secured by Razorpay — card details never reach us."
+                        : allowed
+                          ? "Pay the courier on arrival."
+                          : "Not available for this order."}
+                    </span>
                   </span>
                 </label>
-              )}
+              );
+            })}
+          </div>
 
-              {/* method */}
-              <div className="space-y-2">
-                {(["razorpay", "cod"] as PaymentMethod[]).map((m) => {
-                  const allowed = !quote || quote.methods.includes(m);
-                  return (
-                    <label
-                      key={m}
-                      className={cn(
-                        "flex items-start gap-2.5 border px-3 py-3 text-[12.5px]",
-                        !allowed && "opacity-40",
-                        method === m ? "border-ink bg-bg" : "border-line",
-                        allowed ? "cursor-pointer" : "cursor-not-allowed",
-                      )}
-                    >
-                      <input
-                        type="radio"
-                        name="method"
-                        value={m}
-                        checked={method === m}
-                        disabled={!allowed}
-                        onChange={() => setMethod(m)}
-                        className="mt-0.5 accent-[var(--color-ink)]"
-                      />
-                      <span className="min-w-0 flex-1 text-ink">
-                        {m === "razorpay"
-                          ? "Card · UPI · Netbanking · Wallet"
-                          : "Cash on delivery"}
-                        <span className="mt-0.5 block text-[11px] text-ink-3">
-                          {m === "razorpay"
-                            ? "Google Pay, PhonePe, Paytm and every UPI app. Secured by Razorpay — card details never reach us."
-                            : allowed
-                              ? "Pay the courier on arrival."
-                              : "Not available for this order."}
-                        </span>
-                      </span>
-                    </label>
-                  );
-                })}
+          {/* note */}
+          {noteOpen ? (
+            <textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value.slice(0, 500))}
+              rows={2}
+              autoFocus
+              placeholder="Anything we should know for delivery?"
+              className="w-full resize-none border border-line-2 bg-transparent px-3 py-2.5 text-[13px] focus:border-ink focus:outline-none"
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={() => setNoteOpen(true)}
+              className="text-[11px] font-medium tracking-[0.12em] text-ink-2 uppercase underline-offset-4 hover:underline"
+            >
+              + Add a note
+            </button>
+          )}
+
+          {(placeError || paymentError || quoteError) && (
+            <p className="border border-error/40 bg-error/5 px-3 py-2.5 text-[12px] text-error">
+              {paymentError ?? placeError ?? quoteError}
+            </p>
+          )}
+          {pinBlocked && (
+            <p className="text-[12px] text-error">
+              Update the delivery address — we don’t ship to that PIN yet.
+            </p>
+          )}
+
+          {payState?.kind === "dev" && (
+            <div className="border border-dashed border-line-2 bg-bg/60 px-3.5 py-3 text-[12px] text-ink-2">
+              <p className="font-medium text-ink">
+                Development — Razorpay not configured
+              </p>
+              <p className="mt-1 text-[11px]">
+                Order <span className="text-ink">{payState.orderNumber}</span> is
+                held. Simulate the hosted-checkout outcome:
+              </p>
+              <div className="mt-2.5 flex gap-2">
+                <Button
+                  size="sm"
+                  onClick={() => void simulatePayment("paid")}
+                  disabled={paying}
+                >
+                  {paying ? "…" : "Payment success"}
+                </Button>
+                <Button
+                  variant="onDark"
+                  size="sm"
+                  onClick={() => void simulatePayment("failed")}
+                  disabled={paying}
+                >
+                  Failure
+                </Button>
               </div>
-
-              <textarea
-                value={note}
-                onChange={(e) => setNote(e.target.value.slice(0, 500))}
-                rows={2}
-                placeholder="Order note (optional)"
-                className="w-full resize-none border border-line-2 bg-transparent px-3 py-2.5 text-[13px] focus:border-ink focus:outline-none"
-              />
-
-              {(placeError || paymentError || quoteError) && (
-                <p className="border border-error/40 bg-error/5 px-3 py-2.5 text-[12px] text-error">
-                  {paymentError ?? placeError ?? quoteError}
-                </p>
-              )}
-              {pinBlocked && (
-                <p className="text-[12px] text-error">
-                  Update the delivery PIN — we don’t ship there yet.
-                </p>
-              )}
-
-              {payState?.kind === "dev" && (
-                <div className="border border-dashed border-line-2 bg-bg/60 px-3.5 py-3 text-[12px] text-ink-2">
-                  <p className="font-medium text-ink">
-                    Development — Razorpay not configured
-                  </p>
-                  <p className="mt-1 text-[11px]">
-                    Order{" "}
-                    <span className="text-ink">{payState.orderNumber}</span> is
-                    held. Simulate the hosted-checkout outcome:
-                  </p>
-                  <div className="mt-2.5 flex gap-2">
-                    <Button
-                      size="sm"
-                      onClick={() => void simulatePayment("paid")}
-                      disabled={paying}
-                    >
-                      {paying ? "…" : "Payment success"}
-                    </Button>
-                    <Button
-                      variant="onDark"
-                      size="sm"
-                      onClick={() => void simulatePayment("failed")}
-                      disabled={paying}
-                    >
-                      Failure
-                    </Button>
-                  </div>
-                </div>
-              )}
             </div>
-          </StepBlock>
-        </div>
+          )}
+        </section>
 
-        <p className="px-6 py-4 text-center text-[11px] leading-relaxed text-ink-3">
+        <p className="px-6 pb-4 text-center text-[11px] leading-relaxed text-ink-3">
           {method === "cod"
             ? "Cash on delivery — pay when it arrives."
             : "Secured by Razorpay. You’ll pay in a protected window; your order is held for 30 minutes."}
@@ -1125,38 +1197,31 @@ export function CheckoutPanel() {
 
       <PanelFooter>
         {payState?.kind === "retry" ? (
-          <Button size="lg" className="w-full" disabled={paying} onClick={retryPayment}>
+          <Button
+            size="lg"
+            className="w-full"
+            disabled={paying}
+            onClick={retryPayment}
+          >
             {paying ? "Opening secure payment…" : "Retry payment"}
           </Button>
         ) : (
           <Button
             size="lg"
             className="w-full !justify-between !px-5"
-            disabled={
-              placing ||
-              paying ||
-              (step === 3 && (quoting || !quote || pinBlocked))
-            }
-            onClick={advance}
+            disabled={placing || paying || !canPay}
+            onClick={onPay}
           >
             <span className="tracking-[0.1em]">
               {footerLabel}
-              {step === 3 && total != null ? ` · ${formatPaise(total)}` : ""}
+              {total != null ? ` · ${formatPaise(total)}` : ""}
             </span>
-            {step === 3 ? (
-              <PaymentBadges />
-            ) : (
-              <span aria-hidden className="text-w0/70">
-                &rarr;
-              </span>
-            )}
+            <PaymentBadges />
           </Button>
         )}
-        {step === 3 && (
-          <p className="mt-2.5 text-center text-[10.5px] leading-relaxed text-ink-3">
-            By continuing you agree to THE RARESKIN’s Terms &amp; Privacy Policy.
-          </p>
-        )}
+        <p className="mt-2.5 text-center text-[10.5px] leading-relaxed text-ink-3">
+          By continuing you agree to THE RARESKIN’s Terms &amp; Privacy Policy.
+        </p>
       </PanelFooter>
     </>
   );
@@ -1201,57 +1266,6 @@ function PanelFooter({ children }: { children: React.ReactNode }) {
     <footer className="shrink-0 border-t border-line bg-surface px-6 pt-4 pb-[calc(20px+env(safe-area-inset-bottom))]">
       {children}
     </footer>
-  );
-}
-
-function StepBlock({
-  n,
-  title,
-  done,
-  open,
-  summary,
-  onEdit,
-  children,
-}: {
-  n: number;
-  title: string;
-  done: boolean;
-  open: boolean;
-  summary: string;
-  onEdit: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="bg-surface">
-      <header className="flex items-center justify-between px-6 py-3.5">
-        <h3 className="flex items-center gap-2.5 text-[11px] font-medium tracking-[0.16em] text-ink uppercase">
-          <span
-            className={cn(
-              "grid size-5 place-items-center rounded-full border text-[10px] tabular-nums",
-              open || done
-                ? "border-ink bg-ink text-w0"
-                : "border-line-2 text-ink-3",
-            )}
-          >
-            {done ? "✓" : n}
-          </span>
-          {title}
-        </h3>
-        {done && (
-          <button
-            type="button"
-            onClick={onEdit}
-            className="text-[10px] font-medium tracking-[0.12em] text-ink-3 uppercase hover:text-ink"
-          >
-            Edit
-          </button>
-        )}
-      </header>
-      {done && !open && summary && (
-        <p className="px-6 pb-3.5 text-[12.5px] text-ink-2">{summary}</p>
-      )}
-      {open && <div className="px-6 pt-1 pb-6">{children}</div>}
-    </section>
   );
 }
 

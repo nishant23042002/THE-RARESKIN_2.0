@@ -171,29 +171,32 @@ header fills with the tri-fragrance gradient as you move through it.
 
 - **Bag** — the lush juice-washed line items (`CartLineRow`), subtotal, and
   "Proceed to checkout".
-- **Checkout** (`checkout-panel.tsx`) — an always-visible **order review** at the
-  top (each line with name / "Extrait de Parfum" / qty / price / MRP strike,
-  then the price ladder — items, discount, credit, delivery, total, "You save
-  ₹X" (plus an inclusive-GST line only when a rate is set) — and a
-  Free-delivery / No-hidden-fees / Secure-checkout trust row), then three
-  collapsing steps:
-  1. **Contact** — name + email. **Both are pre-filled** from the account or the
-     selected saved address (`address.name` / `address.email`), so nothing is
-     typed twice; a guest types them once and they are saved onto the new
-     address. `nameTouched` / `emailTouched` stop a prefill from clobbering an
-     edit. The phone comes from the session. A guest sees a "verify your number" gate → the sign-in
-     modal opens *on top of the open drawer*; on success the modal closes and the
-     panel resumes (it does **not** navigate away — `sign-in-modal.tsx` checks
-     `useCart().view === "checkout"`). The OTP creates a lightweight `customer`
-     account and the bag carries over.
-  2. **Delivery** — PIN first (serviceability + COD check + state auto-fill),
-     then the address; saved addresses are selectable.
-  3. **Payment** — a discreet "add a code" disclosure, a store-credit toggle
-     (when there's a balance), the method (COD only when the region allows it),
-     an order note. A single sticky footer CTA advances the steps and, on the
-     last one, reads "Place order · ₹X" with the accepted-payment marks
-     (`PaymentBadges` — Visa / Mastercard / RuPay / UPI; the UPI tile stands in
-     for GPay / PhonePe / Paytm / every UPI app).
+- **Checkout** (`checkout-panel.tsx`) — **one screen, not a wizard.** A returning
+  shopper's trip is review → pay; a first-timer types their address once.
+  - **Order review** (always visible) — each line with name / "Extrait de
+    Parfum" / qty / price / MRP strike, then the price ladder (items, discount,
+    credit, delivery, total, "You save ₹X"; an inclusive-GST line only when a
+    rate is set) and a Free-delivery / No-hidden-fees / Secure-checkout row.
+  - **Deliver to** — the default saved address shown as a card (name from the
+    address itself — never the account "name" — plus lines, PIN, phone, and a
+    live "Delivers to <state> · free shipping" note). **Change** expands the
+    saved-address picker + "＋ Add a new address"; picking one collapses it. A
+    shopper with no saved address sees the form directly (PIN → serviceability,
+    name, mobile, lines, state), saved to the account on first order. The
+    **receipt email** shows as text ("Receipt & updates to … · SMS to …") with
+    an *Edit* that reveals the input; it's only ever typed when we don't already
+    know it (account email / address email).
+  - **Payment** — a "＋ Discount code" disclosure, a store-credit toggle (when
+    there's a balance), the method rows (COD only when the region allows it), a
+    "＋ Add a note" disclosure.
+  - **One sticky CTA** — "Pay securely · ₹X" (or "Place order · ₹X" for COD)
+    with the accepted-payment marks (`PaymentBadges` — Visa / Mastercard / RuPay
+    / UPI; the UPI tile stands in for GPay / PhonePe / Paytm). It validates the
+    email + address, expands whatever needs fixing, then places and pays.
+  - A **guest** sees a "verify your number" gate first → the sign-in modal opens
+    *on top of the open drawer* (`sign-in-modal.tsx` checks
+    `useCart().view === "checkout"` and does not navigate away); the OTP makes a
+    lightweight `customer` account and the bag carries over to the express screen.
 - **Done** — a debossed check, the order number in display serif, "what's next".
   A **paid** order then shows a 5-second countdown (a draining tri-juice rail)
   and auto-advances: the drawer slides out and the page transition carries the
