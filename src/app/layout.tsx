@@ -1,6 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import { Jost, Newsreader } from "next/font/google";
 import { SmoothScroll } from "@/components/providers/smooth-scroll";
+import { RouteTransitionProvider } from "@/components/providers/route-transition";
+import { AuthProvider } from "@/components/providers/auth-provider";
+import { SignInModalMount } from "@/components/auth/sign-in-modal-mount";
 import { CartProvider } from "@/components/providers/cart-provider";
 import { NavToneProvider } from "@/components/providers/nav-tone";
 import { ScrollbarVar } from "@/components/providers/scrollbar-var";
@@ -79,21 +82,26 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         </a>
         <SvgDefs />
         <ScrollbarVar />
-        <CartProvider>
-          <SmoothScroll>
-            <NavToneProvider>
-              <div className="fixed inset-x-0 top-0 z-50">
-                <AnnouncementBar />
-                <Header nav={nav} />
-              </div>
-              {children}
-              <Footer />
-            </NavToneProvider>
-            <CartDrawer />
-            <CartToast />
-            <CartBar />
-          </SmoothScroll>
-        </CartProvider>
+        <AuthProvider>
+          <CartProvider>
+            <SmoothScroll>
+              <RouteTransitionProvider>
+                <NavToneProvider>
+                  <div className="fixed inset-x-0 top-0 z-50">
+                    <AnnouncementBar />
+                    <Header nav={nav} />
+                  </div>
+                  {children}
+                  <Footer />
+                </NavToneProvider>
+                <CartDrawer />
+                <CartToast />
+                <CartBar />
+                <SignInModalMount />
+              </RouteTransitionProvider>
+            </SmoothScroll>
+          </CartProvider>
+        </AuthProvider>
       </body>
     </html>
   );

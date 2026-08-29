@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, type CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { Logo } from "@/components/ui/logo";
 import { MenuIcon } from "@/components/ui/menu-icon";
 import { useScrolled } from "@/hooks/use-scrolled";
 import { useCart } from "@/components/providers/cart-provider";
+import { useAuth } from "@/components/providers/auth-provider";
 import { useNavTone } from "@/components/providers/nav-tone";
 import type { CatalogNavItem } from "@/lib/catalog";
 import { SiteMenu } from "./site-menu";
@@ -21,6 +22,17 @@ export function Header({ nav }: { nav: CatalogNavItem[] }) {
   const { tone } = useNavTone();
   const [menuOpen, setMenuOpen] = useState(false);
   const { count, openCart } = useCart();
+  const { status, openSignIn } = useAuth();
+  // The storefront shell is server-rendered with no session knowledge; the
+  // client seeds auth from a sessionStorage cache. Gate the auth-dependent
+  // control on mount so SSR and first paint agree (no hydration mismatch) —
+  // repeat visitors see a one-frame "Sign in" → "Account" swap.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
+  const authed = mounted && status === "authed";
 
   const effectiveTone = scrolled ? "dark" : tone;
 
@@ -59,7 +71,23 @@ export function Header({ nav }: { nav: CatalogNavItem[] }) {
             <Logo className="w-full" />
           </Link>
 
-          <div className="justify-self-end">
+          <div className="flex items-center justify-self-end gap-4 sm:gap-5">
+            {authed ? (
+              <Link
+                href="/account"
+                className="nav-underline hidden py-1 text-[10.5px] tracking-[0.14em] uppercase sm:inline"
+              >
+                Account
+              </Link>
+            ) : (
+              <button
+                type="button"
+                onClick={() => openSignIn()}
+                className="nav-underline hidden py-1 text-[10.5px] tracking-[0.14em] uppercase sm:inline"
+              >
+                Sign in
+              </button>
+            )}
             <button
               type="button"
               onClick={openCart}

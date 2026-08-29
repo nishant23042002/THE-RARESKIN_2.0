@@ -14,6 +14,7 @@ interface AddressSub {
   label?: string;
   name: string;
   phone: string;
+  email?: string;
   line1: string;
   line2?: string;
   landmark?: string;
@@ -29,6 +30,7 @@ const addressSchema = new Schema<AddressSub>(
     label: String,
     name: { type: String, required: true },
     phone: { type: String, required: true },
+    email: { type: String, lowercase: true, trim: true },
     line1: { type: String, required: true },
     line2: String,
     landmark: String,
@@ -84,8 +86,14 @@ const userSchema = new Schema<UserDoc>(
       default: null,
       lowercase: true,
       trim: true,
-      // sparse unique: many nulls allowed, real values must be distinct
-      index: { unique: true, sparse: true, name: "email_unique_sparse" },
+      // partial unique: only real string emails are indexed, so any number of
+      // accounts can sit at `email: null` (a plain `sparse` index does NOT do
+      // this — it still treats an explicit `null` as a value and collides).
+      index: {
+        unique: true,
+        partialFilterExpression: { email: { $type: "string" } },
+        name: "email_unique",
+      },
     },
     emailVerifiedAt: { type: Date, default: null },
     role: { type: String, enum: USER_ROLES, default: "customer" },

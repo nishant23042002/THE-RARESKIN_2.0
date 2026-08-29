@@ -14,7 +14,7 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   // Native Node.js require for the DB / media SDKs — they use Node built-ins and
   // must not be bundled into the Server Components graph.
-  serverExternalPackages: ["mongoose", "cloudinary"],
+  serverExternalPackages: ["mongoose", "cloudinary", "twilio"],
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

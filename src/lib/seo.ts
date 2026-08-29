@@ -10,10 +10,13 @@ export function pageMeta({
   title,
   description,
   path,
+  noindex,
 }: {
   title: string;
   description?: string;
   path: string;
+  /** keep the page out of search — order pages, checkout, account */
+  noindex?: boolean;
 }): Metadata {
   const desc = description ?? SITE.description;
   const url = absoluteUrl(path);
@@ -21,6 +24,7 @@ export function pageMeta({
     title,
     description: desc,
     alternates: { canonical: path },
+    ...(noindex ? { robots: { index: false, follow: false } } : {}),
     openGraph: {
       title,
       description: desc,

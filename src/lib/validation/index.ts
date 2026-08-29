@@ -4,6 +4,8 @@
  * defined exactly once.
  */
 export * from "./primitives";
+export * from "./auth";
+export * from "./commerce";
 export * from "./media";
 export * from "./product";
 export * from "./site-settings";

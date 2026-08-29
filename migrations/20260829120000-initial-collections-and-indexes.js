@@ -39,7 +39,14 @@ const INDEXES = {
   ],
   users: [
     [{ phone: 1 }, { unique: true, name: "phone_unique" }],
-    [{ email: 1 }, { unique: true, sparse: true, name: "email_unique_sparse" }],
+    [
+      { email: 1 },
+      {
+        unique: true,
+        partialFilterExpression: { email: { $type: "string" } },
+        name: "email_unique",
+      },
+    ],
     [{ role: 1, status: 1 }, { name: "role_status" }],
     [{ createdAt: -1 }, { name: "createdAt_desc" }],
   ],

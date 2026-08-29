@@ -34,6 +34,10 @@
   /* warm gilt — the only flat accent, used on dark grounds (announcement, marquee) */
   --color-gilt: #d89a4d;
 
+  /* status — muted so they sit inside the warm palette, still WCAG AA on --color-bg */
+  --color-error: #b23a2b;
+  --color-ok: #4a7355;
+
   /* type */
   --font-sans: var(--font-jost), ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-serif: var(--font-newsreader), Georgia, "Times New Roman", serif;
@@ -114,7 +118,8 @@
     border-radius: 1px;
   }
 
-  body.is-locked {
+  body.is-locked,
+  body.route-locked {
     overflow: hidden;
   }
 }
@@ -127,6 +132,22 @@
     text-transform: uppercase;
     color: var(--color-ink-3);
     font-weight: 400;
+  }
+
+  /* ---- functional UI surfaces: checkout, account, forms ----
+     The editorial body runs light (300). Dense, information-carrying UI needs
+     more weight to stay legible at small sizes, so these surfaces set a 400
+     floor. `.serif` display type inside them still resolves to its own weight.
+     Applied on the drawer panel and the /account main. */
+  .ui-surface,
+  .ui-surface input,
+  .ui-surface select,
+  .ui-surface textarea,
+  .ui-surface button {
+    font-weight: 400;
+  }
+  .ui-surface .serif {
+    font-weight: 300;
   }
 
   .serif {
@@ -222,6 +243,44 @@
   }
   .menu-panel [data-stagger] {
     opacity: 0;
+  }
+
+  /* ---- sign-in modal: centred card ≥ 640px, bottom sheet below. The dialog +
+     panel are parked from first paint; GSAP drives the entrance/exit via inline
+     style, with a safety net that forces the resting state if it can't tick.
+     Form content is never opacity-parked — it rides the panel in, and new
+     fields on the code step must not be trapped invisible. ---- */
+  .signin-dialog {
+    opacity: 0;
+  }
+  .signin-panel {
+    opacity: 0;
+  }
+  .signin-juice {
+    background-image: linear-gradient(
+      90deg,
+      #e0d7bf 0%,
+      #c5872f 52%,
+      #3d2712 100%
+    );
+  }
+
+  /* route transition — parked from first paint; GSAP drives it via inline style */
+  .route-curtain {
+    opacity: 0;
+    visibility: hidden;
+  }
+  /* gentle fade-up on the phone → code step change. Failure-safe: no fill mode,
+     so the element always rests at its natural (visible) state — the keyframe
+     only adds movement while it plays. */
+  .signin-step {
+    animation: signin-step-in 0.4s var(--ease-out-strong);
+  }
+  @keyframes signin-step-in {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
   }
 
   .no-scrollbar {

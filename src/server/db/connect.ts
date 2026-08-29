@@ -39,7 +39,11 @@ export async function dbConnect(): Promise<typeof mongoose> {
     // concurrent lambdas, and let migrations own index creation in production.
     mongoose.set("strictQuery", true);
     mongoose.set("autoIndex", env.NODE_ENV !== "production");
-    mongoose.set("sanitizeFilter", true);
+    // Note: `sanitizeFilter` is intentionally NOT set globally — it wraps every
+    // object filter value ($gt/$in/$ne) in $eq unless opted out per query, which
+    // breaks our own operator queries. Query-selector injection is prevented at
+    // the boundary instead: every request body is parsed through Zod into typed
+    // primitives before it reaches a query (see the Next.js data-security guide).
 
     registerModels();
 

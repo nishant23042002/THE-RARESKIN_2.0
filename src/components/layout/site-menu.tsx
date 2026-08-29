@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useRef, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { useLenis } from "lenis/react";
 import { gsap } from "@/lib/gsap";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
+import { lockScroll, unlockScroll } from "@/lib/scroll-lock";
 import { Logo } from "@/components/ui/logo";
+import { useAuth } from "@/components/providers/auth-provider";
 import type { CatalogNavItem } from "@/lib/catalog";
 
 const MORE_LINKS = [
@@ -35,6 +37,14 @@ export function SiteMenu({
   const panelRef = useRef<HTMLDivElement>(null);
   const reduced = useReducedMotion();
   const lenis = useLenis();
+  const { status, openSignIn } = useAuth();
+  // Match SSR (no session) on first paint — see the note in header.tsx.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
+  const authed = mounted && status === "authed";
 
   useEffect(() => {
     if (open) lenis?.stop();
@@ -49,7 +59,7 @@ export function SiteMenu({
 
     if (open) {
       if (!dlg.open) dlg.showModal();
-      document.body.classList.add("is-locked");
+      lockScroll("menu");
 
       // hand GSAP a clean model of the parked state (`y:0` clears the pixel
       // offset the browser baked into the matrix from the CSS `%` park).
@@ -86,7 +96,7 @@ export function SiteMenu({
 
     const finish = () => {
       dlg.close();
-      document.body.classList.remove("is-locked");
+      unlockScroll("menu");
     };
 
     if (reduced) {
@@ -188,6 +198,28 @@ export function SiteMenu({
             {l.label}
           </Link>
         ))}
+        {authed ? (
+          <Link
+            href="/account"
+            onClick={onClose}
+            data-stagger
+            className="py-2 text-[13px] uppercase tracking-[0.08em] text-ink-2 transition-colors hover:text-ink"
+          >
+            Account
+          </Link>
+        ) : (
+          <button
+            type="button"
+            data-stagger
+            onClick={() => {
+              onClose();
+              openSignIn();
+            }}
+            className="py-2 text-left text-[13px] uppercase tracking-[0.08em] text-ink-2 transition-colors hover:text-ink"
+          >
+            Sign in
+          </button>
+        )}
 
         <p className="mt-auto pt-8 text-[10.5px] uppercase tracking-[0.1em] text-ink-3">
           Cash on delivery &middot; Ships across India

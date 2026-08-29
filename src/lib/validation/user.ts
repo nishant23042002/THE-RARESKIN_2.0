@@ -38,6 +38,8 @@ export const address = z.object({
   label: shortText(40).optional(),
   name: shortText(120),
   phone: indianMobileE164,
+  /** stored on the address so checkout can pre-fill the receipt email */
+  email: email.optional(),
   line1: shortText(160),
   line2: shortText(160).optional(),
   landmark: shortText(120).optional(),

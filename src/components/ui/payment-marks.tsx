@@ -69,6 +69,36 @@ export function PaymentMarks({ className }: { className?: string }) {
   );
 }
 
+/**
+ * Compact payment marks for a **dark** surface (the "Place order" CTA). Each
+ * mark sits on its own white tile so the network colours read at any size. The
+ * UPI (BHIM) tile stands in for every UPI app — Google Pay, PhonePe, Paytm,
+ * Navi and the rest all settle over UPI.
+ */
+export function PaymentBadges({ className }: { className?: string }) {
+  return (
+    <span className={cn("flex items-center gap-1", className)} aria-hidden>
+      {MARKS.map((m) => (
+        <span
+          key={m.label}
+          className="grid h-[18px] w-[26px] place-items-center rounded-[3px] bg-white"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={m.src}
+            alt=""
+            width={22}
+            height={14}
+            loading="lazy"
+            decoding="async"
+            className="h-[13px] w-auto"
+          />
+        </span>
+      ))}
+    </span>
+  );
+}
+
 /** Official India flag (flagcdn `in.svg`), vendored to `/public/pay/india.svg`. */
 export function IndiaFlag({ className }: { className?: string }) {
   return (
