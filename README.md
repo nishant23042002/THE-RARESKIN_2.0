@@ -62,6 +62,8 @@ pnpm catalog set aurevan price 749   # edit a field + bump the cache
 pnpm catalog set vayren stock 60     # set an inventory level
 pnpm coupon add WELCOME10 percent 10 # create a discount code (admin UI later)
 pnpm revalidate         # refresh the storefront cache on demand
+pnpm email:test RRS-2026-000001  # render every order email to .mail/ (dev)
+pnpm email:preview      # react-email dev server for the templates
 ```
 
 Copy `.env.example` to `.env.local` to wire integrations. The storefront still
@@ -197,8 +199,15 @@ Wired end to end (Test Mode). Full setup + guarantees in
    every 5 min, reconcile daily).
 4. Flip `flags.checkoutEnabled: true` in Site Settings.
 
-Emails, GST-invoice PDFs and a job queue (Inngest) land in Phase F — the
-webhook leaves `// TODO(phase-f)` hooks.
+### Emails (Resend)
+
+Order-lifecycle email is wired end to end — see [`docs/email.md`](docs/email.md).
+A durable `emailmessages` outbox, an opportunistic `after()` drain, and a `*/2`
+cron sweep as the guarantee. Blank `RESEND_API_KEY` → every email renders to
+`.mail/*.html` for local review (`pnpm email:test <orderNumber>`,
+`pnpm email:preview`). Going live: verify a domain, set `RESEND_API_KEY` /
+`EMAIL_FROM` / `RESEND_WEBHOOK_SECRET`. The GST-invoice PDF is deferred to
+Phase H (there's no tax invoice while GST is off).
 
 ### Contact & newsletter forms
 

@@ -10,6 +10,8 @@ import { AuditLog } from "./audit-log";
 import { Cart } from "./cart";
 import { Counter } from "./counter";
 import { Coupon } from "./coupon";
+import { EmailMessage } from "./email-message";
+import { EmailSuppression } from "./email-suppression";
 import { MediaAsset } from "./media-asset";
 import { Order } from "./order";
 import { OtpChallenge } from "./otp-challenge";
@@ -26,6 +28,12 @@ export { AuditLog, recordAudit } from "./audit-log";
 export { Cart } from "./cart";
 export { Counter, nextSequence } from "./counter";
 export { Coupon } from "./coupon";
+export {
+  EmailMessage,
+  EMAIL_TEMPLATES,
+  EMAIL_STATUSES,
+} from "./email-message";
+export { EmailSuppression, SUPPRESSION_REASONS } from "./email-suppression";
 export { MediaAsset } from "./media-asset";
 export { Order } from "./order";
 export { OtpChallenge } from "./otp-challenge";
@@ -42,6 +50,15 @@ export type { AuditLogDoc } from "./audit-log";
 export type { CartDoc, CartItemSub } from "./cart";
 export type { CounterDoc } from "./counter";
 export type { CouponDoc } from "./coupon";
+export type {
+  EmailMessageDoc,
+  EmailTemplate,
+  EmailStatus,
+} from "./email-message";
+export type {
+  EmailSuppressionDoc,
+  SuppressionReason,
+} from "./email-suppression";
 export type { MediaAssetDoc } from "./media-asset";
 export type {
   OrderDoc,
@@ -67,6 +84,8 @@ export function registerModels(): void {
   void Cart;
   void Counter;
   void Coupon;
+  void EmailMessage;
+  void EmailSuppression;
   void MediaAsset;
   void Order;
   void OtpChallenge;

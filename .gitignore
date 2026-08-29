@@ -74,3 +74,6 @@ Desktop.ini
 *.local
 *.tmp
 
+# rendered transactional emails (RESEND_API_KEY blank → written here for review)
+/.mail/
+

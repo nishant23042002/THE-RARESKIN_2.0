@@ -30,6 +30,8 @@ import {
   availableMethods,
   type ServiceabilityResult,
 } from "./serviceability";
+import { notifyOrderPlacedCod } from "@/server/email";
+
 import { validateCoupon, couponRejectionMessage } from "./coupons";
 import { commitStockForOrder, type StockLine } from "./inventory";
 import { getStoreCreditBalance, spendStoreCredit } from "./store-credit";
@@ -635,6 +637,12 @@ export async function placeOrder(
     ip: ctx.ip,
     userAgent: ctx.userAgent,
   });
+
+  // Phase F — a COD order has no payment step, so its confirmation email is
+  // sent here. Online orders are emailed on verified payment (`confirmPaidOrder`).
+  if (order.payment.method === "cod") {
+    await notifyOrderPlacedCod(order.orderNumber);
+  }
 
   return {
     ok: true,

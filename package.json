@@ -16,7 +16,10 @@
     "db:migrate": "migrate-mongo up",
     "db:migrate:down": "migrate-mongo down",
     "db:migrate:status": "migrate-mongo status",
-    "db:migrate:create": "migrate-mongo create"
+    "db:migrate:create": "migrate-mongo create",
+    "email:preview": "email dev --dir src/server/email/templates --port 3030",
+    "email:drain": "tsx scripts/email.ts drain",
+    "email:test": "tsx scripts/email.ts test"
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",
@@ -29,6 +32,8 @@
     "next": "16.3.3",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "react-email": "^6.9.3",
+    "resend": "^6.25.0",
     "server-only": "^0.0.1",
     "twilio": "^6.1.0",
     "zod": "^4.5.1"

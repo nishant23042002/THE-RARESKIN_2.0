@@ -65,10 +65,18 @@ const schema = z.object({
   RAZORPAY_KEY_SECRET: z.string().min(1).optional(),
   RAZORPAY_WEBHOOK_SECRET: z.string().min(1).optional(),
 
-  // ── Scheduled jobs (auto-cancel, reconciliation) ───────────────────────
+  // ── Scheduled jobs (auto-cancel, reconciliation, email drain) ──────────
   // Bearer token the cron routes require. Set it in the Vercel project +
   // vercel.json crons. Blank = the cron routes 401 everything.
   CRON_SECRET: z.string().min(16).optional(),
+
+  // ── Transactional email — Resend ──────────────────────────────────────
+  // Blank locally → every email is rendered to .mail/<key>.html instead of
+  // being sent (the outbox, drain, retry and webhook idempotency all still
+  // run). Verify a sending domain in Resend first so EMAIL_FROM passes SPF/DKIM.
+  RESEND_API_KEY: z.string().min(1).optional(),
+  EMAIL_FROM: z.string().min(1).optional(),
+  RESEND_WEBHOOK_SECRET: z.string().min(1).optional(),
 
   // ── Seed / bootstrap (only read by scripts/seed.ts) ─────────────────────
   SEED_SUPERADMIN_PHONE: z
@@ -227,3 +235,26 @@ export function getRazorpayEnv(): {
 }
 
 export const getCronSecret = () => getEnv().CRON_SECRET ?? null;
+
+// ── Transactional email — Resend ───────────────────────────────────────
+
+/** True when real email delivery is wired. Blank → the dev `.mail/` fallback. */
+export const isEmailConfigured = () => Boolean(getEnv().RESEND_API_KEY);
+
+/** The `From:` header. A verified Resend domain must back this address. */
+export function getEmailFrom(): string {
+  return getEnv().EMAIL_FROM ?? "THE RARESKIN <orders@therareskin.com>";
+}
+
+/** Resend API key, asserted present. Call from the send path only. */
+export function getResendApiKey(): string {
+  const key = getEnv().RESEND_API_KEY;
+  if (!key) throw new Error("Resend is not configured. Set RESEND_API_KEY.");
+  return key;
+}
+
+/** The Resend webhook signing secret (`whsec_…`), configured independently. */
+export const getResendWebhookSecret = () =>
+  getEnv().RESEND_WEBHOOK_SECRET ?? null;
+export const isResendWebhookConfigured = () =>
+  Boolean(getEnv().RESEND_WEBHOOK_SECRET);

@@ -176,7 +176,9 @@ production OTP can send you must, on a DLT portal (Jio / Airtel / Vi / BSNL):
 
 ## Not in this phase
 
-- New-device email alerts (needs Resend — Phase F). The device is recorded on
-  the session and shown in `/account`; the alert is a `// TODO(phase-f)` hook.
+- New-device sign-in email alerts. The email pipeline now exists (Phase F,
+  `src/server/email/`); this just needs a `notifyNewDevice` template + a hook in
+  `createSession`. The device is already recorded on the session and shown in
+  `/account`.
 - ~~Guest cart merge on login~~ — done in Phase D (`docs/checkout.md`).
 - Admin 2FA (TOTP) + sudo re-auth — Phase G.

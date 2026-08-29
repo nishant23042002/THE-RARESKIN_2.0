@@ -16,6 +16,12 @@ import {
   grantStoreCredit,
   refundStoreCreditForOrder,
 } from "@/server/commerce/store-credit";
+import {
+  notifyOrderCancelled,
+  notifyOrderConfirmed,
+  notifyPaymentFailed,
+  notifyRefundProcessed,
+} from "@/server/email";
 import { DISCOVERY_SET_SLUG } from "@/lib/catalog";
 import type {
   OrderStatus,
@@ -210,7 +216,9 @@ export async function confirmPaidOrder(
       ip: null,
       userAgent: null,
     });
-    // TODO(phase-f): enqueue confirmation email + GST invoice PDF
+    // Phase F — the confirmation / receipt email.
+    await notifyOrderConfirmed(result.orderNumber);
+    // TODO(phase-h): GST invoice PDF
   }
   return result;
 }
@@ -258,7 +266,8 @@ export async function markPaymentFailed(input: {
     raw: redact(input.raw),
     note: input.reason,
   });
-  // TODO(phase-f): enqueue "payment failed — resume" email
+  // Phase F — one "resume payment" email per order (not per retry).
+  await notifyPaymentFailed(order.orderNumber, input.reason);
   return { ok: true };
 }
 
@@ -356,6 +365,10 @@ export async function cancelUnpaidOrder(
       ip: null,
       userAgent: null,
     });
+    // Phase F — "your order was cancelled" (nothing charged).
+    if (result.orderNumber) {
+      await notifyOrderCancelled(result.orderNumber, opts.reason);
+    }
   }
   return result;
 }
@@ -376,6 +389,10 @@ export async function recordRefund(input: {
   await dbConnect();
   const dbSession = await mongoose.startSession();
   let result: { ok: boolean; orderStatus?: OrderStatus } = { ok: false };
+  // hoisted for the post-commit email — only set on a *new* processed refund
+  let emailPayload:
+    | { orderNumber: string; refundIndex: number; fullRefund: boolean }
+    | undefined;
 
   try {
     await dbSession.withTransaction(async () => {
@@ -405,12 +422,18 @@ export async function recordRefund(input: {
         via: input.via ?? "razorpay",
         createdAt: new Date(),
       });
+      const refundIndex = order.refunds.length - 1;
 
       if (input.status === "processed") {
         order.payment.refundedPaise += input.amountPaise;
         const full =
           order.payment.refundedPaise >= order.pricing.grandTotalPaise;
         order.payment.status = full ? "refunded" : "partially_refunded";
+        emailPayload = {
+          orderNumber: order.orderNumber,
+          refundIndex,
+          fullRefund: full,
+        };
         if (full && canTransition(order.status, "refunded")) {
           transitionOrder(order, "refunded", {
             actor: input.source === "webhook" ? "system" : "staff",
@@ -470,6 +493,20 @@ export async function recordRefund(input: {
   } finally {
     await dbSession.endSession();
   }
+
+  // Phase F — "your refund is on its way", once per refund.
+  const refundEmail = emailPayload;
+  if (result.ok && refundEmail) {
+    await notifyRefundProcessed({
+      orderNumber: refundEmail.orderNumber,
+      providerRefundId: input.providerRefundId,
+      refundIndex: refundEmail.refundIndex,
+      amountPaise: input.amountPaise,
+      reason: input.reason,
+      fullRefund: refundEmail.fullRefund,
+    });
+  }
+
   return result;
 }
 
