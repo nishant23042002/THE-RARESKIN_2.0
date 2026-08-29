@@ -18,7 +18,6 @@ import { getSiteSettings } from "@/server/data/settings";
 import { hydrateItems, type HydratedCartLine } from "@/server/data/cart";
 import { toPaise } from "@/lib/money";
 import { resolvePincode, stateCodeFromName } from "@/lib/pincode";
-import { DISCOVERY_SET_SLUG } from "@/lib/catalog";
 import type {
   CheckoutQuoteInput,
   PlaceOrderInput,
@@ -33,11 +32,7 @@ import {
 } from "./serviceability";
 import { validateCoupon, couponRejectionMessage } from "./coupons";
 import { commitStockForOrder, type StockLine } from "./inventory";
-import {
-  getStoreCreditBalance,
-  spendStoreCredit,
-  grantStoreCredit,
-} from "./store-credit";
+import { getStoreCreditBalance, spendStoreCredit } from "./store-credit";
 
 // ── quote ───────────────────────────────────────────────────────────────
 
@@ -480,6 +475,10 @@ export async function placeOrder(
               upiVpa: null,
             },
             invoice: { number: null, hsn: settings.gst.hsnCode, url: null, generatedAt: null },
+            paymentDueBy:
+              input.method === "razorpay"
+                ? new Date(Date.now() + 30 * 60_000)
+                : null,
             timeline: [
               {
                 at: new Date(),
@@ -488,8 +487,8 @@ export async function placeOrder(
                 actorId: ctx.userId,
                 note:
                   input.method === "cod"
-                    ? "Order placed — cash on delivery. Confirmation lands with the COD flow (Phase I)."
-                    : "Order placed — awaiting payment (Razorpay integration, Phase E).",
+                    ? "Order placed — cash on delivery."
+                    : "Order placed — awaiting payment.",
               },
             ],
             customerNote: input.customerNote,
@@ -557,27 +556,8 @@ export async function placeOrder(
         }
       }
 
-      // Discovery-Set credit — issue now so the ledger is exercisable in
-      // Phase D. Phase E moves this to the verified payment webhook.
-      for (const l of hydrated.lines) {
-        if (l.slug !== DISCOVERY_SET_SLUG) continue;
-        const p = productBySku.get(l.sku);
-        if (p?.credit?.amount && p.credit.amount > 0) {
-          await grantStoreCredit(
-            {
-              userId: ctx.userId,
-              amountPaise: p.credit.amount,
-              reason: "discovery_set_purchase",
-              sourceOrderId: orderDoc._id,
-              expiresAt: p.credit.expiryDays
-                ? new Date(Date.now() + p.credit.expiryDays * 86_400_000)
-                : null,
-              note: "Discovery Set — credit toward a full-size bottle",
-            },
-            dbSession,
-          );
-        }
-      }
+      // The Discovery-Set credit is issued on *verified payment*
+      // (`confirmPaidOrder`), never at order creation.
 
       // Empty the shopper's cart.
       await Cart.updateOne(

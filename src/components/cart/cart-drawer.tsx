@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLenis } from "lenis/react";
 
 import { gsap } from "@/lib/gsap";
 import { useCart } from "@/components/providers/cart-provider";
+import { useRouteTransition } from "@/components/providers/route-transition";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { Button } from "@/components/ui/button";
 import { Mark } from "@/components/ui/mark";
@@ -40,9 +41,13 @@ export function CartDrawer() {
     subtotal,
     hydrated,
     placedOrder,
+    modalSuspended,
   } = useCart();
   const reduced = useReducedMotion();
   const dialogRef = useRef<HTMLDialogElement>(null);
+  /** true while we flip the dialog's modal level ourselves — the resulting
+   *  `close` event must not be read as the user closing the drawer. */
+  const suppressCloseRef = useRef(false);
   const panelRef = useRef<HTMLElement>(null);
   const scrimRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
@@ -134,6 +139,36 @@ export function CartDrawer() {
     return () => window.clearTimeout(safety);
   }, [isOpen, reduced]);
 
+  // A top-layer modal paints above every z-indexed element on the page, so a
+  // third-party payment overlay (Razorpay Checkout) would open *behind* the
+  // drawer. While `modalSuspended` is set, drop to a non-modal `show()` so the
+  // overlay sits in front; re-enter `showModal()` once it closes. The `close`
+  // event this triggers is masked so it doesn't collapse the drawer.
+  useEffect(() => {
+    const dlg = dialogRef.current;
+    if (!dlg || !dlg.open) return;
+
+    let isModal = true;
+    try {
+      isModal = dlg.matches(":modal");
+    } catch {
+      /* :modal unsupported — assume modal, the toggle below still corrects it */
+    }
+    if (modalSuspended !== isModal) return; // already in the right mode
+
+    suppressCloseRef.current = true;
+    dlg.close();
+    if (modalSuspended) {
+      dlg.show();
+    } else {
+      dlg.showModal();
+    }
+    const clear = window.setTimeout(() => {
+      suppressCloseRef.current = false;
+    }, 0);
+    return () => window.clearTimeout(clear);
+  }, [modalSuspended]);
+
   // slide between views
   useEffect(() => {
     const track = trackRef.current;
@@ -165,6 +200,11 @@ export function CartDrawer() {
       closeCart();
     };
     const onClose = () => {
+      // our own modal-level flip, not a real close — ignore it
+      if (suppressCloseRef.current) {
+        suppressCloseRef.current = false;
+        return;
+      }
       unlockScroll("cart");
       if (isOpen) closeCart();
     };
@@ -327,7 +367,8 @@ export function CartDrawer() {
                     </span>
                   </div>
                   <p className="mt-1.5 text-[10px] leading-relaxed text-ink-3">
-                    Shipping is free. GST shown at the next step.
+                    Free shipping across India. The price is the price — nothing
+                    added at checkout.
                   </p>
                   <Button onClick={goToCheckout} className="mt-4 w-full">
                     Proceed to checkout
@@ -344,6 +385,7 @@ export function CartDrawer() {
             {/* slide: confirmation */}
             <div className="flex h-full w-1/3 flex-col">
               <Confirmation
+                key={placedOrder?.orderNumber ?? "none"}
                 order={placedOrder}
                 onClose={closeCart}
               />
@@ -355,14 +397,62 @@ export function CartDrawer() {
   );
 }
 
+/** Seconds the confirmation lingers before it carries a paid shopper to their
+ *  order. Long enough to read the confirmation, short enough not to nag. */
+const REDIRECT_SECS = 5;
+
 function Confirmation({
   order,
   onClose,
 }: {
-  order: { orderNumber: string; method: "razorpay" | "cod" } | null;
+  order: { orderNumber: string; method: "razorpay" | "cod"; paid: boolean } | null;
   onClose: () => void;
 }) {
+  const { navigate } = useRouteTransition();
+  const reduced = useReducedMotion();
+  const [secondsLeft, setSecondsLeft] = useState(REDIRECT_SECS);
+  const [autoRedirect, setAutoRedirect] = useState(true);
+  const firedRef = useRef(false);
+
+  const orderNumber = order?.orderNumber ?? null;
+  const paid = order?.paid ?? false;
+  const orderHref = orderNumber ? `/account/orders/${orderNumber}` : "/account/orders";
+
+  const goToOrder = () => {
+    if (firedRef.current) return;
+    firedRef.current = true;
+    onClose(); // slide the drawer out
+    window.setTimeout(() => navigate(orderHref), reduced ? 0 : 260);
+  };
+
+  // Paid orders auto-advance to the order page after a short, visible countdown.
+  // A `key` on this component (the order number) gives every order a fresh mount,
+  // so `secondsLeft` starts at REDIRECT_SECS without a reset inside the effect.
+  useEffect(() => {
+    if (!paid || !orderNumber || !autoRedirect) return;
+    firedRef.current = false;
+    const startedAt = Date.now();
+    const id = window.setInterval(() => {
+      const remaining = Math.max(
+        0,
+        REDIRECT_SECS - Math.floor((Date.now() - startedAt) / 1000),
+      );
+      setSecondsLeft(remaining);
+      if (remaining === 0) {
+        window.clearInterval(id);
+        goToOrder();
+      }
+    }, 250);
+    return () => window.clearInterval(id);
+    // goToOrder is stable enough for this lifecycle; deps kept minimal on purpose
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paid, orderNumber, autoRedirect]);
+
   if (!order) return <div className="flex-1" />;
+
+  const progress =
+    ((REDIRECT_SECS - secondsLeft) / REDIRECT_SECS) * 100;
+
   return (
     <>
       <div className="flex flex-1 flex-col items-center justify-center px-8 text-center">
@@ -382,34 +472,56 @@ function Confirmation({
             />
           </svg>
         </span>
-        <p className="eyebrow mb-2 text-ok">Order placed</p>
+        <p className="eyebrow mb-2 text-ok">
+          {paid ? "Payment received" : "Order placed"}
+        </p>
         <h3 className="serif text-[1.7rem] leading-tight tracking-[-0.01em] text-ink">
           {order.orderNumber}
         </h3>
-        <p className="mx-auto mt-3 max-w-[30ch] text-[12.5px] leading-relaxed text-ink-2">
+        <p className="mx-auto mt-3 max-w-[32ch] text-[13px] leading-relaxed text-ink-2">
           {order.method === "cod"
             ? "You’ll pay the courier in cash on arrival. We’ll confirm dispatch by SMS."
-            : "Held as unpaid for now — online payment goes live shortly and our team will be in touch. A receipt is on its way to your email."}
+            : paid
+              ? "Thank you — your payment is confirmed. A receipt is on its way to your email and we’ll text you when it ships."
+              : "Your order is held for 30 minutes. Reopen it from your account to complete payment."}
         </p>
+
+        {paid && autoRedirect && (
+          <div className="mt-7 w-full max-w-[240px]">
+            <div className="relative h-px overflow-hidden bg-line-2">
+              <span
+                className="absolute inset-y-0 left-0 transition-[width] duration-[250ms] ease-linear"
+                style={{ width: `${progress}%`, backgroundImage: TRI_JUICE }}
+              />
+            </div>
+            <p className="mt-2.5 text-[10.5px] tracking-[0.1em] text-ink-3 uppercase">
+              Opening your order in{" "}
+              <span className="tabular-nums text-ink">{secondsLeft}s</span>
+            </p>
+          </div>
+        )}
+
         <Logo
           className="mt-8 text-ink-3"
           style={{ width: "96px", opacity: 0.5 }}
         />
       </div>
       <footer className="shrink-0 space-y-2.5 border-t border-line px-6 pt-4 pb-[calc(22px+env(safe-area-inset-bottom))]">
-        <Button
-          href={`/account/orders/${order.orderNumber}`}
-          onClick={onClose}
-          className="w-full"
-        >
-          View order
+        <Button onClick={goToOrder} className="w-full">
+          {paid && autoRedirect ? "View order now" : "View order"}
         </Button>
         <button
           type="button"
-          onClick={onClose}
+          onClick={() => {
+            if (paid && autoRedirect) {
+              setAutoRedirect(false);
+            } else {
+              onClose();
+            }
+          }}
           className="w-full py-2 text-[10px] tracking-[0.16em] text-ink-3 uppercase transition-colors hover:text-ink"
         >
-          Keep shopping
+          {paid && autoRedirect ? "Stay here" : "Keep shopping"}
         </button>
       </footer>
     </>

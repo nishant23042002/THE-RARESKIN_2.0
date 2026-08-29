@@ -13,12 +13,14 @@ import { Coupon } from "./coupon";
 import { MediaAsset } from "./media-asset";
 import { Order } from "./order";
 import { OtpChallenge } from "./otp-challenge";
+import { Payment } from "./payment";
 import { Product } from "./product";
 import { Session } from "./session";
 import { SiteSettings } from "./site-settings";
 import { StockLedger } from "./stock-ledger";
 import { StoreCredit } from "./store-credit";
 import { User } from "./user";
+import { WebhookEvent } from "./webhook-event";
 
 export { AuditLog, recordAudit } from "./audit-log";
 export { Cart } from "./cart";
@@ -27,12 +29,14 @@ export { Coupon } from "./coupon";
 export { MediaAsset } from "./media-asset";
 export { Order } from "./order";
 export { OtpChallenge } from "./otp-challenge";
+export { Payment, recordPayment } from "./payment";
 export { Product } from "./product";
 export { Session } from "./session";
 export { SiteSettings } from "./site-settings";
 export { StockLedger } from "./stock-ledger";
 export { StoreCredit } from "./store-credit";
 export { User } from "./user";
+export { WebhookEvent } from "./webhook-event";
 
 export type { AuditLogDoc } from "./audit-log";
 export type { CartDoc, CartItemSub } from "./cart";
@@ -45,12 +49,14 @@ export type {
   OrderTimelineSub,
 } from "./order";
 export type { OtpChallengeDoc } from "./otp-challenge";
+export type { PaymentDoc } from "./payment";
 export type { ProductDoc } from "./product";
 export type { SessionDoc } from "./session";
 export type { SiteSettingsDoc } from "./site-settings";
 export type { StockLedgerDoc } from "./stock-ledger";
 export type { StoreCreditDoc } from "./store-credit";
 export type { UserDoc } from "./user";
+export type { WebhookEventDoc } from "./webhook-event";
 
 let registered = false;
 
@@ -64,11 +70,13 @@ export function registerModels(): void {
   void MediaAsset;
   void Order;
   void OtpChallenge;
+  void Payment;
   void Product;
   void Session;
   void SiteSettings;
   void StockLedger;
   void StoreCredit;
   void User;
+  void WebhookEvent;
   registered = true;
 }

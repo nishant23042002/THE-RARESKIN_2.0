@@ -2,10 +2,10 @@ import Link from "next/link";
 
 import { Container } from "@/components/ui/container";
 import { AccountActions } from "@/components/account/account-actions";
+import { OrderRow } from "@/components/account/order-row";
 import { pageMeta } from "@/lib/seo";
 import { maskPhone } from "@/lib/auth";
 import { formatPaise } from "@/lib/money";
-import { StatusPill } from "@/components/account/status-pill";
 import { requireUser, listUserSessions } from "@/server/auth";
 import { listUserOrders } from "@/server/data/orders";
 import { listAddresses } from "@/server/data/addresses";
@@ -20,13 +20,6 @@ export const metadata = pageMeta({
 });
 
 export const dynamic = "force-dynamic";
-
-const fmtDate = (iso: string) =>
-  new Date(iso).toLocaleDateString("en-IN", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
 
 export default async function AccountPage() {
   const { user, session } = await requireUser("/account");
@@ -106,35 +99,18 @@ export default async function AccountPage() {
               </Link>
             </div>
           ) : (
-            <ul className="mt-4 divide-y divide-line border-y border-line">
-              {recent.map((o) => (
-                <li key={o.orderNumber}>
-                  <Link
-                    href={`/account/orders/${o.orderNumber}`}
-                    className="flex items-center gap-4 py-4 transition-colors hover:bg-surface"
-                  >
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-[13.5px] tracking-[0.02em] text-ink">
-                        {o.firstItemName}
-                        {o.itemCount > 1 ? (
-                          <span className="text-ink-3">
-                            {" "}
-                            + {o.itemCount - 1} more
-                          </span>
-                        ) : null}
-                      </span>
-                      <span className="mt-0.5 block text-[11.5px] text-ink-3">
-                        {o.orderNumber} · {fmtDate(o.placedAt)}
-                      </span>
-                    </span>
-                    <span className="shrink-0 text-[13px] tabular-nums text-ink">
-                      {formatPaise(Math.round(o.grandTotal * 100))}
-                    </span>
-                    <StatusPill status={o.status} />
-                  </Link>
-                </li>
-              ))}
-            </ul>
+            <>
+              <p className="mt-1.5 text-[11.5px] text-ink-3">
+                Select an order to see its items, totals and where it is.
+              </p>
+              <ul className="mt-3 divide-y divide-line border-y border-line">
+                {recent.map((o) => (
+                  <li key={o.orderNumber}>
+                    <OrderRow order={o} />
+                  </li>
+                ))}
+              </ul>
+            </>
           )}
         </section>
 

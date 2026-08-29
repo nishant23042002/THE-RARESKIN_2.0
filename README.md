@@ -8,11 +8,13 @@ India / INR. Built greenfield from the approved "Campaign" prototype.
 - **Motion:** GSAP 3 + ScrollTrigger + `@gsap/react`, Lenis smooth scroll
 - **Commerce:** a `localStorage` working cart that syncs to a server cart
   (guest + account, merged on sign-in); checkout is a **right-side drawer** that
-  slides bag → checkout → confirmation (no separate route), with a server-side
-  GST engine, coupon + store-credit application, pincode serviceability and
-  atomic stock reservation. Orders are created server-side with correct maths
-  and a stock hold; **payment is stubbed** until Razorpay is wired (next phase).
-  See [`docs/checkout.md`](docs/checkout.md).
+  slides bag → checkout → payment → confirmation (no separate route), with a
+  server-side GST engine, coupon + store-credit application, pincode
+  serviceability and atomic stock reservation. **Razorpay hosted checkout** is
+  wired end to end — verified webhook (authoritative), immutable payment log,
+  refund path, auto-cancel of unpaid orders. Works locally without keys via a
+  "simulate payment" panel. See [`docs/checkout.md`](docs/checkout.md) and
+  [`docs/payments.md`](docs/payments.md).
 - **Data layer:** MongoDB Atlas + Mongoose, Zod validation shared client/server,
   Cloudinary for media, `migrate-mongo` migrations. The storefront reads the
   catalogue (products, prices, copy, SEO) from the database via a `server-only`
@@ -181,21 +183,22 @@ See `.env.example`. All optional:
 
 ## Wiring the integrations
 
-### Checkout (Razorpay — next phase)
+### Payments (Razorpay)
 
-The order pipeline is built; only the payment step is stubbed. To wire Razorpay:
+Wired end to end (Test Mode). Full setup + guarantees in
+[`docs/payments.md`](docs/payments.md). The short version:
 
-1. In `placeOrder()`, move the stock `commit` behind a short reservation (Redis
-   key) and create the order as `pending` with a Razorpay order id.
-2. Add `POST /api/checkout/razorpay/callback` (verify the signature) and
-   `POST /api/webhooks/razorpay` (idempotent, dedup by event id) — the webhook
-   confirms the order, commits the reservation, and issues the Discovery-Set
-   credit (currently issued at order-creation for testability).
-3. In `checkout-panel.tsx`, the `method === "razorpay"` branch opens the
-   Razorpay modal (over the drawer) instead of placing directly; COD keeps the
-   current path. The drawer's `done` view already handles confirmation.
+1. `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` (Test Mode) → hosted checkout goes
+   live; blank → the local "simulate payment" panel.
+2. Create a webhook at `/api/webhooks/razorpay` for `payment.captured`,
+   `payment.failed`, `order.paid`, `refund.processed`, `refund.failed`,
+   `payment.dispute.created`; its secret → `RAZORPAY_WEBHOOK_SECRET`.
+3. `CRON_SECRET` in the Vercel project (crons in `vercel.json`: auto-cancel
+   every 5 min, reconcile daily).
+4. Flip `flags.checkoutEnabled: true` in Site Settings.
 
-Set `flags.checkoutEnabled: true` in Site Settings when ready for customers.
+Emails, GST-invoice PDFs and a job queue (Inngest) land in Phase F — the
+webhook leaves `// TODO(phase-f)` hooks.
 
 ### Contact & newsletter forms
 
@@ -235,10 +238,11 @@ Content that ships as a deliberate placeholder and needs a real value / review
 before going live:
 
 - **Domain** — confirm `NEXT_PUBLIC_SITE_URL` / the value in `lib/site.ts`.
-- **Checkout / payment** — the order pipeline is done; wire Razorpay (see
-  "Wiring the integrations"), then flip `flags.checkoutEnabled` in Site
-  Settings. Until then the checkout drawer shows "opens with launch" for
-  customers.
+- **Checkout / payment** — the flow is done end to end. Add Razorpay Test-Mode
+  keys + a webhook (see [`docs/payments.md`](docs/payments.md)) and
+  `CRON_SECRET`, then flip `flags.checkoutEnabled` in Site Settings. Until then
+  the checkout drawer shows "opens with launch" for customers; in dev it uses
+  the simulate-payment panel.
 - **Coupons** — created with `pnpm coupon add …` for now (admin UI is a later
   phase). None ship by default.
 - **Stock** — every product seeds at `stock: 0`; set real levels with

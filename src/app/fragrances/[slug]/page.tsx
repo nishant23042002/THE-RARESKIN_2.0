@@ -249,7 +249,7 @@ export default async function FragrancePage({
               </div>
 
               <AddToBagButton
-                sku={f.slug}
+                sku={f.sku}
                 name={f.name}
                 price={f.price}
                 mrp={f.mrp}
@@ -388,7 +388,7 @@ export default async function FragrancePage({
                       </s>
                     </span>
                     <AddToBagButton
-                      sku={r.slug}
+                      sku={r.sku}
                       name={r.name}
                       price={r.price}
                       mrp={r.mrp}

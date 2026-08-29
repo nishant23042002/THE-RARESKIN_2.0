@@ -149,10 +149,17 @@ export interface OrderDoc {
     provider: string | null;
     providerOrderId: string | null;
     providerPaymentId: string | null;
+    /** the verified checkout-callback signature, kept for audit */
+    signature: string | null;
+    /** payment instrument, e.g. "upi" | "card" | "netbanking" | "wallet" */
+    instrument: string | null;
     capturedAt: Date | null;
     last4: string | null;
     upiVpa: string | null;
+    refundedPaise: number;
   };
+  /** for an unpaid online order — the auto-cancel job releases it after this */
+  paymentDueBy: Date | null;
   fulfilment: {
     carrier: string | null;
     trackingNumber: string | null;
@@ -167,6 +174,7 @@ export interface OrderDoc {
     providerRefundId: string | null;
     status: string;
     actorId: Types.ObjectId | null;
+    via: string;
     createdAt: Date;
   }[];
   timeline: OrderTimelineSub[];
@@ -220,10 +228,14 @@ const orderSchema = new Schema<OrderDoc>(
       provider: { type: String, default: null },
       providerOrderId: { type: String, default: null },
       providerPaymentId: { type: String, default: null },
+      signature: { type: String, default: null },
+      instrument: { type: String, default: null },
       capturedAt: { type: Date, default: null },
       last4: { type: String, default: null },
       upiVpa: { type: String, default: null },
+      refundedPaise: { type: Number, default: 0 },
     },
+    paymentDueBy: { type: Date, default: null },
     fulfilment: {
       carrier: { type: String, default: null },
       trackingNumber: { type: String, default: null },
@@ -246,6 +258,7 @@ const orderSchema = new Schema<OrderDoc>(
           providerRefundId: { type: String, default: null },
           status: { type: String, default: "created" },
           actorId: { type: Schema.Types.ObjectId, ref: "User", default: null },
+          via: { type: String, default: "razorpay" }, // "razorpay" | "manual"
           createdAt: { type: Date, default: Date.now },
         },
       ],
@@ -283,6 +296,14 @@ orderSchema.index(
 orderSchema.index(
   { userId: 1, idempotencyKey: 1 },
   { name: "user_idem_unique", unique: true },
+);
+// Auto-cancel sweep: unpaid online orders past their window.
+orderSchema.index(
+  { "payment.status": 1, paymentDueBy: 1 },
+  {
+    name: "unpaid_due",
+    partialFilterExpression: { paymentDueBy: { $type: "date" } },
+  },
 );
 
 export const Order: Model<OrderDoc> =

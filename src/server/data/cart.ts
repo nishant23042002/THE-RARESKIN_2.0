@@ -57,29 +57,48 @@ interface ResolvedItem {
   addedAt: Date;
 }
 
-/** Map requested SKUs to catalogue products; drop unknown SKUs, clamp qty. */
+/**
+ * Map requested identifiers to catalogue products; drop unknowns, clamp qty.
+ *
+ * The identifier is normally the inventory SKU, but older storefront carts (and
+ * anything that adds by product route) may carry the product *slug* instead —
+ * both are accepted and always resolved to the canonical SKU so everything
+ * downstream (orders, stock ledger, invoices) is keyed consistently.
+ */
 async function resolveItems(
   items: CartItemInput[],
 ): Promise<ResolvedItem[]> {
   const wanted = new Map<string, number>();
   for (const it of items.slice(0, MAX_CART_LINES)) {
-    const sku = it.sku.toUpperCase();
-    wanted.set(sku, Math.min(MAX_LINE_QTY, (wanted.get(sku) ?? 0) + it.qty));
+    const key = it.sku.trim().toUpperCase();
+    if (!key) continue;
+    wanted.set(key, Math.min(MAX_LINE_QTY, (wanted.get(key) ?? 0) + it.qty));
   }
   if (wanted.size === 0) return [];
 
+  const keys = [...wanted.keys()];
   const docs = await Product.find({
-    "inventory.sku": { $in: [...wanted.keys()] },
+    $or: [
+      { "inventory.sku": { $in: keys } },
+      { slug: { $in: keys.map((k) => k.toLowerCase()) } },
+    ],
   })
-    .select("_id inventory.sku")
-    .lean<Pick<ProductDoc, "_id" | "inventory">[]>();
+    .select("_id inventory.sku slug")
+    .lean<(Pick<ProductDoc, "_id" | "inventory"> & { slug: string })[]>();
 
-  const bySku = new Map(docs.map((d) => [d.inventory.sku, d._id]));
+  const byKey = new Map<string, Pick<ProductDoc, "_id" | "inventory">>();
+  for (const d of docs) {
+    byKey.set(d.inventory.sku.toUpperCase(), d);
+    byKey.set(d.slug.toUpperCase(), d);
+  }
+
   const now = new Date();
   const out: ResolvedItem[] = [];
-  for (const [sku, qty] of wanted) {
-    const productId = bySku.get(sku);
-    if (productId) out.push({ productId, sku, qty, addedAt: now });
+  for (const [key, qty] of wanted) {
+    const doc = byKey.get(key);
+    if (doc) {
+      out.push({ productId: doc._id, sku: doc.inventory.sku, qty, addedAt: now });
+    }
   }
   return out;
 }
@@ -267,23 +286,39 @@ function lineImage(doc: ProductDoc): string | null {
   return doc.media?.flat?.url ?? doc.media?.hero?.url ?? null;
 }
 
-/** Join a set of `{ sku, qty }` against the live catalogue for display. */
+/**
+ * Join a set of `{ sku, qty }` against the live catalogue for display.
+ *
+ * The identifier may be the inventory SKU or (older carts) the product slug —
+ * both resolve, and each line is emitted with the canonical SKU.
+ */
 export async function hydrateItems(
   items: { sku: string; qty: number }[],
 ): Promise<HydratedCart> {
   await dbConnect();
-  const skus = items.map((i) => i.sku.toUpperCase());
-  if (skus.length === 0) return { lines: [], removed: [], subtotal: 0, count: 0 };
+  const keys = items
+    .map((i) => i.sku.trim().toUpperCase())
+    .filter(Boolean);
+  if (keys.length === 0) return { lines: [], removed: [], subtotal: 0, count: 0 };
 
-  const docs = await Product.find({ "inventory.sku": { $in: skus } })
-    .lean<ProductDoc[]>();
-  const bySku = new Map(docs.map((d) => [d.inventory.sku, d]));
+  const docs = await Product.find({
+    $or: [
+      { "inventory.sku": { $in: keys } },
+      { slug: { $in: keys.map((k) => k.toLowerCase()) } },
+    ],
+  }).lean<ProductDoc[]>();
+  const byKey = new Map<string, ProductDoc>();
+  for (const d of docs) {
+    byKey.set(d.inventory.sku.toUpperCase(), d);
+    byKey.set(d.slug.toUpperCase(), d);
+  }
 
   const lines: HydratedCartLine[] = [];
   const removed: string[] = [];
   for (const it of items) {
-    const sku = it.sku.toUpperCase();
-    const doc = bySku.get(sku);
+    const key = it.sku.trim().toUpperCase();
+    const doc = byKey.get(key);
+    const sku = doc?.inventory.sku ?? key;
     const sellable =
       doc &&
       doc.status === "active" &&

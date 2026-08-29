@@ -48,7 +48,7 @@ export function DiscoverySet({
               </span>
             </span>
             <AddToBagButton
-              sku={set.slug}
+              sku={set.sku}
               name={set.name}
               price={set.price}
               mrp={set.mrp}

@@ -49,8 +49,10 @@ const gstSettings = z.object({
       "Enter a valid 15-character GSTIN",
     )
     .optional(),
-  /** percent, tax-inclusive pricing */
-  ratePercent: z.number().min(0).max(28).default(18),
+  /** percent, tax-inclusive pricing. 0 turns the tax breakdown off entirely
+   *  (no CGST/SGST/IGST split, no GST line on the order) — the storefront
+   *  price is then simply the price. Flip to 18 to bring the engine back. */
+  ratePercent: z.number().min(0).max(28).default(0),
   hsnCode: hsnCode.default("33030090"),
   originStateCode: z
     .string()

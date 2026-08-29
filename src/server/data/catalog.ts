@@ -52,6 +52,7 @@ function toFragrance(doc: ProductDoc): Fragrance {
   return {
     id: String(doc._id),
     slug: isFragranceSlug(doc.slug) ? doc.slug : "aurevan",
+    sku: doc.inventory.sku,
     name: doc.name,
     pronunciation: doc.pronunciation ?? "",
     title: doc.title,
@@ -95,6 +96,7 @@ function toDiscoverySet(doc: ProductDoc): DiscoverySetInfo {
   return {
     id: String(doc._id),
     slug: DISCOVERY_SET_SLUG,
+    sku: doc.inventory.sku,
     name: doc.name,
     headline: doc.title,
     detail: doc.poem,

@@ -48,6 +48,8 @@ export interface FragranceImages {
 export interface Fragrance {
   id: string;
   slug: FragranceSlug;
+  /** inventory SKU — the identifier the cart and checkout carry */
+  sku: string;
   name: string;
   pronunciation: string;
   title: string;
@@ -86,6 +88,8 @@ export interface Fragrance {
 export interface DiscoverySetInfo {
   id: string;
   slug: typeof DISCOVERY_SET_SLUG;
+  /** inventory SKU — the identifier the cart and checkout carry */
+  sku: string;
   name: string;
   headline: string;
   detail: string;

@@ -152,7 +152,7 @@ export function Quiz({ fragrances }: { fragrances: Fragrance[] }) {
                     </p>
                     <div className="mt-6 flex flex-wrap items-center gap-2.5">
                       <AddToBagButton
-                        sku={match.slug}
+                        sku={match.sku}
                         name={match.name}
                         price={match.price}
                         mrp={match.mrp}

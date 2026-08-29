@@ -13,8 +13,10 @@ import { formatPaise } from "@/lib/money";
 import { GST_STATES, resolvePincode } from "@/lib/pincode";
 import { maskPhone, normalizeIndianMobile } from "@/lib/auth";
 import { isFragranceSlug } from "@/lib/catalog";
+import { openRazorpayCheckout } from "@/lib/razorpay-checkout";
 import type {
   CheckoutQuoteResponse,
+  PaymentConfirmResponse,
   PlaceOrderFailure,
   PlaceOrderSuccess,
   QuoteLine,
@@ -109,7 +111,14 @@ type Step = 1 | 2 | 3;
  */
 export function CheckoutPanel() {
   const { status, user, openSignIn } = useAuth();
-  const { lines: cartLines, hydrated, view, completeOrder } = useCart();
+  const {
+    lines: cartLines,
+    hydrated,
+    view,
+    completeOrder,
+    suspendModal,
+    resumeModal,
+  } = useCart();
 
   const items = useMemo(
     () => cartLines.map((l) => ({ sku: l.sku, qty: l.qty })),
@@ -138,10 +147,17 @@ export function CheckoutPanel() {
   const [note, setNote] = useState("");
 
   const [quote, setQuote] = useState<CheckoutQuoteResponse | null>(null);
+  const [quoteError, setQuoteError] = useState<string | null>(null);
   const [quoting, setQuoting] = useState(false);
   const [placing, setPlacing] = useState(false);
   const [placeError, setPlaceError] = useState<string | null>(null);
   const [cartChanged, setCartChanged] = useState<QuoteWarning[] | null>(null);
+
+  const [paying, setPaying] = useState(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [payState, setPayState] = useState<
+    { kind: "dev" | "retry"; orderNumber: string } | null
+  >(null);
 
   const [idempotencyKey] = useState(() =>
     typeof crypto !== "undefined" && crypto.randomUUID
@@ -220,9 +236,17 @@ export function CheckoutPanel() {
       });
       const data = (await res.json()) as
         | CheckoutQuoteResponse
-        | { ok: false; message: string };
-      if ((data as CheckoutQuoteResponse).ok) {
-        setQuote(data as CheckoutQuoteResponse);
+        | { ok: false; code?: string; message?: string };
+      if (data.ok) {
+        setQuote(data);
+        setQuoteError(null);
+      } else {
+        setQuote(null);
+        setQuoteError(
+          data.code === "empty-cart"
+            ? "Everything in your bag has sold out. Head back to the shop."
+            : data.message ?? "We couldn’t price your bag. Try again in a moment.",
+        );
       }
     } catch {
       /* keep the last good quote */
@@ -437,7 +461,7 @@ export function CheckoutPanel() {
       });
       const data = (await res.json()) as PlaceOrderSuccess | PlaceOrderFailure;
       if (data.ok) {
-        completeOrder({ orderNumber: data.orderNumber, method });
+        await handlePayment(data);
         return;
       }
       if (data.code === "cart-changed") {
@@ -461,14 +485,114 @@ export function CheckoutPanel() {
     }
   }
 
+  // ── payment ──────────────────────────────────────────────────────────
+
+  async function handlePayment(placed: PlaceOrderSuccess) {
+    const { orderNumber, payment } = placed;
+    if (payment.kind === "cod") {
+      completeOrder({ orderNumber, method: "cod", paid: false });
+      return;
+    }
+    if (payment.kind === "razorpay-dev") {
+      setPayState({ kind: "dev", orderNumber });
+      return;
+    }
+    // real Razorpay
+    setPaymentError(null);
+    setPaying(true);
+    // The drawer is a top-layer <dialog>; drop it to non-modal so Razorpay's
+    // hosted checkout opens in front of it, not behind.
+    suspendModal();
+    try {
+      const outcome = await openRazorpayCheckout({
+        keyId: payment.keyId,
+        razorpayOrderId: payment.razorpayOrderId,
+        amountPaise: payment.amountPaise,
+        prefill: payment.prefill,
+        orderNumber,
+      });
+      if (outcome.status === "success") {
+        const vr = await fetch("/api/payments/razorpay/callback", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(outcome.payload),
+        });
+        const vd = (await vr.json()) as PaymentConfirmResponse;
+        if (vd.ok) {
+          completeOrder({ orderNumber, method: "razorpay", paid: true });
+        } else {
+          // Payment likely went through — the webhook will reconcile. Show a
+          // soft confirmation rather than an error.
+          completeOrder({ orderNumber, method: "razorpay", paid: true });
+        }
+      } else if (outcome.status === "failed") {
+        setPayState({ kind: "retry", orderNumber });
+        setPaymentError(outcome.message);
+      } else {
+        setPayState({ kind: "retry", orderNumber });
+        setPaymentError("Payment not completed. Your order is held for 30 minutes.");
+      }
+    } catch (err) {
+      setPayState({ kind: "retry", orderNumber });
+      setPaymentError(
+        err instanceof Error ? err.message : "The payment window failed to open.",
+      );
+    } finally {
+      resumeModal();
+      setPaying(false);
+    }
+  }
+
+  async function retryPayment() {
+    // Re-hit place with the same idempotency key → same order, same Razorpay id.
+    setPayState(null);
+    setPaymentError(null);
+    await placeOrder();
+  }
+
+  async function simulatePayment(outcome: "paid" | "failed") {
+    if (!payState) return;
+    setPaying(true);
+    setPaymentError(null);
+    try {
+      const r = await fetch("/api/payments/dev-simulate", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ orderNumber: payState.orderNumber, outcome }),
+      });
+      const d = (await r.json()) as PaymentConfirmResponse;
+      if (d.ok) {
+        completeOrder({
+          orderNumber: payState.orderNumber,
+          method: "razorpay",
+          paid: true,
+        });
+      } else {
+        setPaymentError(
+          outcome === "failed"
+            ? "Simulated a failed payment. The order stays open — retry."
+            : "Could not simulate the payment.",
+        );
+      }
+    } catch {
+      setPaymentError("Network error.");
+    } finally {
+      setPaying(false);
+    }
+  }
+
   const footerLabel =
     step === 1
       ? "Continue to delivery"
       : step === 2
         ? "Continue to payment"
-        : placing
-          ? "Placing your order…"
-          : "Place order";
+        : placing || paying
+          ? method === "cod"
+            ? "Placing your order…"
+            : "Opening secure payment…"
+          : method === "cod"
+            ? "Place order"
+            : "Pay securely";
 
   return (
     <>
@@ -572,26 +696,29 @@ export function CheckoutPanel() {
               </dd>
             </div>
 
-            <div className="!mt-1.5 flex items-center justify-between text-[11px] text-ink-3">
-              <span>
-                {quote
-                  ? `Incl. ${quote.pricing.gst.ratePercent}% GST ${formatPaise(
-                      quote.pricing.gst.totalPaise,
-                    )}`
-                  : "GST calculated at the next step"}
-              </span>
-              {youSavePaise > 0 && (
-                <span className="text-ok">
-                  You save {formatPaise(youSavePaise)}
+            {(youSavePaise > 0 ||
+              (quote && quote.pricing.gst.totalPaise > 0)) && (
+              <div className="!mt-1.5 flex items-center justify-between text-[11px] text-ink-3">
+                <span>
+                  {quote && quote.pricing.gst.totalPaise > 0
+                    ? `Incl. ${quote.pricing.gst.ratePercent}% GST ${formatPaise(
+                        quote.pricing.gst.totalPaise,
+                      )}`
+                    : ""}
                 </span>
-              )}
-            </div>
+                {youSavePaise > 0 && (
+                  <span className="text-ok">
+                    You save {formatPaise(youSavePaise)}
+                  </span>
+                )}
+              </div>
+            )}
           </dl>
 
           {/* trust row */}
           <div className="mt-4 grid grid-cols-3 gap-2 border-t border-line pt-3.5 text-center">
             <Trust glyph={<TruckGlyph />} label="Free delivery" />
-            <Trust glyph={<DocGlyph />} label="GST invoice" />
+            <Trust glyph={<DocGlyph />} label="No hidden fees" />
             <Trust glyph={<ShieldGlyph />} label="Secure checkout" />
           </div>
         </section>
@@ -926,7 +1053,7 @@ export function CheckoutPanel() {
                           : "Cash on delivery"}
                         <span className="mt-0.5 block text-[11px] text-ink-3">
                           {m === "razorpay"
-                            ? "Google Pay, PhonePe, Paytm and all UPI apps. Secure payment goes live with the next release."
+                            ? "Google Pay, PhonePe, Paytm and every UPI app. Secured by Razorpay — card details never reach us."
                             : allowed
                               ? "Pay the courier on arrival."
                               : "Not available for this order."}
@@ -945,9 +1072,9 @@ export function CheckoutPanel() {
                 className="w-full resize-none border border-line-2 bg-transparent px-3 py-2.5 text-[13px] focus:border-ink focus:outline-none"
               />
 
-              {placeError && (
+              {(placeError || paymentError || quoteError) && (
                 <p className="border border-error/40 bg-error/5 px-3 py-2.5 text-[12px] text-error">
-                  {placeError}
+                  {paymentError ?? placeError ?? quoteError}
                 </p>
               )}
               {pinBlocked && (
@@ -955,39 +1082,79 @@ export function CheckoutPanel() {
                   Update the delivery PIN — we don’t ship there yet.
                 </p>
               )}
+
+              {payState?.kind === "dev" && (
+                <div className="border border-dashed border-line-2 bg-bg/60 px-3.5 py-3 text-[12px] text-ink-2">
+                  <p className="font-medium text-ink">
+                    Development — Razorpay not configured
+                  </p>
+                  <p className="mt-1 text-[11px]">
+                    Order{" "}
+                    <span className="text-ink">{payState.orderNumber}</span> is
+                    held. Simulate the hosted-checkout outcome:
+                  </p>
+                  <div className="mt-2.5 flex gap-2">
+                    <Button
+                      size="sm"
+                      onClick={() => void simulatePayment("paid")}
+                      disabled={paying}
+                    >
+                      {paying ? "…" : "Payment success"}
+                    </Button>
+                    <Button
+                      variant="onDark"
+                      size="sm"
+                      onClick={() => void simulatePayment("failed")}
+                      disabled={paying}
+                    >
+                      Failure
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           </StepBlock>
         </div>
 
         <p className="px-6 py-4 text-center text-[11px] leading-relaxed text-ink-3">
-          Nothing is charged until you place the order. Payment goes live with
-          the next release.
+          {method === "cod"
+            ? "Cash on delivery — pay when it arrives."
+            : "Secured by Razorpay. You’ll pay in a protected window; your order is held for 30 minutes."}
         </p>
       </div>
 
       <PanelFooter>
-        <Button
-          size="lg"
-          className="w-full !justify-between !px-5"
-          disabled={placing || (step === 3 && (quoting || !quote || pinBlocked))}
-          onClick={advance}
-        >
-          <span className="tracking-[0.1em]">
-            {footerLabel}
-            {step === 3 && total != null ? ` · ${formatPaise(total)}` : ""}
-          </span>
-          {step === 3 ? (
-            <PaymentBadges />
-          ) : (
-            <span aria-hidden className="text-w0/70">
-              &rarr;
+        {payState?.kind === "retry" ? (
+          <Button size="lg" className="w-full" disabled={paying} onClick={retryPayment}>
+            {paying ? "Opening secure payment…" : "Retry payment"}
+          </Button>
+        ) : (
+          <Button
+            size="lg"
+            className="w-full !justify-between !px-5"
+            disabled={
+              placing ||
+              paying ||
+              (step === 3 && (quoting || !quote || pinBlocked))
+            }
+            onClick={advance}
+          >
+            <span className="tracking-[0.1em]">
+              {footerLabel}
+              {step === 3 && total != null ? ` · ${formatPaise(total)}` : ""}
             </span>
-          )}
-        </Button>
+            {step === 3 ? (
+              <PaymentBadges />
+            ) : (
+              <span aria-hidden className="text-w0/70">
+                &rarr;
+              </span>
+            )}
+          </Button>
+        )}
         {step === 3 && (
           <p className="mt-2.5 text-center text-[10.5px] leading-relaxed text-ink-3">
-            By placing this order you agree to THE RARESKIN’s Terms & Privacy
-            Policy.
+            By continuing you agree to THE RARESKIN’s Terms &amp; Privacy Policy.
           </p>
         )}
       </PanelFooter>

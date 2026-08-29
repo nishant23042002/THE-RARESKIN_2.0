@@ -79,7 +79,7 @@ export function ProductCard({
             <s className="ml-2 text-[10px] opacity-60">{formatINR(f.mrp)}</s>
           </span>
           <AddToBagButton
-            sku={f.slug}
+            sku={f.sku}
             name={f.name}
             price={f.price}
             mrp={f.mrp}

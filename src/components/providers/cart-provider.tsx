@@ -29,6 +29,8 @@ export type CartView = "bag" | "checkout" | "done";
 export interface PlacedOrder {
   orderNumber: string;
   method: "razorpay" | "cod";
+  /** true once payment is confirmed (Razorpay) — COD stays false */
+  paid: boolean;
 }
 
 interface CartContextValue {
@@ -50,6 +52,16 @@ interface CartContextValue {
   backToBag: () => void;
   /** order placed — slide to confirmation and empty the bag */
   completeOrder: (order: PlacedOrder) => void;
+  /**
+   * The drawer is a top-layer `<dialog showModal()>`, which sits above every
+   * z-indexed element on the page — including a third-party payment overlay
+   * (Razorpay Checkout). While `modalSuspended` is true the drawer drops to a
+   * non-modal `show()` so that overlay can render in front of it; call
+   * `resumeModal()` once the overlay closes.
+   */
+  modalSuspended: boolean;
+  suspendModal: () => void;
+  resumeModal: () => void;
   addItem: (line: Omit<CartLine, "qty"> & { qty?: number }) => void;
   setQty: (sku: string, qty: number) => void;
   removeItem: (sku: string) => void;
@@ -63,6 +75,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
   const [view, setView] = useState<CartView>("bag");
   const [placedOrder, setPlacedOrder] = useState<PlacedOrder | null>(null);
+  const [modalSuspended, setModalSuspended] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<number | undefined>(undefined);
   const resetTimer = useRef<number | undefined>(undefined);
@@ -184,6 +197,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const closeCart = useCallback(() => {
     setIsOpen(false);
+    setModalSuspended(false);
     // reset the view after the close animation so it doesn't flicker on the way out
     window.clearTimeout(resetTimer.current);
     resetTimer.current = window.setTimeout(() => {
@@ -191,6 +205,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
       setPlacedOrder(null);
     }, 520);
   }, []);
+
+  const suspendModal = useCallback(() => setModalSuspended(true), []);
+  const resumeModal = useCallback(() => setModalSuspended(false), []);
 
   const openCart = useCallback(() => {
     window.clearTimeout(resetTimer.current);
@@ -209,6 +226,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const completeOrder = useCallback((order: PlacedOrder) => {
     setPlacedOrder(order);
+    setModalSuspended(false);
     setView("done");
     dispatch({ type: "clear" });
   }, []);
@@ -228,6 +246,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
       goToCheckout,
       backToBag,
       completeOrder,
+      modalSuspended,
+      suspendModal,
+      resumeModal,
       addItem: (line) => {
         dispatch({ type: "add", line });
         notify(`${line.name} added to bag`);
@@ -242,6 +263,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
       isOpen,
       view,
       placedOrder,
+      modalSuspended,
+      suspendModal,
+      resumeModal,
       toast,
       notify,
       openCart,

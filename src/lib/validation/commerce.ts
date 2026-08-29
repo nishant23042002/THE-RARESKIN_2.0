@@ -43,6 +43,34 @@ export const PAYMENT_STATUSES = [
 ] as const;
 export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
 
+/** Rows in the immutable `payments` audit log. */
+export const PAYMENT_EVENTS = [
+  "order_created",
+  "authorized",
+  "captured",
+  "failed",
+  "refund_created",
+  "refunded",
+  "refund_failed",
+  "disputed",
+] as const;
+export type PaymentEvent = (typeof PAYMENT_EVENTS)[number];
+
+export const PAYMENT_EVENT_SOURCES = [
+  "server",
+  "checkout-callback",
+  "webhook",
+  "admin",
+  "cron",
+  "dev-simulate",
+] as const;
+
+export const REFUND_STATUSES = [
+  "created",
+  "processed",
+  "failed",
+] as const;
+
 export const COUPON_TYPES = ["percent", "fixed", "free_shipping"] as const;
 export type CouponType = (typeof COUPON_TYPES)[number];
 
@@ -141,6 +169,32 @@ export const placeOrderInput = z.object({
     path: ["newAddress"],
   });
 export type PlaceOrderInput = z.infer<typeof placeOrderInput>;
+
+// ── payments (Phase E) ─────────────────────────────────────────────────
+
+/** Body of `POST /api/payments/razorpay/callback` — the fast confirmation path
+ *  after the hosted checkout succeeds. The webhook is authoritative. */
+export const razorpayCallbackInput = z.object({
+  razorpay_order_id: z.string().min(6).max(64),
+  razorpay_payment_id: z.string().min(6).max(64),
+  razorpay_signature: z.string().min(16).max(256),
+});
+export type RazorpayCallbackInput = z.infer<typeof razorpayCallbackInput>;
+
+/** Dev-only: simulate a payment outcome when Razorpay isn't configured. */
+export const devPaymentSimulateInput = z.object({
+  orderNumber: z.string().min(6).max(32),
+  outcome: z.enum(["paid", "failed"]),
+});
+
+/** Admin refund (the UI is Phase G; the schema + engine ship now). */
+export const refundInput = z.object({
+  orderNumber: z.string().min(6).max(32),
+  /** omit for a full refund of the remaining amount */
+  amountPaise: paise.optional(),
+  reason: shortText(240),
+});
+export type RefundInput = z.infer<typeof refundInput>;
 
 // ── admin: coupon CRUD (schema lives here; UI is Phase H) ────────────────
 

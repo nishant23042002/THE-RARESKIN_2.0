@@ -59,6 +59,17 @@ const schema = z.object({
   UPSTASH_REDIS_REST_URL: z.string().min(1).optional(),
   UPSTASH_REDIS_REST_TOKEN: z.string().min(1).optional(),
 
+  // ── Payments — Razorpay ────────────────────────────────────────────────
+  // Blank locally → checkout falls back to a dev "simulate payment" panel.
+  RAZORPAY_KEY_ID: z.string().min(1).optional(),
+  RAZORPAY_KEY_SECRET: z.string().min(1).optional(),
+  RAZORPAY_WEBHOOK_SECRET: z.string().min(1).optional(),
+
+  // ── Scheduled jobs (auto-cancel, reconciliation) ───────────────────────
+  // Bearer token the cron routes require. Set it in the Vercel project +
+  // vercel.json crons. Blank = the cron routes 401 everything.
+  CRON_SECRET: z.string().min(16).optional(),
+
   // ── Seed / bootstrap (only read by scripts/seed.ts) ─────────────────────
   SEED_SUPERADMIN_PHONE: z
     .string()
@@ -181,3 +192,38 @@ export const isUpstashConfigured = () => {
   const env = getEnv();
   return Boolean(env.UPSTASH_REDIS_REST_URL && env.UPSTASH_REDIS_REST_TOKEN);
 };
+
+/** True when Razorpay can create orders. The webhook needs its secret too;
+ *  `isRazorpayWebhookConfigured()` checks that separately. */
+export const isRazorpayConfigured = () => {
+  const env = getEnv();
+  return Boolean(env.RAZORPAY_KEY_ID && env.RAZORPAY_KEY_SECRET);
+};
+
+export const isRazorpayWebhookConfigured = () =>
+  Boolean(getEnv().RAZORPAY_WEBHOOK_SECRET);
+
+/** The webhook secret alone (configured independently of the API keys). */
+export const getRazorpayWebhookSecret = () =>
+  getEnv().RAZORPAY_WEBHOOK_SECRET ?? null;
+
+/** Razorpay API credentials, asserted present. Call from payment code only. */
+export function getRazorpayEnv(): {
+  keyId: string;
+  keySecret: string;
+  webhookSecret: string | null;
+} {
+  const env = getEnv();
+  if (!env.RAZORPAY_KEY_ID || !env.RAZORPAY_KEY_SECRET) {
+    throw new Error(
+      "Razorpay is not configured. Set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET.",
+    );
+  }
+  return {
+    keyId: env.RAZORPAY_KEY_ID,
+    keySecret: env.RAZORPAY_KEY_SECRET,
+    webhookSecret: env.RAZORPAY_WEBHOOK_SECRET ?? null,
+  };
+}
+
+export const getCronSecret = () => getEnv().CRON_SECRET ?? null;

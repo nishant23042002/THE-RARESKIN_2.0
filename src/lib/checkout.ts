@@ -81,11 +81,24 @@ export interface CheckoutQuoteErrorResponse {
   message: string;
 }
 
+/** How the client should collect payment for a just-placed order. */
+export type CheckoutPaymentDirective =
+  | { kind: "cod" }
+  | {
+      kind: "razorpay";
+      razorpayOrderId: string;
+      keyId: string;
+      amountPaise: number;
+      prefill: { name: string; email: string; contact: string };
+    }
+  | { kind: "razorpay-dev"; amountPaise: number };
+
 export interface PlaceOrderSuccess {
   ok: true;
   orderNumber: string;
   orderId: string;
   reused: boolean;
+  payment: CheckoutPaymentDirective;
 }
 
 export interface PlaceOrderFailure {
@@ -102,9 +115,17 @@ export interface PlaceOrderFailure {
     | "coupon-invalid"
     | "credit-changed"
     | "sold-out"
+    | "payment-init-failed"
     | "transaction-unsupported";
   message?: string;
   details?: unknown;
+}
+
+/** `POST /api/payments/razorpay/callback` and `/api/payments/dev-simulate`. */
+export interface PaymentConfirmResponse {
+  ok: boolean;
+  orderNumber?: string;
+  error?: "bad-request" | "auth-required" | "signature" | "not-found" | "failed";
 }
 
 /** Customer-facing label for an order status. */

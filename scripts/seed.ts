@@ -168,7 +168,9 @@ function buildSettings() {
       feePaise: 0,
     },
     gst: {
-      ratePercent: 18,
+      // 0 = tax display switched off (India-centric brand, prices are all-in).
+      // Set back to 18 to re-enable the CGST/SGST/IGST engine and invoice lines.
+      ratePercent: 0,
       hsnCode: "33030090",
       originStateCode: "27",
       pricesIncludeTax: true,

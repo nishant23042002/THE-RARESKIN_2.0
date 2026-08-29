@@ -1,8 +1,10 @@
-# Checkout & orders (Phase D)
+# Checkout & orders (Phase D → E)
 
 The commerce backbone: a server cart, an India GST pricing engine, coupon and
-store-credit application, atomic stock reservation, and order creation. **No
-payment yet** — "pay" places the order as `pending`; Razorpay is the next phase.
+store-credit application, atomic stock reservation, and order creation
+(Phase D), plus **Razorpay hosted checkout end to end** — verified webhook,
+immutable payment log, refund path, auto-cancel (Phase E, see
+[`docs/payments.md`](payments.md)).
 
 > Guiding rule: **never trust the client with a number.** The checkout request
 > carries SKUs, quantities and an address. Prices, tax, discounts, credit,
@@ -47,7 +49,8 @@ src/components/providers/cart-provider   view state: bag ↔ checkout ↔ done
 src/lib/scroll-lock.ts                   ref-counted body lock (drawer + modal)
 src/app/account/*                 landing, orders list + [orderNumber] detail
 src/app/account/addresses         address book
-src/components/account/           address-book.tsx · status-pill.tsx
+src/components/account/           order-row · order-thumb · order-progress ·
+                                  status-pill · address-book
 ```
 
 ## The cart
@@ -66,8 +69,14 @@ re-prices them, and clears the account cart on success.
 
 ## The GST engine — `computePricing`
 
-Pricing is **tax-inclusive** (`settings.gst.pricesIncludeTax`). Catalogue prices
-already contain 18% GST, so:
+> **Currently off.** `settings.gst.ratePercent` is `0`, so `taxableValue ==
+> grandTotal`, every tax figure is `0`, and no GST line is shown anywhere
+> (checkout drawer, order detail, list). The engine below is intact — set
+> `ratePercent` back to `18` in Site Settings (and `scripts/seed.ts`) to bring
+> the CGST/SGST/IGST split and the invoice line back.
+
+Pricing is **tax-inclusive** (`settings.gst.pricesIncludeTax`). When a rate is
+set, catalogue prices are treated as already containing it, so:
 
 ```
 itemsSubtotal = Σ unitPrice × qty                 (tax-inclusive, paise)
@@ -164,9 +173,10 @@ header fills with the tri-fragrance gradient as you move through it.
   "Proceed to checkout".
 - **Checkout** (`checkout-panel.tsx`) — an always-visible **order review** at the
   top (each line with name / "Extrait de Parfum" / qty / price / MRP strike,
-  then the price ladder — items, discount, credit, delivery, **inclusive GST**,
-  total, "You save ₹X" — and a Free-delivery / GST-invoice / Secure-checkout
-  trust row), then three collapsing steps:
+  then the price ladder — items, discount, credit, delivery, total, "You save
+  ₹X" (plus an inclusive-GST line only when a rate is set) — and a
+  Free-delivery / No-hidden-fees / Secure-checkout trust row), then three
+  collapsing steps:
   1. **Contact** — name + email. **Both are pre-filled** from the account or the
      selected saved address (`address.name` / `address.email`), so nothing is
      typed twice; a guest types them once and they are saved onto the new
@@ -184,9 +194,12 @@ header fills with the tri-fragrance gradient as you move through it.
      last one, reads "Place order · ₹X" with the accepted-payment marks
      (`PaymentBadges` — Visa / Mastercard / RuPay / UPI; the UPI tile stands in
      for GPay / PhonePe / Paytm / every UPI app).
-- **Done** — a debossed check, the order number in display serif, "what's next",
-  then "View order" (routes to `/account/orders/<n>` via the page transition,
-  closing the drawer) / "Keep shopping".
+- **Done** — a debossed check, the order number in display serif, "what's next".
+  A **paid** order then shows a 5-second countdown (a draining tri-juice rail)
+  and auto-advances: the drawer slides out and the page transition carries the
+  shopper to `/account/orders/<n>`. "View order now" skips the wait; "Stay here"
+  cancels it. A COD order keeps the plain "View order" / "Keep shopping" pair
+  (no auto-redirect — nothing has been charged yet).
 
 The panel re-quotes (debounced) on every change to PIN, coupon, credit or
 method. `flags.checkoutEnabled` gates it for customers; always on in dev.
@@ -199,14 +212,33 @@ method. `flags.checkoutEnabled` gates it for customers; always on in dev.
 sizes. The editorial body stays at 300; only the dense, transactional surfaces
 run heavier so information reads cleanly.
 
-## The `/account` landing
+## The `/account` area
 
 `getAccountOverview()` (`src/server/data/account.ts`) drives an at-a-glance
 strip — **Orders · In progress · Store credit** (or lifetime spend) — above the
-recent-order list (first item, order number, date, total, a `StatusPill`), the
-default delivery address, and the store-credit explainer. `StatusPill`
-(`src/components/account/status-pill.tsx`) colours each order by where it
-stands and is shared by the list, the landing and the order detail.
+recent-order list, the default delivery address, and the store-credit explainer.
+
+**Order rows** (`src/components/account/order-row.tsx`) are shared by the
+`/account` recent strip and the full `/account/orders` list: overlapped product
+packshots, name + "+ N more", number · date, total, a `StatusPill`, and an
+explicit **View ›** affordance so the row plainly reads as a way through.
+
+**Order detail** (`/account/orders/[orderNumber]`) leads with the number, the
+`StatusPill`, and `OrderProgress` — a five-stop rail (Placed → Confirmed →
+Prepared → Shipped → Delivered) that fills with the house tri-fragrance gradient,
+the same one on the checkout drawer. Then the pieces (each links to its PDP, with
+the product's headline notes as hairline chips), the total, delivery + payment,
+and a connected timeline ("The journey").
+
+**Live visuals.** `src/server/data/orders.ts` joins each ordered item's
+`productId` against the live catalogue at read time for its gallery image, PDP
+link and notes — so replacing a product's photography updates order history too.
+`OrderThumb` (`src/components/account/order-thumb.tsx`) renders that image, or
+falls back to the vector `<Flacon>` (fragrances) / the house mark. The order's
+own `items[].image` snapshot is only the last-resort fallback.
+
+`StatusPill` (`src/components/account/status-pill.tsx`) colours each order by
+where it stands and is shared by every one of these surfaces.
 
 ## Migration
 
