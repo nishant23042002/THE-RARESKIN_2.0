@@ -151,11 +151,9 @@ export function CheckoutPanel() {
   const [editingAddress, setEditingAddress] = useState(false);
 
   const [method, setMethod] = useState<PaymentMethod>("razorpay");
-  const [couponOpen, setCouponOpen] = useState(false);
   const [couponInput, setCouponInput] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
   const [useCredit, setUseCredit] = useState(false);
-  const [noteOpen, setNoteOpen] = useState(false);
   const [note, setNote] = useState("");
 
   const [quote, setQuote] = useState<CheckoutQuoteResponse | null>(null);
@@ -1017,8 +1015,9 @@ export function CheckoutPanel() {
 
           {/* coupon */}
           <div>
+            <p className={labelCls}>Discount code</p>
             {appliedCoupon ? (
-              <div className="flex items-center justify-between border border-ok/40 bg-ok/5 px-3 py-2.5 text-[12.5px]">
+              <div className="mt-1.5 flex items-center justify-between border border-ok/40 bg-ok/5 px-3 py-2.5 text-[12.5px]">
                 <span className="text-ink">
                   <span className="tracking-[0.08em]">{appliedCoupon}</span>{" "}
                   applied
@@ -1034,13 +1033,18 @@ export function CheckoutPanel() {
                   Remove
                 </button>
               </div>
-            ) : couponOpen ? (
-              <div className="flex gap-2">
+            ) : (
+              <div className="mt-1.5 flex gap-2">
                 <input
                   value={couponInput}
                   onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
-                  placeholder="Discount code"
-                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      applyCoupon();
+                    }
+                  }}
+                  placeholder="Enter a code"
                   className="w-full border border-line-2 bg-transparent px-3 py-2.5 text-[13px] tracking-[0.06em] uppercase focus:border-ink focus:outline-none"
                 />
                 <Button
@@ -1048,18 +1052,11 @@ export function CheckoutPanel() {
                   size="sm"
                   onClick={applyCoupon}
                   className="shrink-0"
+                  disabled={couponInput.trim().length < 3}
                 >
                   Apply
                 </Button>
               </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setCouponOpen(true)}
-                className="text-[11px] font-medium tracking-[0.12em] text-ink-2 uppercase underline-offset-4 hover:underline"
-              >
-                + Discount code
-              </button>
             )}
             {quote?.coupon && quote.coupon.applied === false && (
               <p className="mt-1.5 text-[11.5px] text-error">
@@ -1128,24 +1125,16 @@ export function CheckoutPanel() {
           </div>
 
           {/* note */}
-          {noteOpen ? (
+          <div>
+            <p className={labelCls}>Order note (optional)</p>
             <textarea
               value={note}
               onChange={(e) => setNote(e.target.value.slice(0, 500))}
               rows={2}
-              autoFocus
               placeholder="Anything we should know for delivery?"
-              className="w-full resize-none border border-line-2 bg-transparent px-3 py-2.5 text-[13px] focus:border-ink focus:outline-none"
+              className="mt-1.5 w-full resize-none border border-line-2 bg-transparent px-3 py-2.5 text-[13px] focus:border-ink focus:outline-none"
             />
-          ) : (
-            <button
-              type="button"
-              onClick={() => setNoteOpen(true)}
-              className="text-[11px] font-medium tracking-[0.12em] text-ink-2 uppercase underline-offset-4 hover:underline"
-            >
-              + Add a note
-            </button>
-          )}
+          </div>
 
           {(placeError || paymentError || quoteError) && (
             <p className="border border-error/40 bg-error/5 px-3 py-2.5 text-[12px] text-error">
