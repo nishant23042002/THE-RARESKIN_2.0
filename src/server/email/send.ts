@@ -46,7 +46,10 @@ export async function sendEmailMessage(
           subject: msg.subject,
           react: renderElement(msg.template, props),
         },
-        { idempotencyKey: msg.dedupeKey },
+        // keyed by the outbox row, not the dedupeKey — the row's props are
+        // frozen at enqueue, so retries of it are byte-identical, while a
+        // re-queued email (new row) or a changed template gets a fresh key.
+        { idempotencyKey: `msg_${String(msg._id)}` },
       );
       if (error) {
         const retryable =

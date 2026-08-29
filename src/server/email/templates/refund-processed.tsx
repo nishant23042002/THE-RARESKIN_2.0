@@ -1,13 +1,6 @@
 import type { RefundProcessedProps } from "../types";
 import { EmailLayout } from "./_layout";
-import {
-  Cta,
-  Eyebrow,
-  InfoLine,
-  Lede,
-  OrderMeta,
-  Title,
-} from "./_parts";
+import { Cta, Eyebrow, Lede, OrderMeta, Panel, Title } from "./_parts";
 import { mockBase } from "./_mock";
 
 export default function RefundProcessed(props: RefundProcessedProps) {
@@ -19,8 +12,10 @@ export default function RefundProcessed(props: RefundProcessedProps) {
     >
       <Eyebrow>Refund on its way</Eyebrow>
       <Title>
-        {props.fullRefund ? "You're fully refunded" : "A partial refund is on its way"},{" "}
-        {customerName}.
+        {props.fullRefund
+          ? "You're fully refunded"
+          : "A partial refund is on its way"}
+        , {customerName}.
       </Title>
       <Lede>
         <strong>{props.refundAmount}</strong> has been sent back{" "}
@@ -28,12 +23,13 @@ export default function RefundProcessed(props: RefundProcessedProps) {
         {props.refundReason ? ` — ${props.refundReason}` : ""}. It usually lands
         in 5–7 working days, depending on your bank.
       </Lede>
+
       <OrderMeta orderNumber={props.orderNumber} placedAt={props.placedAt} />
 
-      <InfoLine heading="Refunded">
+      <Panel heading="Refunded" tone="fill">
         {props.refundAmount} {props.destination}
-      </InfoLine>
-      <InfoLine heading="Original payment">{props.paymentLine}</InfoLine>
+      </Panel>
+      <Panel heading="Original payment">{props.paymentLine}</Panel>
 
       <Cta href={brand.orderUrl}>View your order</Cta>
     </EmailLayout>

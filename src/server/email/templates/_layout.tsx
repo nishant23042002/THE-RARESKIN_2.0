@@ -2,8 +2,8 @@ import {
   Body,
   Container,
   Head,
-  Hr,
   Html,
+  Img,
   Link,
   Preview,
   Section,
@@ -11,12 +11,12 @@ import {
 } from "react-email";
 
 import type { EmailBrand } from "../types";
-import { accent, fonts, palette } from "./theme";
+import { accent, fonts, palette, space } from "./theme";
 
 /**
- * The shell every transactional email sits inside: a 600px card on warm paper,
- * the wordmark, a hairline tri-fragrance rule, the message, then a transactional
- * footer (no unsubscribe — these are order emails, not marketing).
+ * The shell every transactional email sits in: a calm 560px card on warm paper.
+ * A centred masthead, a hairline tri-fragrance rule, room to breathe, and a
+ * quiet transactional footer (no unsubscribe — these are order emails).
  */
 export function EmailLayout({
   brand,
@@ -34,57 +34,68 @@ export function EmailLayout({
       <Body
         style={{
           margin: 0,
-          padding: "24px 0",
+          padding: "32px 0 40px",
           backgroundColor: palette.paper,
           fontFamily: fonts.body,
           color: palette.ink,
+          WebkitFontSmoothing: "antialiased",
         }}
       >
         <Container
           style={{
             width: "100%",
-            maxWidth: "600px",
+            maxWidth: "560px",
             margin: "0 auto",
             backgroundColor: palette.card,
-            border: `1px solid ${palette.line}`,
           }}
         >
-          <Section style={{ padding: "26px 32px 0" }}>
-            <Link
-              href={brand.siteUrl}
-              style={{
-                fontFamily: fonts.body,
-                fontSize: "13px",
-                letterSpacing: "0.34em",
-                fontWeight: 600,
-                color: palette.ink,
-                textDecoration: "none",
-                textTransform: "uppercase",
-              }}
-            >
-              {brand.siteName}
+          {/* masthead */}
+          <Section style={{ padding: "38px 0 26px", textAlign: "center" }}>
+            <Link href={brand.siteUrl}>
+              <Img
+                src={brand.logoUrl}
+                alt={brand.siteName}
+                width={176}
+                height={67}
+                style={{ display: "inline-block", border: 0 }}
+              />
             </Link>
           </Section>
 
-          <Section style={{ padding: "16px 0 0" }}>
-            <div
-              style={{
-                height: "3px",
-                background: accent.gradient,
-                backgroundColor: accent.solid,
-              }}
-            />
+          <div
+            style={{
+              height: "2px",
+              background: accent.gradient,
+              backgroundColor: accent.solid,
+            }}
+          />
+
+          <Section style={{ padding: `${space.band} ${space.gutter} 8px` }}>
+            {children}
           </Section>
 
-          <Section style={{ padding: "28px 32px 8px" }}>{children}</Section>
-
-          <Hr style={{ borderColor: palette.line, margin: "8px 0 0" }} />
-
-          <Section style={{ padding: "20px 32px 28px" }}>
+          {/* footer */}
+          <Section
+            style={{
+              padding: `28px ${space.gutter} 34px`,
+              borderTop: `1px solid ${palette.line}`,
+            }}
+          >
             <Text
               style={{
-                margin: "0 0 6px",
-                fontSize: "12px",
+                margin: "0 0 8px",
+                fontFamily: fonts.display,
+                fontStyle: "italic",
+                fontSize: "14px",
+                color: palette.muted,
+              }}
+            >
+              Scents that stay with you.
+            </Text>
+            <Text
+              style={{
+                margin: "0 0 4px",
+                fontSize: "11px",
                 lineHeight: "1.6",
                 color: palette.muted,
               }}
@@ -92,18 +103,10 @@ export function EmailLayout({
               {brand.legalName} · {brand.supportAddress}
             </Text>
             <Text
-              style={{
-                margin: 0,
-                fontSize: "12px",
-                lineHeight: "1.6",
-                color: palette.muted,
-              }}
+              style={{ margin: 0, fontSize: "11px", lineHeight: "1.6", color: palette.muted }}
             >
-              Questions?{" "}
-              <Link
-                href={`mailto:${brand.supportEmail}`}
-                style={{ color: palette.soft }}
-              >
+              Questions? Just reply, or write to{" "}
+              <Link href={`mailto:${brand.supportEmail}`} style={{ color: palette.soft }}>
                 {brand.supportEmail}
               </Link>
               . You&rsquo;re receiving this because you placed an order with{" "}

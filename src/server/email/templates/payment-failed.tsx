@@ -3,12 +3,12 @@ import { EmailLayout } from "./_layout";
 import {
   Cta,
   Eyebrow,
-  InfoLine,
   Lede,
-  LineItems,
   OrderMeta,
+  Panel,
+  Pieces,
+  Summary,
   Title,
-  Totals,
 } from "./_parts";
 import { mockBase } from "./_mock";
 
@@ -24,19 +24,19 @@ export default function PaymentFailed(props: PaymentFailedProps) {
       <Lede>
         We couldn&rsquo;t take payment for this order
         {props.reason ? ` — ${props.reason}` : ""}. Your bag is held
-        {props.holdUntil ? ` until ${props.holdUntil}` : " for a short window"};
+        {props.holdUntil ? ` until ${props.holdUntil}` : " for a short while"};
         finish paying from your account and nothing is lost.
       </Lede>
+
       <OrderMeta orderNumber={props.orderNumber} placedAt={props.placedAt} />
+      <Pieces items={props.items} />
+      <Summary totals={props.totals} grandLabel="Amount due" />
 
-      <LineItems items={props.items} />
-      <Totals totals={props.totals} grandLabel="Amount due" />
-
-      <InfoLine heading="What to do">
-        Open the order and choose &ldquo;Retry payment&rdquo; — the same items,
-        the same price. If it still won&rsquo;t go through, reply to this email
-        and we&rsquo;ll sort it out.
-      </InfoLine>
+      <Panel heading="What to do" tone="fill">
+        Open the order and choose &ldquo;Retry payment&rdquo; — same items, same
+        price. If it still won&rsquo;t go through, just reply and we&rsquo;ll
+        sort it out.
+      </Panel>
 
       <Cta href={brand.orderUrl}>Finish paying</Cta>
     </EmailLayout>

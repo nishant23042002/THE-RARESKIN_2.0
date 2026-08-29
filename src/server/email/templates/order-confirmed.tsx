@@ -1,16 +1,16 @@
 import type { OrderConfirmedProps } from "../types";
 import { EmailLayout } from "./_layout";
 import {
-  AddressBlock,
+  AddressPanel,
   Callout,
   Cta,
   Eyebrow,
-  InfoLine,
   Lede,
-  LineItems,
   OrderMeta,
+  Panel,
+  Pieces,
+  Summary,
   Title,
-  Totals,
 } from "./_parts";
 import { mockBase } from "./_mock";
 
@@ -24,17 +24,17 @@ export default function OrderConfirmed(props: OrderConfirmedProps) {
       <Eyebrow>Payment received</Eyebrow>
       <Title>Thank you, {customerName}.</Title>
       <Lede>
-        Your payment is confirmed and your order is being prepared. Here&rsquo;s
-        everything, for your records.
+        Your payment is confirmed and your order is being made ready. This is
+        yours to keep.
       </Lede>
+
       <OrderMeta orderNumber={props.orderNumber} placedAt={props.placedAt} />
+      <Pieces items={props.items} />
+      <Summary totals={props.totals} grandLabel="Paid" />
 
-      <LineItems items={props.items} />
-      <Totals totals={props.totals} grandLabel="Paid" />
-
-      <AddressBlock heading="Delivering to" address={props.shippingAddress} />
-      <InfoLine heading="Payment">{props.paymentLine}</InfoLine>
-      <InfoLine heading="What happens next">{whatsNext}</InfoLine>
+      <AddressPanel heading="Delivering to" address={props.shippingAddress} />
+      <Panel heading="Paid with">{props.paymentLine}</Panel>
+      <Panel heading="What happens next">{whatsNext}</Panel>
 
       {discoverySetCredit ? (
         <Callout>
@@ -42,7 +42,7 @@ export default function OrderConfirmed(props: OrderConfirmedProps) {
           <strong>{discoverySetCredit.amount}</strong> is now on your account —
           it comes off your first full-size bottle automatically
           {discoverySetCredit.expires
-            ? `, and is valid until ${discoverySetCredit.expires}.`
+            ? `, valid until ${discoverySetCredit.expires}.`
             : "."}
         </Callout>
       ) : null}
@@ -54,6 +54,6 @@ export default function OrderConfirmed(props: OrderConfirmedProps) {
 
 OrderConfirmed.PreviewProps = {
   ...mockBase,
-  whatsNext: "Dispatched within 48h · delivery 2–7 working days across India.",
+  whatsNext: "Dispatched within 48 hours, and delivered in 2–7 working days across India.",
   discoverySetCredit: { amount: "₹799", expires: null },
 } satisfies OrderConfirmedProps;

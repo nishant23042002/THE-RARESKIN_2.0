@@ -11,16 +11,23 @@ export interface EmailBrand {
   supportEmail: string;
   supportAddress: string;
   siteUrl: string;
+  /** hosted masthead PNG (`/email/logo`) */
+  logoUrl: string;
   /** deep link to this order's page */
   orderUrl: string;
 }
 
 export interface EmailLineItem {
   name: string;
+  slug: string;
+  concentration: string; // "Extrait de Parfum · 50 ml" | "Discovery Set · 3 × 10 ml"
+  /** a short olfactory line, e.g. "Citrus, bergamot, white florals" */
+  noteLine: string | null;
   sku: string;
   qty: number;
   unitPrice: string; // "₹799"
   lineTotal: string;
+  /** product packshot / generated flacon PNG, or null */
   image: string | null;
 }
 

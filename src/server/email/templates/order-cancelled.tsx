@@ -3,22 +3,19 @@ import { EmailLayout } from "./_layout";
 import {
   Cta,
   Eyebrow,
-  InfoLine,
   Lede,
-  LineItems,
   OrderMeta,
+  Panel,
+  Pieces,
+  Summary,
   Title,
-  Totals,
 } from "./_parts";
 import { mockBase } from "./_mock";
 
 export default function OrderCancelled(props: OrderCancelledProps) {
   const { brand, customerName } = props;
   return (
-    <EmailLayout
-      brand={brand}
-      preview={`Order ${props.orderNumber} cancelled`}
-    >
+    <EmailLayout brand={brand} preview={`Order ${props.orderNumber} cancelled`}>
       <Eyebrow>Order cancelled</Eyebrow>
       <Title>This one didn&rsquo;t go through, {customerName}.</Title>
       <Lede>
@@ -27,15 +24,15 @@ export default function OrderCancelled(props: OrderCancelledProps) {
         Nothing has been charged
         {props.refundNote ? `, and ${props.refundNote.toLowerCase()}` : ""}.
       </Lede>
+
       <OrderMeta orderNumber={props.orderNumber} placedAt={props.placedAt} />
+      <Pieces items={props.items} />
+      <Summary totals={props.totals} grandLabel="Order value" />
 
-      <LineItems items={props.items} />
-      <Totals totals={props.totals} grandLabel="Order value" />
-
-      <InfoLine heading="Still want these?">
-        Everything is back in stock for you — start a fresh order whenever
+      <Panel heading="Still want these?">
+        Everything is back in stock for you — begin a fresh order whenever
         you&rsquo;re ready.
-      </InfoLine>
+      </Panel>
 
       <Cta href={brand.siteUrl}>Return to the shop</Cta>
     </EmailLayout>

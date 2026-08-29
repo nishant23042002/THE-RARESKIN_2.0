@@ -1,13 +1,13 @@
 import type { OrderShippedProps } from "../types";
 import { EmailLayout } from "./_layout";
 import {
-  AddressBlock,
+  AddressPanel,
   Cta,
   Eyebrow,
-  InfoLine,
   Lede,
-  LineItems,
   OrderMeta,
+  Panel,
+  Pieces,
   Title,
 } from "./_parts";
 import { mockBase } from "./_mock";
@@ -27,17 +27,17 @@ export default function OrderShipped(props: OrderShippedProps) {
         {props.carrier ? ` with ${props.carrier}` : ""}
         {props.eta ? ` and should reach you ${props.eta}` : ""}.
       </Lede>
+
       <OrderMeta orderNumber={props.orderNumber} placedAt={props.placedAt} />
+      <Pieces items={props.items} />
 
       {props.trackingNumber ? (
-        <InfoLine heading="Tracking">
+        <Panel heading="Tracking" tone="fill">
           {props.carrier ? `${props.carrier} · ` : ""}
           {props.trackingNumber}
-        </InfoLine>
+        </Panel>
       ) : null}
-
-      <LineItems items={props.items} />
-      <AddressBlock heading="Delivering to" address={props.shippingAddress} />
+      <AddressPanel heading="Delivering to" address={props.shippingAddress} />
 
       <Cta href={props.trackingUrl ?? brand.orderUrl}>
         {props.trackingUrl ? "Track your parcel" : "View your order"}

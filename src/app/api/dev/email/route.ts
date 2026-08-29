@@ -1,9 +1,15 @@
+import { promises as fs } from "node:fs";
+import path from "node:path";
+
 import { NextResponse } from "next/server";
 
 import { dbConnect } from "@/server/db";
-import { EmailMessage } from "@/server/models";
+import { EMAIL_TEMPLATES, EmailMessage } from "@/server/models";
 import { isProduction } from "@/server/env";
 import { drainOutbox } from "@/server/email";
+import { loadOrderEmailContext, whatsNextLine } from "@/server/email/order-context";
+import { renderHtml } from "@/server/email/render";
+import type { EmailPropsFor } from "@/server/email/types";
 import {
   notifyOrderCancelled,
   notifyOrderConfirmed,
@@ -15,11 +21,12 @@ import {
 
 /**
  * Local email tooling — runs inside the real Next runtime (which `tsx` scripts
- * can't: `unstable_cache` + `react-dom/server` both need it). Driven by
- * `pnpm email:drain` / `pnpm email:test <orderNumber>`. 404 in production.
+ * can't: `unstable_cache` + `react-dom/server` both need it). 404 in production.
  *
- *   GET /api/dev/email?action=drain
- *   GET /api/dev/email?action=test&order=RRS-2026-000001
+ *   ?action=drain                          send every queued / retry-due row
+ *   ?action=test&order=RRS-…[&only=<tpl>]   enqueue + drain (SENDS if a key is set)
+ *   ?action=render&order=RRS-…              render every template to .mail/ only,
+ *                                          never sends — for design review
  */
 export const dynamic = "force-dynamic";
 
@@ -36,6 +43,58 @@ export async function GET(request: Request) {
 
   if (action === "drain") {
     return NextResponse.json({ ok: true, ...(await drainOutbox({ limit: 100 })) });
+  }
+
+  if (action === "render") {
+    if (!order) {
+      return NextResponse.json({ ok: false, error: "?order= required" }, { status: 400 });
+    }
+    const ctx = await loadOrderEmailContext(order);
+    if (!ctx) {
+      return NextResponse.json({ ok: false, error: "order not found" }, { status: 404 });
+    }
+    const whatsNext = await whatsNextLine();
+    const extras: Record<string, Record<string, unknown>> = {
+      "order-confirmed": {
+        whatsNext,
+        discoverySetCredit: ctx.discoverySetCredit,
+      },
+      "order-placed-cod": {
+        amountDueOnDelivery: ctx.base.totals.grandTotal,
+        whatsNext,
+      },
+      "payment-failed": {
+        reason: "the bank declined the transaction",
+        holdUntil: ctx.paymentDueBy,
+      },
+      "order-cancelled": {
+        reason: "Payment wasn't completed within 30 minutes.",
+        refundNote: "any store credit you used has been returned",
+      },
+      "refund-processed": {
+        refundAmount: "₹799",
+        refundReason: "returned unopened within 7 days",
+        destination: "to your original payment method",
+        fullRefund: false,
+      },
+      "order-shipped": {
+        carrier: "Delhivery",
+        trackingNumber: "DL1234567890IN",
+        trackingUrl: "https://www.delhivery.com/track/package/DL1234567890IN",
+        eta: "in 3–4 days",
+      },
+      "order-delivered": { deliveredAt: ctx.base.placedAt },
+    };
+    const dir = path.join(process.cwd(), ".mail");
+    await fs.mkdir(dir, { recursive: true });
+    const written: string[] = [];
+    for (const tpl of EMAIL_TEMPLATES) {
+      const props = { ...ctx.base, ...extras[tpl] } as EmailPropsFor<typeof tpl>;
+      const html = await renderHtml(tpl, props);
+      await fs.writeFile(path.join(dir, `${tpl}.html`), html, "utf8");
+      written.push(`${tpl}.html`);
+    }
+    return NextResponse.json({ ok: true, written, note: "check .mail/ — nothing was sent" });
   }
 
   if (action === "test") {

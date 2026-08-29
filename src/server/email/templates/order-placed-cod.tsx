@@ -1,16 +1,16 @@
 import type { OrderPlacedCodProps } from "../types";
 import { EmailLayout } from "./_layout";
 import {
-  AddressBlock,
+  AddressPanel,
   Callout,
   Cta,
   Eyebrow,
-  InfoLine,
   Lede,
-  LineItems,
   OrderMeta,
+  Panel,
+  Pieces,
+  Summary,
   Title,
-  Totals,
 } from "./_parts";
 import { mockBase } from "./_mock";
 
@@ -24,18 +24,17 @@ export default function OrderPlacedCod(props: OrderPlacedCodProps) {
       <Eyebrow>Order received</Eyebrow>
       <Title>We&rsquo;ve got it, {customerName}.</Title>
       <Lede>
-        Your order is confirmed. Keep{" "}
-        <strong>{props.amountDueOnDelivery}</strong> ready for the courier — no
-        payment now.
+        Your order is confirmed. Nothing to pay now — keep{" "}
+        <strong>{props.amountDueOnDelivery}</strong> ready for the courier.
       </Lede>
+
       <OrderMeta orderNumber={props.orderNumber} placedAt={props.placedAt} />
+      <Pieces items={props.items} />
+      <Summary totals={props.totals} grandLabel="Due on delivery" />
 
-      <LineItems items={props.items} />
-      <Totals totals={props.totals} grandLabel="Due on delivery" />
-
-      <AddressBlock heading="Delivering to" address={props.shippingAddress} />
-      <InfoLine heading="Payment">Cash on delivery</InfoLine>
-      <InfoLine heading="What happens next">{props.whatsNext}</InfoLine>
+      <AddressPanel heading="Delivering to" address={props.shippingAddress} />
+      <Panel heading="Payment">Cash on delivery</Panel>
+      <Panel heading="What happens next">{props.whatsNext}</Panel>
 
       <Callout>
         Pay the courier in cash when your parcel arrives. We&rsquo;ll text you
@@ -51,5 +50,5 @@ OrderPlacedCod.PreviewProps = {
   ...mockBase,
   paymentLine: "Cash on delivery",
   amountDueOnDelivery: "₹1,598",
-  whatsNext: "Dispatched within 48h · delivery 2–7 working days across India.",
+  whatsNext: "Dispatched within 48 hours, and delivered in 2–7 working days across India.",
 } satisfies OrderPlacedCodProps;
