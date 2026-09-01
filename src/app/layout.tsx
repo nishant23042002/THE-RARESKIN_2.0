@@ -1,24 +1,17 @@
 import type { Metadata, Viewport } from "next";
 import { Jost, Newsreader } from "next/font/google";
-import { SmoothScroll } from "@/components/providers/smooth-scroll";
-import { RouteTransitionProvider } from "@/components/providers/route-transition";
-import { AuthProvider } from "@/components/providers/auth-provider";
-import { SignInModalMount } from "@/components/auth/sign-in-modal-mount";
-import { SignInAutoPrompt } from "@/components/auth/sign-in-auto-prompt";
-import { CartProvider } from "@/components/providers/cart-provider";
-import { NavToneProvider } from "@/components/providers/nav-tone";
 import { ScrollbarVar } from "@/components/providers/scrollbar-var";
-import { AnnouncementBar } from "@/components/layout/announcement-bar";
-import { Header } from "@/components/layout/header";
-import { Footer } from "@/components/layout/footer";
-import { CartDrawer } from "@/components/cart/cart-drawer";
-import { CartToast } from "@/components/cart/cart-toast";
-import { CartBar } from "@/components/cart/cart-bar";
 import { SvgDefs } from "@/components/ui/svg-defs";
 import { SITE } from "@/lib/site";
 import { organizationJsonLd } from "@/lib/seo";
-import { getCatalogNav, getBagSuggestions } from "@/server/data/catalog";
 import "./globals.css";
+
+/**
+ * Root layout — `<html>` / `<body>`, fonts, and the handful of globals every
+ * section shares. The storefront chrome (providers, header, footer, cart, the
+ * sign-in machinery) lives in `(store)/layout.tsx`; the admin has its own shell
+ * in `(admin)/layout.tsx`. Route groups keep the URLs unchanged.
+ */
 
 const jost = Jost({
   subsets: ["latin"],
@@ -63,12 +56,7 @@ export const viewport: Viewport = {
   themeColor: "#f2f1ed",
 };
 
-export default async function RootLayout({ children }: LayoutProps<"/">) {
-  const [nav, bagSuggestions] = await Promise.all([
-    getCatalogNav(),
-    getBagSuggestions(),
-  ]);
-
+export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en-IN" className={`${jost.variable} ${newsreader.variable}`}>
       <body>
@@ -86,27 +74,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         </a>
         <SvgDefs />
         <ScrollbarVar />
-        <AuthProvider>
-          <CartProvider suggestions={bagSuggestions}>
-            <SmoothScroll>
-              <RouteTransitionProvider>
-                <NavToneProvider>
-                  <div className="fixed inset-x-0 top-0 z-50">
-                    <AnnouncementBar />
-                    <Header nav={nav} />
-                  </div>
-                  {children}
-                  <Footer />
-                </NavToneProvider>
-                <CartDrawer />
-                <CartToast />
-                <CartBar />
-                <SignInModalMount />
-                <SignInAutoPrompt />
-              </RouteTransitionProvider>
-            </SmoothScroll>
-          </CartProvider>
-        </AuthProvider>
+        {children}
       </body>
     </html>
   );

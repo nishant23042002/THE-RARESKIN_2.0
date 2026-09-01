@@ -13,6 +13,7 @@ export {
   notifyOrderCancelled,
   notifyRefundProcessed,
   notifyOrderStatus,
+  notifyNewDevice,
 } from "./notify";
 export { suppressEmail, isSuppressed } from "./suppression";
 export { verifyResendSignature } from "./webhook-verify";

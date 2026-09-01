@@ -25,6 +25,8 @@ const RULES = {
   "otp:start:ip": { limit: 30, window: "15 m" as Duration },
   "otp:verify:phone": { limit: 12, window: "15 m" as Duration },
   "otp:verify:ip": { limit: 50, window: "15 m" as Duration },
+  // Staff sudo re-auth — scoped per user. Deliberately tight.
+  "admin:sudo:user": { limit: 8, window: "15 m" as Duration },
   // Checkout: a quote is cheap (recompute on every field change); placing an
   // order is not. Scoped per user/IP.
   "checkout:quote:ip": { limit: 120, window: "5 m" as Duration },

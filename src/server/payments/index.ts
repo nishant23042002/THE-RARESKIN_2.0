@@ -22,6 +22,7 @@ export type {
 
 export {
   canTransition,
+  nextStatuses,
   transitionOrder,
   finalizeOnlineCheckout,
   markIntentFailed,

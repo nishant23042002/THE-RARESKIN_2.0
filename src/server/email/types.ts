@@ -13,9 +13,13 @@ export interface EmailBrand {
   siteUrl: string;
   /** hosted masthead PNG (`/email/logo`) */
   logoUrl: string;
-  /** deep link to this order's page */
+  /** the account landing */
+  accountUrl: string;
+  /** deep link to an order's page — order emails set this to the real order;
+   *  non-order emails (e.g. new-device) point it at the account page */
   orderUrl: string;
-  /** direct download for this order's invoice PDF */
+  /** direct download for an order's invoice PDF — as `orderUrl`, non-order
+   *  emails just reuse the account URL */
   invoiceUrl: string;
 }
 
@@ -104,6 +108,19 @@ export interface OrderDeliveredProps extends OrderEmailBase {
   deliveredAt: string;
 }
 
+/** Security notice — not order-related, so it doesn't extend `OrderEmailBase`. */
+export interface NewDeviceProps {
+  brand: EmailBrand;
+  /** the account holder's first name, or "there" */
+  customerName: string;
+  /** "Chrome on Windows" | "Safari on iOS" | "a new device" */
+  deviceLabel: string;
+  /** the sign-in IP, or null when unknown */
+  ip: string | null;
+  /** IST timestamp, already formatted */
+  when: string;
+}
+
 export interface EmailPropsMap {
   "order-confirmed": OrderConfirmedProps;
   "order-placed-cod": OrderPlacedCodProps;
@@ -112,6 +129,7 @@ export interface EmailPropsMap {
   "refund-processed": RefundProcessedProps;
   "order-shipped": OrderShippedProps;
   "order-delivered": OrderDeliveredProps;
+  "new-device": NewDeviceProps;
 }
 
 export type EmailPropsFor<T extends keyof EmailPropsMap> = EmailPropsMap[T];

@@ -2,8 +2,24 @@ import "server-only";
 
 import { formatPaise } from "@/lib/money";
 
-import { loadOrderEmailContext, whatsNextLine } from "./order-context";
+import { accountBrand, loadOrderEmailContext, whatsNextLine } from "./order-context";
 import { enqueueAndDrain } from "./outbox";
+
+const IST_DATETIME = new Intl.DateTimeFormat("en-IN", {
+  timeZone: "Asia/Kolkata",
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+  hour: "numeric",
+  minute: "2-digit",
+});
+
+/** tiny non-crypto hash for a dedupe key */
+function hash(s: string): string {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+  return Math.abs(h).toString(36);
+}
 
 /**
  * The one-liners the order-lifecycle code calls. Each loads the order, shapes
@@ -131,10 +147,59 @@ export function notifyRefundProcessed(input: {
   });
 }
 
-/** Phase G calls this once the admin can advance an order. No live trigger yet. */
+/**
+ * First sign-in from a new browser + OS. Best-effort, dedupe-guarded per
+ * (user, day, device+ip). Only sent when the account has an email on file —
+ * many customers never add one.
+ */
+export function notifyNewDevice(input: {
+  userId: string;
+  email: string | null;
+  name: string;
+  device: { browser: string | null; os: string | null };
+  ip: string | null;
+  at?: Date;
+}): Promise<void> {
+  return safely("notifyNewDevice", async () => {
+    const email = input.email?.trim().toLowerCase();
+    if (!email || !email.includes("@")) return;
+
+    const at = input.at ?? new Date();
+    const ymd = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Kolkata",
+    }).format(at); // YYYY-MM-DD
+    const deviceLabel =
+      [input.device.browser, input.device.os].filter(Boolean).join(" on ") ||
+      "a new device";
+
+    await enqueueAndDrain({
+      template: "new-device",
+      to: email,
+      userId: input.userId,
+      dedupeKey: `new-device:${input.userId}:${ymd}:${hash(
+        `${input.device.browser}|${input.device.os}|${input.ip ?? ""}`,
+      )}`,
+      props: {
+        brand: accountBrand(),
+        customerName: input.name?.trim().split(" ")[0] || "there",
+        deviceLabel,
+        ip: input.ip,
+        when: IST_DATETIME.format(at),
+      },
+    });
+  });
+}
+
+/** Fired by the admin when an order is advanced to `shipped` / `delivered`. */
 export function notifyOrderStatus(
   orderNumber: string,
   status: "shipped" | "delivered",
+  fulfilment?: {
+    carrier?: string | null;
+    trackingNumber?: string | null;
+    trackingUrl?: string | null;
+    eta?: string | null;
+  },
 ): Promise<void> {
   return safely(`notifyOrderStatus:${status}`, async () => {
     const ctx = await loadOrderEmailContext(orderNumber);
@@ -147,10 +212,10 @@ export function notifyOrderStatus(
         dedupeKey: `order-shipped:${orderNumber}`,
         props: {
           ...ctx.base,
-          carrier: null,
-          trackingNumber: null,
-          trackingUrl: null,
-          eta: null,
+          carrier: fulfilment?.carrier ?? null,
+          trackingNumber: fulfilment?.trackingNumber ?? null,
+          trackingUrl: fulfilment?.trackingUrl ?? null,
+          eta: fulfilment?.eta ?? null,
         },
       });
     } else {

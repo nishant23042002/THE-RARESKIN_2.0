@@ -3,6 +3,7 @@ import "server-only";
 import { randomBytes } from "node:crypto";
 import { cache } from "react";
 import { cookies, headers } from "next/headers";
+import type { Types } from "mongoose";
 
 import { dbConnect } from "@/server/db";
 import { Session, User, type SessionDoc, type UserDoc } from "@/server/models";
@@ -105,6 +106,28 @@ export async function createSession(
   });
 
   return session;
+}
+
+/**
+ * Has this account been seen on this browser + OS before? Looks back 90 days
+ * across every session (revoked ones included — a prior sign-out still means
+ * "not new"). Used to decide whether to send the new-device security email.
+ */
+export async function isFirstSeenDevice(
+  userId: Types.ObjectId | string,
+  currentToken: string,
+  device: { browser: string | null; os: string | null },
+): Promise<boolean> {
+  await dbConnect();
+  const since = new Date(Date.now() - 90 * 86_400_000);
+  const prior = await Session.countDocuments({
+    userId,
+    _id: { $ne: currentToken },
+    createdAt: { $gt: since },
+    "device.browser": device.browser,
+    "device.os": device.os,
+  });
+  return prior === 0;
 }
 
 export async function clearSessionCookie(): Promise<void> {

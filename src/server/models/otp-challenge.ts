@@ -8,7 +8,7 @@ import { Schema, model, models, type Model, type Types } from "mongoose";
 export interface OtpChallengeDoc {
   _id: Types.ObjectId;
   phone: string;
-  purpose: "login" | "add_phone";
+  purpose: "login" | "add_phone" | "sudo";
   attempts: number;
   maxAttempts: number;
   ip: string | null;
@@ -22,7 +22,11 @@ export interface OtpChallengeDoc {
 const otpChallengeSchema = new Schema<OtpChallengeDoc>(
   {
     phone: { type: String, required: true },
-    purpose: { type: String, enum: ["login", "add_phone"], default: "login" },
+    purpose: {
+      type: String,
+      enum: ["login", "add_phone", "sudo"],
+      default: "login",
+    },
     attempts: { type: Number, default: 0 },
     maxAttempts: { type: Number, default: 5 },
     ip: { type: String, default: null },

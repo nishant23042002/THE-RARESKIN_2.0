@@ -37,7 +37,18 @@ export type IconName =
   | "banknote"
   | "mail"
   | "phone"
-  | "pin";
+  | "pin"
+  | "grid"
+  | "list"
+  | "search"
+  | "gear"
+  | "users"
+  | "tag"
+  | "box"
+  | "external"
+  | "alert"
+  | "arrowLeft"
+  | "clock";
 
 const PATHS: Record<IconName, ReactElement> = {
   bag: (
@@ -124,6 +135,65 @@ const PATHS: Record<IconName, ReactElement> = {
     <>
       <path d="M12 20.5c3.8-3.6 6-6.7 6-9.8a6 6 0 0 0-12 0c0 3.1 2.2 6.2 6 9.8Z" />
       <circle cx="12" cy="10.5" r="2.25" />
+    </>
+  ),
+  grid: (
+    <>
+      <rect x="4" y="4" width="7" height="7" rx="1" />
+      <rect x="13" y="4" width="7" height="7" rx="1" />
+      <rect x="4" y="13" width="7" height="7" rx="1" />
+      <rect x="13" y="13" width="7" height="7" rx="1" />
+    </>
+  ),
+  list: (
+    <>
+      <path d="M8 6h12M8 12h12M8 18h12" />
+      <path d="M4 6h.01M4 12h.01M4 18h.01" />
+    </>
+  ),
+  search: (
+    <>
+      <circle cx="11" cy="11" r="6" />
+      <path d="M20 20l-3.5-3.5" />
+    </>
+  ),
+  gear: (
+    <>
+      <circle cx="12" cy="12" r="3.25" />
+      <path d="M12 3.5v2M12 18.5v2M5.5 5.5l1.4 1.4M17.1 17.1l1.4 1.4M3.5 12h2M18.5 12h2M5.5 18.5l1.4-1.4M17.1 6.9l1.4-1.4" />
+    </>
+  ),
+  users: (
+    <>
+      <circle cx="9" cy="8" r="3" />
+      <path d="M3.5 19a5.5 5.5 0 0 1 11 0" />
+      <path d="M16 5.5a3 3 0 0 1 0 5.5M17 13.5a5.5 5.5 0 0 1 3.5 5" />
+    </>
+  ),
+  tag: (
+    <>
+      <path d="M4 4h7.5L20 12.5 12.5 20 4 11.5z" />
+      <circle cx="8.5" cy="8.5" r="1.25" />
+    </>
+  ),
+  box: (
+    <>
+      <path d="M4 8l8-4 8 4v8l-8 4-8-4z" />
+      <path d="M4 8l8 4 8-4M12 12v8" />
+    </>
+  ),
+  external: <path d="M14 4h6v6M20 4l-9 9M18 14v4.5A1.5 1.5 0 0 1 16.5 20h-11A1.5 1.5 0 0 1 4 18.5v-11A1.5 1.5 0 0 1 5.5 6H10" />,
+  alert: (
+    <>
+      <path d="M12 4l9 15.5H3z" />
+      <path d="M12 10v4.5M12 17.5h.01" />
+    </>
+  ),
+  arrowLeft: <path d="M20 12H4M10 6l-6 6 6 6" />,
+  clock: (
+    <>
+      <circle cx="12" cy="12" r="8" />
+      <path d="M12 7.5V12l3 2" />
     </>
   ),
 };

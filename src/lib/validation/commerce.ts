@@ -9,6 +9,7 @@
 import { z } from "zod";
 
 import {
+  httpUrl,
   indianMobileE164,
   objectIdString,
   paise,
@@ -187,14 +188,45 @@ export const devPaymentSimulateInput = z.object({
   outcome: z.enum(["paid", "failed"]),
 });
 
-/** Admin refund (the UI is Phase G; the schema + engine ship now). */
+/** Admin refund. `orderNumber` comes from the route path, not the body. */
 export const refundInput = z.object({
-  orderNumber: z.string().min(6).max(32),
   /** omit for a full refund of the remaining amount */
   amountPaise: paise.optional(),
   reason: shortText(240),
 });
 export type RefundInput = z.infer<typeof refundInput>;
+
+// ── admin: order management (Phase G1) ──────────────────────────────────
+
+/** `PATCH /api/admin/orders/[orderNumber]` — advance status, with the tracking
+ *  fields when moving to `shipped`. */
+export const orderStatusAdvanceInput = z.object({
+  action: z.literal("status"),
+  to: z.enum(ORDER_STATUSES),
+  carrier: shortText(80).optional(),
+  trackingNumber: shortText(80).optional(),
+  trackingUrl: httpUrl.max(500).optional(),
+  eta: shortText(60).optional(),
+});
+export type OrderStatusAdvanceInput = z.infer<typeof orderStatusAdvanceInput>;
+
+/** `PATCH /api/admin/orders/[orderNumber]` — add an internal (staff-only) note. */
+export const orderNoteInput = z.object({
+  action: z.literal("note"),
+  text: shortText(1000),
+});
+export type OrderNoteInput = z.infer<typeof orderNoteInput>;
+
+export const orderPatchInput = z.discriminatedUnion("action", [
+  orderStatusAdvanceInput,
+  orderNoteInput,
+]);
+
+/** `POST /api/admin/orders/[orderNumber]/cancel` — COD only. */
+export const orderCancelInput = z.object({
+  reason: shortText(240),
+});
+export type OrderCancelInput = z.infer<typeof orderCancelInput>;
 
 // ── admin: coupon CRUD (schema lives here; UI is Phase H) ────────────────
 

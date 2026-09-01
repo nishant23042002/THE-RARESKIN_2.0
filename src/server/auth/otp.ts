@@ -13,6 +13,12 @@ import { dbConnect } from "@/server/db";
 import { OtpChallenge } from "@/server/models";
 import { OTP_LENGTH, OTP_MAX_ATTEMPTS } from "@/lib/auth";
 
+/** What an OTP challenge is for. `login` is the storefront sign-in; `sudo` is a
+ *  staff re-auth that elevates the admin session for a short window. Twilio
+ *  Verify itself is per-phone and purpose-agnostic — this only scopes our own
+ *  challenge row + attempt counter. */
+export type OtpPurpose = "login" | "sudo";
+
 /**
  * OTP send / check — wired to Twilio Verify.
  *
@@ -132,10 +138,11 @@ export interface SendResult {
 async function recordChallenge(
   phone: string,
   ctx: { ip: string | null; userAgent: string | null },
+  purpose: OtpPurpose = "login",
 ): Promise<void> {
   await OtpChallenge.create({
     phone,
-    purpose: "login",
+    purpose,
     attempts: 0,
     maxAttempts: OTP_MAX_ATTEMPTS,
     ip: ctx.ip,
@@ -148,6 +155,7 @@ async function recordChallenge(
 export async function sendOtp(
   phone: string,
   ctx: { ip: string | null; userAgent: string | null },
+  purpose: OtpPurpose = "login",
 ): Promise<SendResult> {
   await dbConnect();
 
@@ -168,8 +176,8 @@ export async function sendOtp(
         console.warn("[otp]", (err as Error).message, "— using the dev code.");
       }
     }
-    await recordChallenge(phone, ctx);
-    console.warn(`[otp] dev code for ${phone} is ${devCode}`);
+    await recordChallenge(phone, ctx, purpose);
+    console.warn(`[otp] dev ${purpose} code for ${phone} is ${devCode}`);
     return { ok: true, devCode };
   }
 
@@ -183,7 +191,7 @@ export async function sendOtp(
     if (v.status !== "pending") {
       return { ok: false, error: "send-failed" };
     }
-    await recordChallenge(phone, ctx);
+    await recordChallenge(phone, ctx, purpose);
     return { ok: true };
   } catch (err) {
     const mapped = mapTwilioError(err, "send");
@@ -203,12 +211,13 @@ export interface CheckResult {
 export async function checkOtp(
   phone: string,
   code: string,
+  purpose: OtpPurpose = "login",
 ): Promise<CheckResult> {
   await dbConnect();
 
   const challenge = await OtpChallenge.findOne({
     phone,
-    purpose: "login",
+    purpose,
     consumedAt: null,
     expiresAt: { $gt: new Date() },
   }).sort({ requestedAt: -1 });

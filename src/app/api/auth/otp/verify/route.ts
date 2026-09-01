@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 
 import { otpVerifyInput } from "@/lib/validation/auth";
 import { normalizeIndianMobile } from "@/lib/auth";
@@ -7,9 +7,11 @@ import {
   checkOtp,
   checkRate,
   createSession,
+  isFirstSeenDevice,
   requestContext,
   upsertVerifiedUser,
 } from "@/server/auth";
+import { notifyNewDevice } from "@/server/email";
 
 /**
  * Finish a login: check the code, get-or-create the account, mint a session.
@@ -62,6 +64,32 @@ export async function POST(request: Request) {
 
   const { user, created } = await upsertVerifiedUser(phone, ctx);
   const session = await createSession(user, ctx);
+
+  // Security heads-up on a sign-in from a browser + OS we haven't seen for this
+  // account. Runs after the response; never blocks login; only sent when the
+  // account has an email on file.
+  if (!created) {
+    after(async () => {
+      try {
+        const isNew = await isFirstSeenDevice(
+          user._id,
+          session._id,
+          session.device,
+        );
+        if (isNew) {
+          await notifyNewDevice({
+            userId: String(user._id),
+            email: user.email,
+            name: user.name,
+            device: session.device,
+            ip: ctx.ip,
+          });
+        }
+      } catch (err) {
+        console.error("[auth] new-device notice failed", err);
+      }
+    });
+  }
 
   await recordAudit({
     actorId: user._id,

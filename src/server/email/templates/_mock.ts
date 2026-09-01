@@ -1,18 +1,21 @@
-import type { OrderEmailBase } from "../types";
+import type { EmailBrand, NewDeviceProps, OrderEmailBase } from "../types";
+
+const mockBrand: EmailBrand = {
+  siteName: "THE RARESKIN",
+  legalName: "Velocity Ventures Group",
+  supportEmail: "therareskinsupport@velocityventuresgroup.in",
+  supportAddress:
+    "Shop No. 04, Jija Mata Bachat Bhavan, Near S.T. Stand, Roha, Dist. Raigad – 402109",
+  siteUrl: "https://therareskin.com",
+  logoUrl: "https://therareskin.com/email/logo",
+  accountUrl: "https://therareskin.com/account",
+  orderUrl: "https://therareskin.com/account/orders/RRS-2026-000042",
+  invoiceUrl: "https://therareskin.com/api/account/orders/RRS-2026-000042/invoice",
+};
 
 /** Sample data so `pnpm email:preview` renders every template standalone. */
 export const mockBase: OrderEmailBase = {
-  brand: {
-    siteName: "THE RARESKIN",
-    legalName: "Velocity Ventures Group",
-    supportEmail: "therareskinsupport@velocityventuresgroup.in",
-    supportAddress:
-      "Shop No. 04, Jija Mata Bachat Bhavan, Near S.T. Stand, Roha, Dist. Raigad – 402109",
-    siteUrl: "https://therareskin.com",
-    logoUrl: "https://therareskin.com/email/logo",
-    orderUrl: "https://therareskin.com/account/orders/RRS-2026-000042",
-    invoiceUrl: "https://therareskin.com/api/account/orders/RRS-2026-000042/invoice",
-  },
+  brand: mockBrand,
   orderNumber: "RRS-2026-000042",
   placedAt: "29 Aug 2026, 8:32 pm",
   customerName: "Aditi",
@@ -59,4 +62,12 @@ export const mockBase: OrderEmailBase = {
     phone: "+91 98765 43210",
   },
   paymentLine: "UPI · aditi@okhdfcbank",
+};
+
+export const mockNewDevice: NewDeviceProps = {
+  brand: mockBrand,
+  customerName: "Aditi",
+  deviceLabel: "Chrome on Windows",
+  ip: "203.0.113.42",
+  when: "2 Sep 2026, 9:14 am",
 };

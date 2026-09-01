@@ -35,6 +35,14 @@ export const OTP_MAX_ATTEMPTS = 5;
 export const CUSTOMER_SESSION_DAYS = 30;
 export const STAFF_SESSION_HOURS = 8;
 
+/**
+ * How long a staff member's `sudo` re-auth stays valid. Dangerous admin actions
+ * (refunds, cancellations, role changes, staff invites, destructive edits)
+ * require a fresh phone-OTP challenge; once passed, `session.sudoUntil` is set
+ * this far ahead so a burst of related actions doesn't re-prompt every time.
+ */
+export const SUDO_WINDOW_MINUTES = 15;
+
 const INDIAN_MOBILE = /^[6-9]\d{9}$/;
 
 /**

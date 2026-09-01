@@ -10,6 +10,7 @@ import { USER_ROLES, type UserRole } from "@/lib/validation/user";
 export {
   createSession,
   clearSessionCookie,
+  isFirstSeenDevice,
   getAuth,
   getCurrentUser,
   touchSession,
@@ -26,7 +27,11 @@ export { checkRate } from "./rate-limit";
 export type { RateRule, RateResult } from "./rate-limit";
 export { verifyTurnstile, isTurnstileConfigured } from "./turnstile";
 
-const roleRank: Record<UserRole, number> = {
+/** The RBAC ladder. `hasRole`/`requireRole` compare against this; the admin
+ *  guards in `@/server/auth/admin` reuse it. `support` and `catalog_manager`
+ *  are siblings (neither outranks the other) — section access is checked by
+ *  explicit role, not only by rank. */
+export const roleRank: Record<UserRole, number> = {
   customer: 0,
   support: 1,
   catalog_manager: 1,

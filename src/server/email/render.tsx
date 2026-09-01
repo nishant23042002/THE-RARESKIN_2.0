@@ -13,14 +13,19 @@ import OrderCancelled from "./templates/order-cancelled";
 import RefundProcessed from "./templates/refund-processed";
 import OrderShipped from "./templates/order-shipped";
 import OrderDelivered from "./templates/order-delivered";
+import NewDevice from "./templates/new-device";
 
 /** Subject line — pure, computed once at enqueue and stored on the row. */
 export function emailSubject<T extends EmailTemplate>(
   template: T,
   props: EmailPropsFor<T>,
 ): string {
-  const n = props.orderNumber;
+  const n = (props as { orderNumber?: string }).orderNumber ?? "";
   switch (template) {
+    case "new-device":
+      return `New sign-in to your ${
+        (props as EmailPropsMap["new-device"]).brand.siteName
+      } account`;
     case "order-confirmed":
       return `Order ${n} confirmed — THE RARESKIN`;
     case "order-placed-cod":
@@ -52,6 +57,7 @@ const COMPONENTS: {
   "refund-processed": RefundProcessed,
   "order-shipped": OrderShipped,
   "order-delivered": OrderDelivered,
+  "new-device": NewDevice,
 };
 
 /** The React element Resend renders (via `emails.send({ react })`). */

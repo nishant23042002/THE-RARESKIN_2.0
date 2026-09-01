@@ -61,7 +61,7 @@ pnpm db:check           # connectivity probe
 pnpm catalog list       # inspect the live catalogue
 pnpm catalog set aurevan price 749   # edit a field + bump the cache
 pnpm catalog set vayren stock 60     # set an inventory level
-pnpm coupon add WELCOME10 percent 10 # create a discount code (admin UI later)
+pnpm coupon add WELCOME10 percent 10 # create a discount code (coupon UI in G3)
 pnpm revalidate         # refresh the storefront cache on demand
 pnpm email:test RRS-2026-000001  # render every order email to .mail/ (dev)
 pnpm email:preview      # react-email dev server for the templates
@@ -263,10 +263,14 @@ before going live:
   `CRON_SECRET`, then flip `flags.checkoutEnabled` in Site Settings. Until then
   the checkout drawer shows "opens with launch" for customers; in dev it uses
   the simulate-payment panel.
-- **Coupons** — created with `pnpm coupon add …` for now (admin UI is a later
-  phase). None ship by default.
+- **Admin** — `/admin` ("Studio") covers order management end to end (fulfil,
+  refund, cancel, notes) with role-gated access + phone-OTP sudo re-auth for
+  dangerous actions. See [`docs/admin.md`](docs/admin.md). Catalogue and coupon
+  UIs land in Phase G2 / G3; until then use the scripts below.
+- **Coupons** — created with `pnpm coupon add …` for now (the coupon UI is
+  Phase G3). None ship by default.
 - **Stock** — every product seeds at `stock: 0`; set real levels with
-  `pnpm catalog set <slug> stock <n>` (or the admin) before launch.
+  `pnpm catalog set <slug> stock <n>` (catalogue UI is Phase G2) before launch.
 - **Contact & newsletter** — connect the API stubs to a real inbox / ESP.
 - **Legal pages** — Shipping / Returns / Privacy / Terms carry real,
   brand-specific copy but should get a final legal review. Confirm the values

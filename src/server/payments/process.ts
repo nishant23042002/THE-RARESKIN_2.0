@@ -65,6 +65,11 @@ export function canTransition(from: OrderStatus, to: OrderStatus): boolean {
   return from === to || TRANSITIONS[from]?.includes(to) === true;
 }
 
+/** The statuses an order in `from` can move to next (excludes `from` itself). */
+export function nextStatuses(from: OrderStatus): OrderStatus[] {
+  return TRANSITIONS[from] ?? [];
+}
+
 /** Mutate the order doc's status + append a timeline entry. Caller saves. */
 export function transitionOrder(
   order: OrderDoc & { save?: unknown },
@@ -503,9 +508,17 @@ async function autoRefund(
 
 export async function cancelUnpaidOrder(
   orderId: mongoose.Types.ObjectId | string,
-  opts: { reason: string; source: Source; actorId?: string | null },
+  opts: {
+    reason: string;
+    source: Source;
+    actorId?: string | null;
+    /** which order statuses this cancel may act on — default `["pending"]` (the
+     *  auto-cancel / customer path). An admin COD cancel widens it. */
+    allowStatuses?: OrderStatus[];
+  },
 ): Promise<{ ok: boolean; orderNumber?: string }> {
   await dbConnect();
+  const allow = opts.allowStatuses ?? ["pending"];
   const dbSession = await mongoose.startSession();
   let result: { ok: boolean; orderNumber?: string } = { ok: false };
 
@@ -513,7 +526,7 @@ export async function cancelUnpaidOrder(
     await dbSession.withTransaction(async () => {
       const order = await Order.findById(orderId).session(dbSession);
       if (!order) return;
-      if (order.status !== "pending" || order.payment.status === "paid") {
+      if (!allow.includes(order.status) || order.payment.status === "paid") {
         result = { ok: false, orderNumber: order.orderNumber };
         return;
       }

@@ -47,7 +47,10 @@ export interface OrderEmailContext {
   refunds: OrderDoc["refunds"];
 }
 
-function brandFor(orderNumber: string): EmailBrand {
+/** Brand block for a non-order email (security notices etc.). Order emails
+ *  override `orderUrl` / `invoiceUrl` via `brandFor`. */
+export function accountBrand(): EmailBrand {
+  const accountUrl = absoluteUrl("/account");
   return {
     siteName: SITE.name,
     legalName: SITE.legalName,
@@ -55,6 +58,15 @@ function brandFor(orderNumber: string): EmailBrand {
     supportAddress: CONTACT.address,
     siteUrl: SITE.url,
     logoUrl: absoluteUrl("/email/logo"),
+    accountUrl,
+    orderUrl: accountUrl,
+    invoiceUrl: accountUrl,
+  };
+}
+
+function brandFor(orderNumber: string): EmailBrand {
+  return {
+    ...accountBrand(),
     orderUrl: absoluteUrl(`/account/orders/${orderNumber}`),
     invoiceUrl: absoluteUrl(`/api/account/orders/${orderNumber}/invoice`),
   };
