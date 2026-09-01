@@ -158,7 +158,7 @@ export interface OrderDoc {
     upiVpa: string | null;
     refundedPaise: number;
   };
-  /** for an unpaid online order — the auto-cancel job releases it after this */
+  /** legacy — COD orders leave this null; online orders are born paid */
   paymentDueBy: Date | null;
   fulfilment: {
     carrier: string | null;
@@ -292,18 +292,12 @@ orderSchema.index(
     partialFilterExpression: { "payment.providerOrderId": { $type: "string" } },
   },
 );
-// A retried place-order request must resolve to the same order, never a second.
+// Two callers finalising one payment (checkout callback + webhook) must resolve
+// to the same order. Online orders set `idempotencyKey` to the Razorpay order
+// id; a COD order uses the client-generated UUID that dedupes a double-submit.
 orderSchema.index(
   { userId: 1, idempotencyKey: 1 },
   { name: "user_idem_unique", unique: true },
-);
-// Auto-cancel sweep: unpaid online orders past their window.
-orderSchema.index(
-  { "payment.status": 1, paymentDueBy: 1 },
-  {
-    name: "unpaid_due",
-    partialFilterExpression: { paymentDueBy: { $type: "date" } },
-  },
 );
 
 export const Order: Model<OrderDoc> =

@@ -15,11 +15,20 @@ const MARKS = [
   { src: "/pay/bhim.svg", label: "UPI" },
 ];
 
-export function PaymentMarks({ className }: { className?: string }) {
+export function PaymentMarks({
+  className,
+  compact = false,
+}: {
+  className?: string;
+  /** smaller marks for tight surfaces (the menu overlay) */
+  compact?: boolean;
+}) {
+  const h = compact ? 19 : 30;
   return (
     <div
       className={cn(
-        "flex flex-wrap items-center gap-x-7 gap-y-3.5",
+        "flex flex-wrap items-center",
+        compact ? "gap-x-4 gap-y-2" : "gap-x-7 gap-y-3.5",
         className,
       )}
     >
@@ -29,19 +38,25 @@ export function PaymentMarks({ className }: { className?: string }) {
           key={m.label}
           src={m.src}
           alt={m.label}
-          width={44}
-          height={30}
+          width={Math.round(h * 1.5)}
+          height={h}
           loading="lazy"
           decoding="async"
-          // multiply drops the marks' white backing plate into the footer ground
-          className="h-[30px] w-auto mix-blend-multiply"
+          // multiply drops the marks' white backing plate into the ground
+          className="w-auto mix-blend-multiply"
+          style={{ height: h }}
         />
       ))}
       <span
         className="flex items-center gap-1.5 text-ink-3"
         title="Cash on delivery"
       >
-        <svg viewBox="0 0 24 16" className="h-4 w-auto" aria-hidden>
+        <svg
+          viewBox="0 0 24 16"
+          className="w-auto"
+          style={{ height: Math.round(h * 0.53) }}
+          aria-hidden
+        >
           <rect
             x="1"
             y="2"
@@ -61,7 +76,12 @@ export function PaymentMarks({ className }: { className?: string }) {
             strokeWidth="1.3"
           />
         </svg>
-        <span className="text-[10px] font-medium tracking-[0.08em] uppercase">
+        <span
+          className={cn(
+            "font-medium tracking-[0.08em] uppercase",
+            compact ? "text-[9px]" : "text-[10px]",
+          )}
+        >
           COD
         </span>
       </span>

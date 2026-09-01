@@ -9,6 +9,7 @@ import {
   DISCOVERY_SET_SLUG,
   isFragranceSlug,
   placeholderImages,
+  type BagSuggestion,
   type CatalogNavItem,
   type DiscoverySetInfo,
   type Fragrance,
@@ -177,6 +178,50 @@ export async function getCatalogNav(): Promise<CatalogNavItem[]> {
     name: f.name,
     accent: f.accent,
   }));
+}
+
+/**
+ * The whole range as one-tap cross-sell cards for the bag drawer. The drawer
+ * filters out whatever is already in the bag, so a shopper always sees a way to
+ * complete the set.
+ */
+/** A real uploaded packshot (Cloudinary), or null when it's still the local
+ *  placeholder path — so the drawer can fall back to the vector flacon. */
+function realPackshot(url: string | undefined): string | null {
+  return url && /^https?:\/\//.test(url) ? url : null;
+}
+
+export async function getBagSuggestions(): Promise<BagSuggestion[]> {
+  const { fragrances, discoverySet } = await getStorefrontCatalog();
+
+  const out: BagSuggestion[] = fragrances
+    .filter((f) => f.available)
+    .map((f) => ({
+      sku: f.sku,
+      slug: f.slug,
+      name: f.name,
+      fragrance: f.slug,
+      image: realPackshot(f.images.flat) ?? realPackshot(f.images.hero),
+      meta: `Extrait · ${f.volumeMl} ml`,
+      price: f.price,
+      mrp: f.mrp,
+      href: `/fragrances/${f.slug}`,
+    }));
+
+  if (discoverySet?.available) {
+    out.push({
+      sku: discoverySet.sku,
+      slug: discoverySet.slug,
+      name: discoverySet.name,
+      image: null,
+      meta: `${discoverySet.vialCount} × ${discoverySet.perVialMl} ml`,
+      price: discoverySet.price,
+      mrp: discoverySet.mrp,
+      href: "/discovery-set",
+    });
+  }
+
+  return out;
 }
 
 /** Related products for a PDP — the other fragrances, in catalogue order. */

@@ -81,7 +81,7 @@ export interface CheckoutQuoteErrorResponse {
   message: string;
 }
 
-/** How the client should collect payment for a just-placed order. */
+/** How the client should collect payment. */
 export type CheckoutPaymentDirective =
   | { kind: "cod" }
   | {
@@ -93,13 +93,32 @@ export type CheckoutPaymentDirective =
     }
   | { kind: "razorpay-dev"; amountPaise: number };
 
-export interface PlaceOrderSuccess {
-  ok: true;
-  orderNumber: string;
-  orderId: string;
-  reused: boolean;
-  payment: CheckoutPaymentDirective;
-}
+type OnlineDirective = Extract<
+  CheckoutPaymentDirective,
+  { kind: "razorpay" | "razorpay-dev" }
+>;
+
+/**
+ * `POST /api/checkout/place`. **Payment-first:** a COD order exists immediately;
+ * an online checkout returns only an `intentId` + a payment directive — the
+ * order is created once Razorpay verifies the payment.
+ */
+export type PlaceOrderSuccess =
+  | {
+      ok: true;
+      kind: "cod";
+      orderNumber: string;
+      orderId: string;
+      pricing: QuotePricing;
+      payment: { kind: "cod" };
+    }
+  | {
+      ok: true;
+      kind: "online";
+      intentId: string;
+      pricing: QuotePricing;
+      payment: OnlineDirective;
+    };
 
 export interface PlaceOrderFailure {
   ok: false;
@@ -125,7 +144,16 @@ export interface PlaceOrderFailure {
 export interface PaymentConfirmResponse {
   ok: boolean;
   orderNumber?: string;
-  error?: "bad-request" | "auth-required" | "signature" | "not-found" | "failed";
+  refunded?: boolean;
+  error?:
+    | "bad-request"
+    | "auth-required"
+    | "signature"
+    | "not-found"
+    | "failed"
+    | "sold-out"
+    | "amount-mismatch"
+    | "intent-not-found";
 }
 
 /** Customer-facing label for an order status. */

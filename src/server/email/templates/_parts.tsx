@@ -1,4 +1,4 @@
-import { Button, Column, Hr, Img, Row, Section, Text } from "react-email";
+import { Button, Column, Hr, Img, Link, Row, Section, Text } from "react-email";
 
 import type { EmailAddress, EmailLineItem, EmailTotals } from "../types";
 import { accent, fonts, palette } from "./theme";
@@ -317,6 +317,26 @@ export function Cta({ href, children }: { href: string; children: React.ReactNod
       >
         {children}
       </Button>
+    </Section>
+  );
+}
+
+/** a quiet centred link under the primary CTA */
+export function SubLink({ href, children }: { href: string; children: React.ReactNode }) {
+  return (
+    <Section style={{ margin: "0 0 8px", textAlign: "center" }}>
+      <Link
+        href={href}
+        style={{
+          fontFamily: fonts.body,
+          fontSize: "12px",
+          letterSpacing: "0.02em",
+          color: palette.muted,
+          textDecoration: "underline",
+        }}
+      >
+        {children}
+      </Link>
     </Section>
   );
 }

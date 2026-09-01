@@ -10,11 +10,12 @@ India / INR. Built greenfield from the approved "Campaign" prototype.
   (guest + account, merged on sign-in); checkout is a **right-side drawer** that
   slides bag → checkout → payment → confirmation (no separate route), with a
   server-side GST engine, coupon + store-credit application, pincode
-  serviceability and atomic stock reservation. **Razorpay hosted checkout** is
-  wired end to end — verified webhook (authoritative), immutable payment log,
-  refund path, auto-cancel of unpaid orders. Works locally without keys via a
-  "simulate payment" panel. See [`docs/checkout.md`](docs/checkout.md) and
-  [`docs/payments.md`](docs/payments.md).
+  serviceability and atomic stock decrement. **Razorpay hosted checkout** is
+  wired end to end, **payment-first** — an online order is created only once the
+  payment is verified (failed/abandoned payments leave nothing behind); verified
+  webhook (authoritative), immutable payment log, refund path, oversell
+  auto-refund. Works locally without keys via a "simulate payment" panel. See
+  [`docs/checkout.md`](docs/checkout.md) and [`docs/payments.md`](docs/payments.md).
 - **Data layer:** MongoDB Atlas + Mongoose, Zod validation shared client/server,
   Cloudinary for media, `migrate-mongo` migrations. The storefront reads the
   catalogue (products, prices, copy, SEO) from the database via a `server-only`
@@ -195,8 +196,8 @@ Wired end to end (Test Mode). Full setup + guarantees in
 2. Create a webhook at `/api/webhooks/razorpay` for `payment.captured`,
    `payment.failed`, `order.paid`, `refund.processed`, `refund.failed`,
    `payment.dispute.created`; its secret → `RAZORPAY_WEBHOOK_SECRET`.
-3. `CRON_SECRET` in the Vercel project (crons in `vercel.json`: auto-cancel
-   every 5 min, reconcile daily).
+3. `CRON_SECRET` in the Vercel project (crons in `vercel.json`: reconcile
+   payments daily, drain the email outbox every 2 min).
 4. Flip `flags.checkoutEnabled: true` in Site Settings.
 
 ### Emails (Resend)
@@ -206,8 +207,18 @@ A durable `emailmessages` outbox, an opportunistic `after()` drain, and a `*/2`
 cron sweep as the guarantee. Blank `RESEND_API_KEY` → every email renders to
 `.mail/*.html` for local review (`pnpm email:test <orderNumber>`,
 `pnpm email:preview`). Going live: verify a domain, set `RESEND_API_KEY` /
-`EMAIL_FROM` / `RESEND_WEBHOOK_SECRET`. The GST-invoice PDF is deferred to
-Phase H (there's no tax invoice while GST is off).
+`EMAIL_FROM` / `RESEND_WEBHOOK_SECRET`.
+
+### Invoices
+
+Every non-cancelled order has a downloadable PDF invoice —
+`GET /api/account/orders/<orderNumber>/invoice` (a "Download invoice" button on
+the order page, a link in the confirmation email). Rendered on demand with
+`@react-pdf/renderer` from `src/server/invoice/` — brand wordmark, the tri-juice
+rule, a flacon glyph per fragrance with its notes, both party blocks, the full
+pricing ladder (discount, credit, shipping, COD fee, GST when applicable),
+exact payment method, and the amount in words. Brand fonts (`public/fonts/*.woff`)
+are bundled into the route via `outputFileTracingIncludes`.
 
 ### Contact & newsletter forms
 

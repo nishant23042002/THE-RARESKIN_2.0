@@ -15,13 +15,15 @@ import {
   cartReducer,
   cartCount,
   cartSubtotal,
+  cartSavings,
+  cartListTotal,
   readCart,
   writeCart,
   initialCartState,
   type CartLine,
 } from "@/lib/cart";
 import { useAuth } from "@/components/providers/auth-provider";
-import { isFragranceSlug } from "@/lib/catalog";
+import { isFragranceSlug, type BagSuggestion } from "@/lib/catalog";
 
 /** The drawer is one panel that slides between three views. */
 export type CartView = "bag" | "checkout" | "done";
@@ -37,6 +39,12 @@ interface CartContextValue {
   lines: CartLine[];
   count: number;
   subtotal: number;
+  /** rupees off MRP across the bag (0 when nothing is discounted) */
+  savings: number;
+  /** bag total at MRP — the struck-through "before" figure */
+  listTotal: number;
+  /** the rest of the range, for the drawer's "complete the collection" strip */
+  suggestions: BagSuggestion[];
   /** false until localStorage has been read (avoids an empty-bag flash) */
   hydrated: boolean;
   isOpen: boolean;
@@ -70,7 +78,13 @@ interface CartContextValue {
 
 const CartContext = createContext<CartContextValue | null>(null);
 
-export function CartProvider({ children }: { children: ReactNode }) {
+export function CartProvider({
+  children,
+  suggestions = [],
+}: {
+  children: ReactNode;
+  suggestions?: BagSuggestion[];
+}) {
   const [state, dispatch] = useReducer(cartReducer, initialCartState);
   const [isOpen, setIsOpen] = useState(false);
   const [view, setView] = useState<CartView>("bag");
@@ -236,6 +250,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
       lines: state.lines,
       count: cartCount(state),
       subtotal: cartSubtotal(state),
+      savings: cartSavings(state),
+      listTotal: cartListTotal(state),
+      suggestions,
       hydrated,
       isOpen,
       view,
@@ -259,6 +276,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }),
     [
       state,
+      suggestions,
       hydrated,
       isOpen,
       view,

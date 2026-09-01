@@ -5,6 +5,7 @@ import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Flacon } from "@/components/ui/flacon";
 import { Mark } from "@/components/ui/mark";
+import { Icon, type IconName } from "@/components/ui/icon";
 import { PaymentBadges } from "@/components/ui/payment-marks";
 import { useAuth } from "@/components/providers/auth-provider";
 import { useCart } from "@/components/providers/cart-provider";
@@ -166,9 +167,11 @@ export function CheckoutPanel() {
   const [paying, setPaying] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [payState, setPayState] = useState<
-    { kind: "dev" | "retry"; orderNumber: string } | null
+    { kind: "dev"; intentId: string } | { kind: "retry" } | null
   >(null);
 
+  // Dedupes a COD double-submit. Online checkout is payment-first — each attempt
+  // mints a fresh Razorpay order, so no client key is needed there.
   const [idempotencyKey] = useState(() =>
     typeof crypto !== "undefined" && crypto.randomUUID
       ? crypto.randomUUID()
@@ -307,7 +310,7 @@ export function CheckoutPanel() {
       <>
         <div className="flex flex-1 flex-col justify-center px-6 py-10 text-center">
           <span className="mx-auto mb-4 inline-flex size-11 items-center justify-center rounded-full border border-line-2">
-            <LockGlyph />
+            <Icon name="lock" className="size-4 text-ink-2" />
           </span>
           <h3 className="serif text-[1.55rem] leading-tight text-ink">
             One step — verify your number
@@ -498,13 +501,13 @@ export function CheckoutPanel() {
   // ── payment ──────────────────────────────────────────────────────────
 
   async function handlePayment(placed: PlaceOrderSuccess) {
-    const { orderNumber, payment } = placed;
-    if (payment.kind === "cod") {
-      completeOrder({ orderNumber, method: "cod", paid: false });
+    if (placed.kind === "cod") {
+      completeOrder({ orderNumber: placed.orderNumber, method: "cod", paid: false });
       return;
     }
+    const { payment } = placed;
     if (payment.kind === "razorpay-dev") {
-      setPayState({ kind: "dev", orderNumber });
+      setPayState({ kind: "dev", intentId: placed.intentId });
       return;
     }
     // real Razorpay
@@ -519,7 +522,7 @@ export function CheckoutPanel() {
         razorpayOrderId: payment.razorpayOrderId,
         amountPaise: payment.amountPaise,
         prefill: payment.prefill,
-        orderNumber,
+        reference: "THE RARESKIN order",
       });
       if (outcome.status === "success") {
         const vr = await fetch("/api/payments/razorpay/callback", {
@@ -528,22 +531,34 @@ export function CheckoutPanel() {
           body: JSON.stringify(outcome.payload),
         });
         const vd = (await vr.json()) as PaymentConfirmResponse;
-        if (vd.ok) {
-          completeOrder({ orderNumber, method: "razorpay", paid: true });
+        if (vd.ok && vd.orderNumber) {
+          completeOrder({
+            orderNumber: vd.orderNumber,
+            method: "razorpay",
+            paid: true,
+          });
+        } else if (vd.error === "sold-out") {
+          setPayState({ kind: "retry" });
+          setPaymentError(
+            "That item just sold out — your payment was refunded in full.",
+          );
         } else {
-          // Payment likely went through — the webhook will reconcile. Show a
-          // soft confirmation rather than an error.
-          completeOrder({ orderNumber, method: "razorpay", paid: true });
+          // Payment went through but confirmation didn't land — the webhook
+          // reconciles it. Send the shopper to their orders.
+          setPayState({ kind: "retry" });
+          setPaymentError(
+            "Payment received — we're confirming your order. Check your account in a moment.",
+          );
         }
       } else if (outcome.status === "failed") {
-        setPayState({ kind: "retry", orderNumber });
+        setPayState({ kind: "retry" });
         setPaymentError(outcome.message);
       } else {
-        setPayState({ kind: "retry", orderNumber });
-        setPaymentError("Payment not completed. Your order is held for 30 minutes.");
+        setPayState({ kind: "retry" });
+        setPaymentError("Payment not completed. Your bag is still here — try again.");
       }
     } catch (err) {
-      setPayState({ kind: "retry", orderNumber });
+      setPayState({ kind: "retry" });
       setPaymentError(
         err instanceof Error ? err.message : "The payment window failed to open.",
       );
@@ -554,34 +569,36 @@ export function CheckoutPanel() {
   }
 
   async function retryPayment() {
-    // Re-hit place with the same idempotency key → same order, same Razorpay id.
+    // Fresh attempt — a new checkout intent + a new Razorpay order.
     setPayState(null);
     setPaymentError(null);
     await placeOrder();
   }
 
   async function simulatePayment(outcome: "paid" | "failed") {
-    if (!payState) return;
+    if (payState?.kind !== "dev") return;
     setPaying(true);
     setPaymentError(null);
     try {
       const r = await fetch("/api/payments/dev-simulate", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ orderNumber: payState.orderNumber, outcome }),
+        body: JSON.stringify({ intentId: payState.intentId, outcome }),
       });
       const d = (await r.json()) as PaymentConfirmResponse;
-      if (d.ok) {
+      if (d.ok && d.orderNumber) {
         completeOrder({
-          orderNumber: payState.orderNumber,
+          orderNumber: d.orderNumber,
           method: "razorpay",
           paid: true,
         });
       } else {
         setPaymentError(
-          outcome === "failed"
-            ? "Simulated a failed payment. The order stays open — retry."
-            : "Could not simulate the payment.",
+          d.error === "sold-out"
+            ? "That item just sold out — the payment was refunded."
+            : outcome === "failed"
+              ? "Simulated a failed payment. Your bag is still here — retry."
+              : "Could not simulate the payment.",
         );
       }
     } catch {
@@ -723,9 +740,9 @@ export function CheckoutPanel() {
 
           {/* trust row */}
           <div className="mt-4 grid grid-cols-3 gap-2 border-t border-line pt-3.5 text-center">
-            <Trust glyph={<TruckGlyph />} label="Free delivery" />
-            <Trust glyph={<DocGlyph />} label="No hidden fees" />
-            <Trust glyph={<ShieldGlyph />} label="Secure checkout" />
+            <Trust icon="truck" label="Free delivery" />
+            <Trust icon="receipt" label="No hidden fees" />
+            <Trust icon="shield" label="Secure checkout" />
           </div>
         </section>
 
@@ -1153,8 +1170,8 @@ export function CheckoutPanel() {
                 Development — Razorpay not configured
               </p>
               <p className="mt-1 text-[11px]">
-                Order <span className="text-ink">{payState.orderNumber}</span> is
-                held. Simulate the hosted-checkout outcome:
+                Simulate the hosted-checkout outcome — the order is created only
+                on success:
               </p>
               <div className="mt-2.5 flex gap-2">
                 <Button
@@ -1180,7 +1197,7 @@ export function CheckoutPanel() {
         <p className="px-6 pb-4 text-center text-[11px] leading-relaxed text-ink-3">
           {method === "cod"
             ? "Cash on delivery — pay when it arrives."
-            : "Secured by Razorpay. You’ll pay in a protected window; your order is held for 30 minutes."}
+            : "Secured by Razorpay. Your order is placed the moment payment succeeds — nothing before."}
         </p>
       </div>
 
@@ -1195,20 +1212,24 @@ export function CheckoutPanel() {
             {paying ? "Opening secure payment…" : "Retry payment"}
           </Button>
         ) : (
-          <Button
-            size="lg"
-            className="w-full !justify-between !px-5"
-            disabled={placing || paying || !canPay}
-            onClick={onPay}
-          >
-            <span className="tracking-[0.1em]">
-              {footerLabel}
-              {total != null ? ` · ${formatPaise(total)}` : ""}
-            </span>
-            <PaymentBadges />
-          </Button>
+          <>
+            <Button
+              size="lg"
+              className="w-full"
+              disabled={placing || paying || !canPay}
+              onClick={onPay}
+            >
+              <span className="tracking-[0.1em] whitespace-nowrap">
+                {footerLabel}
+                {total != null ? ` · ${formatPaise(total)}` : ""}
+              </span>
+            </Button>
+            <div className="mt-2.5 flex justify-center">
+              <PaymentBadges />
+            </div>
+          </>
         )}
-        <p className="mt-2.5 text-center text-[10.5px] leading-relaxed text-ink-3">
+        <p className="mt-2 text-center text-[10.5px] leading-relaxed text-ink-3">
           By continuing you agree to THE RARESKIN’s Terms &amp; Privacy Policy.
         </p>
       </PanelFooter>
@@ -1239,10 +1260,10 @@ function Row({
   );
 }
 
-function Trust({ glyph, label }: { glyph: React.ReactNode; label: string }) {
+function Trust({ icon, label }: { icon: IconName; label: string }) {
   return (
     <span className="flex flex-col items-center gap-1.5 text-ink-3">
-      <span className="text-ink-2">{glyph}</span>
+      <Icon name={icon} className="size-[17px] text-ink-2" />
       <span className="text-[9.5px] font-medium tracking-[0.06em] uppercase">
         {label}
       </span>
@@ -1258,78 +1279,3 @@ function PanelFooter({ children }: { children: React.ReactNode }) {
   );
 }
 
-function LockGlyph() {
-  return (
-    <svg viewBox="0 0 20 20" className="w-4 text-ink-2" fill="none" aria-hidden>
-      <rect
-        x="4"
-        y="9"
-        width="12"
-        height="8"
-        rx="1"
-        stroke="currentColor"
-        strokeWidth="1.3"
-      />
-      <path
-        d="M7 9 V6.5 A3 3 0 0 1 13 6.5 V9"
-        stroke="currentColor"
-        strokeWidth="1.3"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function TruckGlyph() {
-  return (
-    <svg viewBox="0 0 24 24" className="w-[18px]" fill="none" aria-hidden>
-      <path
-        d="M2 6h11v10H2zM13 9h5l3 3v4h-8z"
-        stroke="currentColor"
-        strokeWidth="1.3"
-        strokeLinejoin="round"
-      />
-      <circle cx="7" cy="18" r="1.6" stroke="currentColor" strokeWidth="1.3" />
-      <circle cx="17" cy="18" r="1.6" stroke="currentColor" strokeWidth="1.3" />
-    </svg>
-  );
-}
-
-function DocGlyph() {
-  return (
-    <svg viewBox="0 0 24 24" className="w-[18px]" fill="none" aria-hidden>
-      <path
-        d="M6 3h8l4 4v14H6z"
-        stroke="currentColor"
-        strokeWidth="1.3"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M9 12h6M9 15h6M9 9h3"
-        stroke="currentColor"
-        strokeWidth="1.3"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function ShieldGlyph() {
-  return (
-    <svg viewBox="0 0 24 24" className="w-[18px]" fill="none" aria-hidden>
-      <path
-        d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"
-        stroke="currentColor"
-        strokeWidth="1.3"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M9 12l2 2 4-4"
-        stroke="currentColor"
-        strokeWidth="1.3"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}

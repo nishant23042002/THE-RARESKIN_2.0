@@ -65,16 +65,17 @@ vercel.json              + { "path": "/api/cron/send-emails", "schedule": "*/2 *
 
 | template | subject | fires from | dedupeKey |
 | --- | --- | --- | --- |
-| `order-confirmed` | `Order <n> confirmed — THE RARESKIN` | `confirmPaidOrder` (verified payment) | `order-confirmed:<n>` |
-| `order-placed-cod` | `Order <n> received — pay on delivery` | `placeOrder` (`method: cod`) | `order-placed-cod:<n>` |
-| `payment-failed` | `Payment didn't go through — order <n>` | `markPaymentFailed` — **once per order**, not per retry | `payment-failed:<n>` |
-| `order-cancelled` | `Order <n> cancelled` | `cancelUnpaidOrder` (auto-cancel / admin) | `order-cancelled:<n>` |
+| `order-confirmed` | `Order <n> confirmed — THE RARESKIN` | `finalizeOnlineCheckout` (verified payment) | `order-confirmed:<n>` |
+| `order-placed-cod` | `Order <n> received — pay on delivery` | `placeCodOrder` (`method: cod`) | `order-placed-cod:<n>` |
+| `payment-failed` | `Payment didn't go through — order <n>` | prepared — not wired to the payment-first flow (kept for manual / COD use) | `payment-failed:<n>` |
+| `order-cancelled` | `Order <n> cancelled` | `cancelUnpaidOrder` (COD cancel / admin) | `order-cancelled:<n>` |
 | `refund-processed` | `Refund on its way — order <n>` | `recordRefund` (`status: processed`) | `refund-processed:<refundId or <n>:<idx>>` |
 | `order-shipped` | `Your order <n> has shipped` | **Phase G** — `notifyOrderStatus`, no live trigger yet | `order-shipped:<n>` |
 | `order-delivered` | `Delivered — order <n>` | **Phase G** | `order-delivered:<n>` |
 
-No GST line (rate 0). No invoice PDF — the confirmation email is the receipt
-(`// TODO(phase-h)` in `process.ts` if that changes).
+No GST line (rate 0). The `order-confirmed` email links to a downloadable
+invoice PDF (`GET /api/account/orders/<n>/invoice`, generated on demand from
+`src/server/invoice/`).
 
 ## Local development
 
@@ -104,7 +105,7 @@ Suppression, retries and the webhook idempotency ledger all still run in dev.
    `whsec_...` signing secret to `RESEND_WEBHOOK_SECRET`.
 4. `CRON_SECRET` is shared with the existing crons — nothing new to set; the
    `*/2` sweep in `vercel.json` picks it up. (Minute-granularity crons need
-   Vercel Pro; on Hobby, fold `drainOutbox` into the `*/5` auto-cancel handler.)
+   Vercel Pro; on Hobby, fold `drainOutbox` into the daily reconcile handler.)
 5. Send a real order through in Test Mode and confirm it lands (check the row in
    `emailmessages` flips to `sent` with a Resend `providerId`, and Resend's
    dashboard shows it delivered).

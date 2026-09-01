@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { Flacon } from "@/components/ui/flacon";
 import { Mark } from "@/components/ui/mark";
+import { Icon } from "@/components/ui/icon";
 import { gsap } from "@/lib/gsap";
 import { useCart } from "@/components/providers/cart-provider";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
@@ -74,26 +75,26 @@ export function CartLineRow({ line }: { line: CartLine }) {
             </p>
           )}
 
-          <div className="mt-3.5 inline-flex items-center gap-3.5 text-ink-2">
+          <div className="mt-3.5 inline-flex items-center rounded-full border border-line-2/80 text-ink-2">
             <button
               type="button"
               onClick={() => setQty(line.sku, line.qty - 1)}
               disabled={line.qty <= 1}
               aria-label={`Decrease ${line.name} quantity`}
-              className="text-[14px] leading-none transition-opacity hover:text-ink disabled:opacity-25"
+              className="grid size-7 place-items-center transition-colors hover:text-ink disabled:opacity-25"
             >
-              &#8722;
+              <Icon name="minus" className="size-3" />
             </button>
-            <span className="min-w-[12px] text-center text-[12px] tabular-nums text-ink">
+            <span className="min-w-[16px] text-center text-[12px] tabular-nums text-ink">
               {line.qty}
             </span>
             <button
               type="button"
               onClick={() => setQty(line.sku, line.qty + 1)}
               aria-label={`Increase ${line.name} quantity`}
-              className="text-[14px] leading-none transition-opacity hover:text-ink"
+              className="grid size-7 place-items-center transition-colors hover:text-ink"
             >
-              +
+              <Icon name="plus" className="size-3" />
             </button>
           </div>
 

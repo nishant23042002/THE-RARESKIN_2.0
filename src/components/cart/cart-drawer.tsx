@@ -9,10 +9,13 @@ import { useRouteTransition } from "@/components/providers/route-transition";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { Button } from "@/components/ui/button";
 import { Mark } from "@/components/ui/mark";
+import { Icon } from "@/components/ui/icon";
 import { Logo } from "@/components/ui/logo";
 import { formatINR } from "@/lib/catalog";
 import { lockScroll, unlockScroll } from "@/lib/scroll-lock";
 import { CartLineRow } from "./cart-line";
+import { BagSuggestions } from "./bag-suggestions";
+import { CartMarquee } from "./cart-marquee";
 import { CheckoutPanel } from "./checkout-panel";
 
 const VIEW_INDEX = { bag: 0, checkout: 1, done: 2 } as const;
@@ -39,6 +42,8 @@ export function CartDrawer() {
     lines,
     count,
     subtotal,
+    savings,
+    listTotal,
     hydrated,
     placedOrder,
     modalSuspended,
@@ -234,6 +239,8 @@ export function CartDrawer() {
         ref={panelRef}
         className="drawer-panel ui-surface absolute inset-y-0 right-0 flex w-[min(468px,94vw)] flex-col border-l border-line bg-surface text-ink will-change-transform"
       >
+        {view !== "done" && <CartMarquee />}
+
         {/* ── header ─────────────────────────────────────────────── */}
         <header className="shrink-0 border-b border-line px-6 pt-5 pb-3.5">
           <div className="flex items-center justify-between">
@@ -243,16 +250,7 @@ export function CartDrawer() {
                 onClick={backToBag}
                 className="-ml-1 inline-flex items-center gap-1.5 px-1 py-0.5 text-[10px] tracking-[0.14em] text-ink-2 uppercase transition-colors hover:text-ink"
               >
-                <svg viewBox="0 0 12 12" className="w-2.5" aria-hidden>
-                  <path
-                    d="M7.5 1.5 L3 6 L7.5 10.5"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
+                <Icon name="chevron" className="size-3 rotate-180" />
                 Bag
               </button>
             ) : (
@@ -276,14 +274,7 @@ export function CartDrawer() {
               aria-label="Close"
               className="-mr-1 p-1.5 text-ink-3 transition-colors hover:text-ink"
             >
-              <svg viewBox="0 0 16 16" className="w-3" aria-hidden>
-                <path
-                  d="M2 2 L14 14 M14 2 L2 14"
-                  stroke="currentColor"
-                  strokeWidth="1.4"
-                  strokeLinecap="round"
-                />
-              </svg>
+              <Icon name="close" className="size-[13px]" />
             </button>
           </div>
 
@@ -338,27 +329,50 @@ export function CartDrawer() {
                 className="flex flex-1 flex-col overflow-y-auto overscroll-contain"
               >
                 {!hydrated ? null : filled ? (
-                  <ul>
-                    {lines.map((line) => (
-                      <CartLineRow key={line.sku} line={line} />
-                    ))}
-                  </ul>
+                  <>
+                    <ul>
+                      {lines.map((line) => (
+                        <CartLineRow key={line.sku} line={line} />
+                      ))}
+                    </ul>
+                    <BagSuggestions className="border-t border-line/70 pt-5 pb-7" />
+                  </>
                 ) : (
-                  <div className="flex flex-1 flex-col items-center justify-center px-8 text-center">
-                    <Mark className="mb-6 w-6 text-ink-3" />
-                    <p className="serif-italic text-[1.4rem] leading-snug text-ink-2">
-                      Nothing chosen yet.
-                    </p>
-                    <p className="mt-3 max-w-[26ch] text-[11px] leading-relaxed text-ink-3">
-                      Three extraits and the Discovery Set. The whole range.
-                    </p>
+                  <div className="flex flex-1 flex-col">
+                    <div className="flex flex-col items-center px-8 pt-16 pb-10 text-center">
+                      <Mark className="mb-5 w-6 text-ink-3" />
+                      <p className="serif-italic text-[1.4rem] leading-snug text-ink-2">
+                        Nothing chosen yet.
+                      </p>
+                      <p className="mt-3 max-w-[26ch] text-[11px] leading-relaxed text-ink-3">
+                        Three extraits and the Discovery Set — add one to begin.
+                      </p>
+                    </div>
+                    <BagSuggestions
+                      heading="The range"
+                      className="mt-auto border-t border-line/70 pt-5 pb-8"
+                    />
                   </div>
                 )}
               </div>
 
               {filled && (
-                <footer className="shrink-0 border-t border-line px-6 pt-5 pb-[calc(22px+env(safe-area-inset-bottom))]">
-                  <div className="flex items-baseline justify-between">
+                <footer className="shrink-0 border-t border-line px-6 pt-4 pb-[calc(20px+env(safe-area-inset-bottom))]">
+                  {savings > 0 && (
+                    <>
+                      <div className="flex items-baseline justify-between text-[11px] text-ink-2">
+                        <span>Bag value</span>
+                        <span className="tabular-nums text-ink-3 line-through">
+                          {formatINR(listTotal)}
+                        </span>
+                      </div>
+                      <div className="mt-1 flex items-baseline justify-between text-[11px] font-medium text-ok">
+                        <span>You save</span>
+                        <span className="tabular-nums">− {formatINR(savings)}</span>
+                      </div>
+                    </>
+                  )}
+                  <div className="mt-2.5 flex items-baseline justify-between border-t border-line pt-2.5">
                     <span className="text-[9.5px] tracking-[0.16em] text-ink-3 uppercase">
                       Subtotal
                     </span>
@@ -366,11 +380,23 @@ export function CartDrawer() {
                       {formatINR(subtotal)}
                     </span>
                   </div>
-                  <p className="mt-1.5 text-[10px] leading-relaxed text-ink-3">
-                    Free shipping across India. The price is the price — nothing
-                    added at checkout.
-                  </p>
-                  <Button onClick={goToCheckout} className="mt-4 w-full">
+
+                  <div className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1 text-[9.5px] tracking-[0.06em] text-ink-3 uppercase">
+                    <span className="inline-flex items-center gap-1.5">
+                      <Icon name="check" className="size-[11px] text-ok" /> Free
+                      shipping
+                    </span>
+                    <span className="inline-flex items-center gap-1.5">
+                      <Icon name="check" className="size-[11px] text-ok" />{" "}
+                      All-inclusive price
+                    </span>
+                    <span className="inline-flex items-center gap-1.5">
+                      <Icon name="check" className="size-[11px] text-ok" /> Easy
+                      returns
+                    </span>
+                  </div>
+
+                  <Button onClick={goToCheckout} className="mt-3.5 w-full">
                     Proceed to checkout
                   </Button>
                 </footer>

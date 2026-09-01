@@ -12,6 +12,7 @@
     "db:seed": "tsx scripts/seed.ts",
     "catalog": "tsx scripts/catalog.ts",
     "coupon": "tsx scripts/coupon.ts",
+  "reset:commerce": "tsx scripts/reset-commerce.ts",
     "revalidate": "tsx scripts/catalog.ts revalidate",
     "db:migrate": "migrate-mongo up",
     "db:migrate:down": "migrate-mongo down",
@@ -23,6 +24,7 @@
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",
+    "@react-pdf/renderer": "^4.9.0",
     "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.38.3",
     "cloudinary": "^2.11.0",
@@ -39,6 +41,8 @@
     "zod": "^4.5.1"
   },
   "devDependencies": {
+    "@fontsource/jost": "^5.3.0",
+    "@fontsource/newsreader": "^5.3.0",
     "@next/env": "^16.3.3",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",

@@ -9,6 +9,7 @@ import {
   OrderMeta,
   Panel,
   Pieces,
+  SubLink,
   Summary,
   Title,
 } from "./_parts";
@@ -48,6 +49,7 @@ export default function OrderConfirmed(props: OrderConfirmedProps) {
       ) : null}
 
       <Cta href={brand.orderUrl}>View your order</Cta>
+      <SubLink href={brand.invoiceUrl}>Download your invoice (PDF)</SubLink>
     </EmailLayout>
   );
 }

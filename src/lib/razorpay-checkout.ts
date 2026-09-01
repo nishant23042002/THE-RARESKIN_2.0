@@ -62,7 +62,8 @@ export interface OpenCheckoutInput {
   razorpayOrderId: string;
   amountPaise: number;
   prefill: { name: string; email: string; contact: string };
-  orderNumber: string;
+  /** a short label shown in the Razorpay modal (no order number exists yet) */
+  reference: string;
 }
 
 export type CheckoutOutcome =
@@ -97,9 +98,9 @@ export async function openRazorpayCheckout(
       amount: input.amountPaise,
       currency: "INR",
       name: "THE RARESKIN",
-      description: `Order ${input.orderNumber}`,
+      description: input.reference,
       prefill: input.prefill,
-      notes: { orderNumber: input.orderNumber },
+      notes: { reference: input.reference },
       theme: { color: "#17140f" },
       handler: (payload) => done({ status: "success", payload }),
       modal: {

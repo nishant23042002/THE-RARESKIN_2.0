@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Container } from "@/components/ui/container";
+import { Icon, type IconName } from "@/components/ui/icon";
 import { PageIntro } from "@/components/layout/page-intro";
 import { ContactForm } from "@/components/contact/contact-form";
 import { pageMeta } from "@/lib/seo";
@@ -12,21 +13,31 @@ export const metadata = pageMeta({
   path: "/contact",
 });
 
-const CHANNELS = [
+const CHANNELS: {
+  label: string;
+  icon: IconName;
+  value: string;
+  href: string;
+  external?: boolean;
+  note: string;
+}[] = [
   {
     label: "Email",
+    icon: "mail",
     value: CONTACT.email,
     href: `mailto:${CONTACT.email}`,
     note: "Fastest for order questions",
   },
   {
     label: "Phone",
+    icon: "phone",
     value: CONTACT.phone,
     href: `tel:${CONTACT.phoneHref}`,
     note: "Mon–Sat, working hours (IST)",
   },
   {
     label: "Visit / write",
+    icon: "pin",
     value: CONTACT.address,
     href: CONTACT.mapsUrl,
     external: true,
@@ -58,7 +69,8 @@ export default function ContactPage() {
                 (i > 0 ? " md:pl-8" : "")
               }
             >
-              <span className="text-[9px] tracking-[0.22em] text-ink-3 uppercase">
+              <span className="inline-flex items-center gap-2 text-[9px] tracking-[0.22em] text-ink-3 uppercase">
+                <Icon name={c.icon} className="size-3.5 text-ink-2" />
                 {c.label}
               </span>
               <a
@@ -66,13 +78,14 @@ export default function ContactPage() {
                 {...(c.external
                   ? { target: "_blank", rel: "noopener noreferrer" }
                   : {})}
-                className="text-[14px] leading-[1.55] break-words transition-colors hover:text-ink-2"
+                className="inline-flex items-start gap-1 text-[14px] leading-[1.55] break-words transition-colors hover:text-ink-2"
               >
                 {c.value}
                 {c.external ? (
-                  <span aria-hidden className="text-ink-3">
-                    {" ↗"}
-                  </span>
+                  <Icon
+                    name="arrowUpRight"
+                    className="mt-0.5 size-3 shrink-0 text-ink-3"
+                  />
                 ) : null}
               </a>
               <span className="text-[10.5px] tracking-[0.03em] text-ink-3">

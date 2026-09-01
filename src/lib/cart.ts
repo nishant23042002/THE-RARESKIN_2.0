@@ -92,6 +92,17 @@ export const cartCount = (s: CartState) =>
 export const cartSubtotal = (s: CartState) =>
   s.lines.reduce((n, l) => n + l.price * l.qty, 0);
 
+/** Rupees off MRP across the bag — 0 when no line carries an `mrp`. */
+export const cartSavings = (s: CartState) =>
+  s.lines.reduce(
+    (n, l) => n + Math.max(0, (l.mrp ?? l.price) - l.price) * l.qty,
+    0,
+  );
+
+/** Total at MRP — the "before" figure for a struck-through comparison. */
+export const cartListTotal = (s: CartState) =>
+  s.lines.reduce((n, l) => n + (l.mrp ?? l.price) * l.qty, 0);
+
 export function readCart(): CartLine[] {
   if (typeof window === "undefined") return [];
   try {

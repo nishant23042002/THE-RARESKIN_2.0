@@ -15,6 +15,8 @@ export interface EmailBrand {
   logoUrl: string;
   /** deep link to this order's page */
   orderUrl: string;
+  /** direct download for this order's invoice PDF */
+  invoiceUrl: string;
 }
 
 export interface EmailLineItem {

@@ -217,15 +217,15 @@ function Stat({
   accent?: boolean;
 }) {
   return (
-    <div className="px-4 py-4 text-center first:pl-0 last:pr-0 sm:px-6">
+    <div className="px-2.5 py-4 text-center first:pl-0 last:pr-0 sm:px-6">
       <div
-        className={`serif text-[1.6rem] leading-none tabular-nums ${
+        className={`serif text-[1.45rem] leading-none tabular-nums sm:text-[1.6rem] ${
           accent ? "text-ok" : muted ? "text-ink-3" : "text-ink"
         }`}
       >
         {value}
       </div>
-      <div className="mt-1.5 text-[9.5px] font-medium tracking-[0.14em] text-ink-3 uppercase">
+      <div className="mt-1.5 text-[9px] font-medium tracking-[0.08em] text-ink-3 uppercase sm:text-[9.5px] sm:tracking-[0.14em]">
         {label}
       </div>
     </div>

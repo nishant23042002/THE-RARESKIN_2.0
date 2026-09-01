@@ -4,6 +4,7 @@ import { useEffect, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { Logo } from "@/components/ui/logo";
 import { MenuIcon } from "@/components/ui/menu-icon";
+import { Icon } from "@/components/ui/icon";
 import { useScrolled } from "@/hooks/use-scrolled";
 import { useCart } from "@/components/providers/cart-provider";
 import { useAuth } from "@/components/providers/auth-provider";
@@ -71,21 +72,25 @@ export function Header({ nav }: { nav: CatalogNavItem[] }) {
             <Logo className="w-full" />
           </Link>
 
-          <div className="flex items-center justify-self-end gap-4 sm:gap-5">
+          <div className="flex items-center justify-self-end gap-3.5 sm:gap-5">
             {authed ? (
               <Link
                 href="/account"
-                className="nav-underline hidden py-1 text-[10.5px] tracking-[0.14em] uppercase sm:inline"
+                aria-label="Your account"
+                className="nav-underline inline-flex items-center gap-[7px] py-1 text-[10.5px] tracking-[0.14em] uppercase"
               >
-                Account
+                <Icon name="user" className="size-[15px]" />
+                <span className="hidden sm:inline">Account</span>
               </Link>
             ) : (
               <button
                 type="button"
                 onClick={() => openSignIn()}
-                className="nav-underline hidden py-1 text-[10.5px] tracking-[0.14em] uppercase sm:inline"
+                aria-label="Sign in"
+                className="nav-underline inline-flex items-center gap-[7px] py-1 text-[10.5px] tracking-[0.14em] uppercase"
               >
-                Sign in
+                <Icon name="user" className="size-[15px]" />
+                <span className="hidden sm:inline">Sign in</span>
               </button>
             )}
             <button
@@ -94,7 +99,9 @@ export function Header({ nav }: { nav: CatalogNavItem[] }) {
               aria-label={`Open bag, ${count} ${count === 1 ? "item" : "items"}`}
               className="nav-underline inline-flex items-center gap-[7px] py-1 text-[10.5px] tracking-[0.14em] uppercase"
             >
-              Bag <b className="font-normal tabular-nums">{count}</b>
+              <Icon name="bag" className="size-[15px]" />
+              <span className="hidden sm:inline">Bag</span>
+              <b className="font-normal tabular-nums">{count}</b>
             </button>
           </div>
         </div>

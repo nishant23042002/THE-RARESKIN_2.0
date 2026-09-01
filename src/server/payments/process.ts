@@ -1,25 +1,33 @@
 import "server-only";
 
-import mongoose, { type ClientSession } from "mongoose";
+import mongoose from "mongoose";
 
 import { dbConnect } from "@/server/db";
 import {
+  Cart,
+  CheckoutIntent,
   Coupon,
   Order,
   Product,
+  nextSequence,
   recordAudit,
   recordPayment,
+  type CheckoutIntentDoc,
   type OrderDoc,
 } from "@/server/models";
-import { restoreStockForOrder } from "@/server/commerce/inventory";
+import {
+  commitStockForOrder,
+  restoreStockForOrder,
+  type StockLine,
+} from "@/server/commerce/inventory";
 import {
   grantStoreCredit,
   refundStoreCreditForOrder,
+  spendStoreCredit,
 } from "@/server/commerce/store-credit";
 import {
   notifyOrderCancelled,
   notifyOrderConfirmed,
-  notifyPaymentFailed,
   notifyRefundProcessed,
 } from "@/server/email";
 import { DISCOVERY_SET_SLUG } from "@/lib/catalog";
@@ -28,13 +36,16 @@ import type {
   PAYMENT_EVENT_SOURCES,
 } from "@/lib/validation/commerce";
 
+import { createRazorpayRefund } from "./razorpay";
+
 type Source = (typeof PAYMENT_EVENT_SOURCES)[number];
 
 /**
- * Order state machine + the payment processors. "The webhook is the truth":
- * `confirmPaidOrder`, `markPaymentFailed`, `cancelUnpaidOrder` and `recordRefund`
- * are all **idempotent** — a retried webhook, a callback that races the webhook,
- * or a cron sweep hitting an already-handled order is a clean no-op.
+ * Order state machine + the payment processors. **Payment-first checkout**: an
+ * online order is created only once Razorpay verifies the payment
+ * (`finalizeOnlineCheckout` — driven by the callback and the webhook, both
+ * idempotent). `cancelUnpaidOrder` and `recordRefund` stay idempotent too — a
+ * retried webhook or a cron sweep hitting an already-handled order is a no-op.
  */
 
 // ── state machine ──────────────────────────────────────────────────────
@@ -77,80 +88,220 @@ export function transitionOrder(
   });
 }
 
-// ── confirm a paid order ───────────────────────────────────────────────
+// ── finalize an online checkout once Razorpay confirms payment ─────────
 
-export interface ConfirmPaymentInput {
-  /** either identifier resolves the order */
-  orderNumber?: string;
-  providerOrderId?: string;
+export interface FinalizeInput {
+  /** the Razorpay order id — binds to exactly one CheckoutIntent */
+  providerOrderId: string;
   providerPaymentId: string;
   signature?: string | null;
-  source: Source;
-  webhookEventId?: string | null;
-  /** instrument details from Razorpay */
+  /** captured amount from Razorpay, guarded against the locked intent total */
+  amountPaise?: number | null;
   instrument?: string | null;
   last4?: string | null;
   upiVpa?: string | null;
-  amountPaise?: number | null;
+  source: Source;
+  webhookEventId?: string | null;
   raw?: Record<string, unknown> | null;
 }
 
-export type ConfirmResult =
+export type FinalizeResult =
   | { ok: true; orderNumber: string; reused: boolean }
-  | { ok: false; reason: "not-found" | "amount-mismatch" | "bad-state" };
+  | {
+      ok: false;
+      reason: "intent-not-found" | "amount-mismatch" | "sold-out-refunded";
+    };
 
-export async function confirmPaidOrder(
-  input: ConfirmPaymentInput,
-): Promise<ConfirmResult> {
+/**
+ * Turn a paid `CheckoutIntent` into a real, confirmed order. Idempotent — the
+ * checkout callback and the webhook both call this and converge on one order
+ * (`idempotencyKey` = the Razorpay order id). A capture that can't be honoured
+ * (item sold out, or a stale / tampered amount) is **auto-refunded in full** and
+ * no order is created.
+ */
+export async function finalizeOnlineCheckout(
+  input: FinalizeInput,
+): Promise<FinalizeResult> {
   await dbConnect();
+
+  // Already turned into an order (callback + webhook race, or a plain retry).
+  const existing = await Order.findOne({
+    "payment.providerOrderId": input.providerOrderId,
+  })
+    .select("orderNumber")
+    .lean<{ orderNumber: string } | null>();
+  if (existing) {
+    return { ok: true, orderNumber: existing.orderNumber, reused: true };
+  }
+
+  const intent = await CheckoutIntent.findOne({
+    razorpayOrderId: input.providerOrderId,
+  });
+  if (!intent) return { ok: false, reason: "intent-not-found" };
+  if (intent.status === "consumed" && intent.orderNumber) {
+    return { ok: true, orderNumber: intent.orderNumber, reused: true };
+  }
+
+  const capturedPaise = input.amountPaise ?? intent.amountPaise;
+
+  // The charge was locked when we minted the Razorpay order — a different
+  // captured amount means a stale window or tampering. Refund, create nothing.
+  if (input.amountPaise != null && input.amountPaise !== intent.amountPaise) {
+    await autoRefund(input.providerPaymentId, capturedPaise, {
+      targetType: "CheckoutIntent",
+      targetId: String(intent._id),
+      reason: "amount-mismatch",
+    });
+    return { ok: false, reason: "amount-mismatch" };
+  }
+
+  // Plain-object snapshot for `Order.create` (the doc stays hydrated so we can
+  // flip `intent.status` on it inside the txn).
+  const snap = intent.toObject();
+
+  const year = new Date().getFullYear();
   const dbSession = await mongoose.startSession();
-  let out: ConfirmResult | undefined;
+  let out: FinalizeResult | undefined;
+  let oversoldSku: string | null = null;
 
   try {
     await dbSession.withTransaction(async () => {
-      const order = await findOrder(input, dbSession);
-      if (!order) {
-        out = { ok: false, reason: "not-found" };
+      // Re-check under the txn (withTransaction may retry; the other finaliser
+      // may have committed in between).
+      const dup = await Order.findOne({
+        userId: intent.userId,
+        idempotencyKey: input.providerOrderId,
+      })
+        .select("orderNumber")
+        .session(dbSession);
+      if (dup) {
+        out = { ok: true, orderNumber: dup.orderNumber, reused: true };
         return;
       }
 
-      // Idempotent: already paid → no-op.
-      if (order.payment.status === "paid" || order.status !== "pending") {
-        out = { ok: true, orderNumber: order.orderNumber, reused: true };
-        return;
+      const seq = await nextSequence(`order-${year}`);
+      const orderNumber = `RRS-${year}-${String(seq).padStart(6, "0")}`;
+
+      let orderDoc!: mongoose.HydratedDocument<OrderDoc>;
+      try {
+        const [doc] = await Order.create(
+          [
+            {
+              orderNumber,
+              userId: snap.userId,
+              contact: snap.contact,
+              items: snap.items,
+              pricing: snap.pricing,
+              coupon: snap.coupon,
+              shippingAddress: snap.shippingAddress,
+              billingAddress: snap.billingAddress,
+              status: "confirmed",
+              payment: {
+                method: "razorpay",
+                status: "paid",
+                provider: "razorpay",
+                providerOrderId: input.providerOrderId,
+                providerPaymentId: input.providerPaymentId,
+                signature: input.signature ?? null,
+                instrument: input.instrument ?? null,
+                capturedAt: new Date(),
+                last4: input.last4 ?? null,
+                upiVpa: input.upiVpa ?? null,
+              },
+              invoice: {
+                number: null,
+                hsn: snap.items[0]?.hsnCode ?? "33030090",
+                url: null,
+                generatedAt: null,
+              },
+              paymentDueBy: null,
+              timeline: [
+                {
+                  at: new Date(),
+                  status: "pending",
+                  actor: "customer",
+                  actorId: intent.userId,
+                  note: "Order placed.",
+                },
+                {
+                  at: new Date(),
+                  status: "confirmed",
+                  actor: "system",
+                  actorId: null,
+                  note:
+                    input.source === "webhook"
+                      ? "Payment captured — confirmed by Razorpay webhook."
+                      : "Payment received.",
+                },
+              ],
+              customerNote: snap.customerNote,
+              idempotencyKey: input.providerOrderId,
+              source: "web",
+            },
+          ],
+          { session: dbSession },
+        );
+        orderDoc = doc;
+      } catch (e) {
+        if ((e as { code?: number }).code === 11000) {
+          const found = await Order.findOne({
+            userId: intent.userId,
+            idempotencyKey: input.providerOrderId,
+          })
+            .select("orderNumber")
+            .session(dbSession);
+          out = found
+            ? { ok: true, orderNumber: found.orderNumber, reused: true }
+            : { ok: false, reason: "intent-not-found" };
+          return;
+        }
+        throw e;
       }
 
-      // Amount guard — the Razorpay amount must equal our server total.
-      if (
-        input.amountPaise != null &&
-        input.amountPaise !== order.pricing.grandTotalPaise
-      ) {
-        out = { ok: false, reason: "amount-mismatch" };
-        return;
+      // Stock — guarded. If it can't be honoured the customer has already paid,
+      // so we abort (create nothing) and refund in the catch below.
+      const stockLines = await stockLinesForItems(snap.items, dbSession);
+      const stock = await commitStockForOrder(
+        stockLines,
+        orderDoc._id,
+        dbSession,
+      );
+      if (!stock.ok) {
+        oversoldSku = stock.failedSku;
+        const err = new Error(`SOLD_OUT:${stock.failedSku}`);
+        err.name = "SoldOutError";
+        throw err;
       }
 
-      transitionOrder(order, "confirmed", {
-        actor: "system",
-        note:
-          input.source === "webhook"
-            ? "Payment captured — confirmed by Razorpay webhook."
-            : "Payment received.",
-      });
-      order.payment.status = "paid";
-      order.payment.providerPaymentId = input.providerPaymentId;
-      if (input.providerOrderId)
-        order.payment.providerOrderId = input.providerOrderId;
-      if (input.signature) order.payment.signature = input.signature;
-      order.payment.instrument = input.instrument ?? order.payment.instrument;
-      order.payment.last4 = input.last4 ?? order.payment.last4;
-      order.payment.upiVpa = input.upiVpa ?? order.payment.upiVpa;
-      order.payment.capturedAt = new Date();
-      order.paymentDueBy = null;
-      await order.save({ session: dbSession });
+      // Store credit — best effort. The payment already covered the charge, so
+      // a balance that shrank under us is logged, not fatal.
+      if (intent.creditAppliedPaise > 0) {
+        const spent = await spendStoreCredit(
+          intent.userId,
+          intent.creditAppliedPaise,
+          orderDoc._id,
+          dbSession,
+        );
+        if (spent < intent.creditAppliedPaise) {
+          console.error("[finalize] store credit short", {
+            orderNumber,
+            want: intent.creditAppliedPaise,
+            got: spent,
+          });
+        }
+      }
 
-      // Discovery-Set credit — issued now, on verified payment (idempotent per
-      // order + reason via a unique index in the StoreCredit model).
-      for (const item of order.items) {
+      // Coupon — unconditional bump (they paid the discounted price).
+      if (intent.coupon?.code) {
+        await Coupon.updateOne(
+          { code: intent.coupon.code },
+          { $inc: { usedCount: 1 } },
+          { session: dbSession },
+        );
+      }
+
+      // Discovery-Set credit — idempotent per order + reason.
+      for (const item of orderDoc.items) {
         if (item.slug !== DISCOVERY_SET_SLUG) continue;
         const product = await Product.findById(item.productId)
           .select("credit")
@@ -160,14 +311,12 @@ export async function confirmPaidOrder(
         if (amount > 0) {
           await grantStoreCredit(
             {
-              userId: order.userId,
+              userId: orderDoc.userId,
               amountPaise: amount,
               reason: "discovery_set_purchase",
-              sourceOrderId: order._id,
+              sourceOrderId: orderDoc._id,
               expiresAt: product?.credit?.expiryDays
-                ? new Date(
-                    Date.now() + product.credit.expiryDays * 86_400_000,
-                  )
+                ? new Date(Date.now() + product.credit.expiryDays * 86_400_000)
                 : null,
               note: "Discovery Set — credit toward a full-size bottle",
             },
@@ -176,20 +325,31 @@ export async function confirmPaidOrder(
         }
       }
 
+      await Cart.updateOne(
+        { userId: intent.userId },
+        { $set: { items: [], appliedCoupon: null, appliedCredit: false } },
+        { session: dbSession },
+      );
+
+      intent.status = "consumed";
+      intent.orderNumber = orderNumber;
+      await intent.save({ session: dbSession });
+
       await recordPayment(
         {
-          orderId: order._id,
-          orderNumber: order.orderNumber,
+          orderId: orderDoc._id,
+          orderNumber,
           provider: "razorpay",
           event: "captured",
-          amountPaise: order.pricing.grandTotalPaise,
-          providerOrderId: order.payment.providerOrderId,
+          amountPaise: orderDoc.pricing.grandTotalPaise,
+          providerOrderId: input.providerOrderId,
           providerPaymentId: input.providerPaymentId,
           providerRefundId: null,
           method: input.instrument ?? null,
           last4: input.last4 ?? null,
           upiVpa: input.upiVpa ?? null,
-          signatureVerified: Boolean(input.signature) || input.source === "webhook",
+          signatureVerified:
+            Boolean(input.signature) || input.source === "webhook",
           source: input.source,
           webhookEventId: input.webhookEventId ?? null,
           raw: redact(input.raw),
@@ -198,77 +358,145 @@ export async function confirmPaidOrder(
         dbSession,
       );
 
-      out = { ok: true, orderNumber: order.orderNumber, reused: false };
+      out = { ok: true, orderNumber, reused: false };
     });
+  } catch (err) {
+    const e = err as Error;
+    if (e.name === "SoldOutError") {
+      // The customer paid for something we can't ship — refund in full.
+      await autoRefund(input.providerPaymentId, capturedPaise, {
+        targetType: "CheckoutIntent",
+        targetId: String(intent._id),
+        reason: "sold-out",
+      });
+      await CheckoutIntent.updateOne(
+        { _id: intent._id, status: "pending" },
+        { $set: { status: "failed" } },
+      );
+      await recordAudit({
+        actorId: null,
+        actorRole: "system",
+        action: "order.oversold_refunded",
+        targetType: "CheckoutIntent",
+        targetId: String(intent._id),
+        after: {
+          sku: oversoldSku,
+          providerPaymentId: input.providerPaymentId,
+          amountPaise: capturedPaise,
+        },
+        ip: null,
+        userAgent: null,
+      });
+      return { ok: false, reason: "sold-out-refunded" };
+    }
+    throw err;
   } finally {
     await dbSession.endSession();
   }
 
-  const result: ConfirmResult = out ?? { ok: false, reason: "not-found" };
+  const result: FinalizeResult = out ?? {
+    ok: false,
+    reason: "intent-not-found",
+  };
   if (result.ok && !result.reused) {
     await recordAudit({
       actorId: null,
       actorRole: "system",
-      action: "order.paid",
+      action: "order.placed",
       targetType: "Order",
       targetId: result.orderNumber,
-      after: { source: input.source, paymentId: input.providerPaymentId },
+      after: {
+        source: input.source,
+        paymentId: input.providerPaymentId,
+        via: "payment-first",
+      },
       ip: null,
       userAgent: null,
     });
-    // Phase F — the confirmation / receipt email.
     await notifyOrderConfirmed(result.orderNumber);
-    // TODO(phase-h): GST invoice PDF
+    // The invoice PDF is generated on demand — see `src/server/invoice/` and
+    // `GET /api/account/orders/[orderNumber]/invoice` (linked from the email).
   }
   return result;
 }
 
-// ── mark a payment failed (order stays pending; customer can retry) ─────
-
-export async function markPaymentFailed(input: {
-  orderNumber?: string;
-  providerOrderId?: string;
-  providerPaymentId: string | null;
-  reason: string;
-  source: Source;
-  webhookEventId?: string | null;
-  raw?: Record<string, unknown> | null;
-}): Promise<{ ok: boolean }> {
+/** Flag an intent whose payment attempt failed (analytics only — no order). */
+export async function markIntentFailed(
+  razorpayOrderId: string,
+  reason: string,
+): Promise<void> {
   await dbConnect();
-  const order = await findOrder(input);
-  if (!order || order.payment.status === "paid") return { ok: false };
+  const res = await CheckoutIntent.updateOne(
+    { razorpayOrderId, status: "pending" },
+    { $set: { status: "failed" } },
+  );
+  if (res.modifiedCount > 0) {
+    console.info("[checkout] payment attempt failed", { razorpayOrderId, reason });
+  }
+}
 
-  order.payment.status = "failed";
-  order.timeline.push({
-    at: new Date(),
-    status: order.status,
-    actor: "system",
-    actorId: null,
-    note: `Payment attempt failed — ${input.reason}. You can retry from checkout.`,
+/** Resolve `{ trackInventory, allowBackorder }` for each ordered line. */
+async function stockLinesForItems(
+  items: CheckoutIntentDoc["items"],
+  session: mongoose.ClientSession,
+): Promise<StockLine[]> {
+  const skus = items.map((i) => i.sku);
+  const docs = await Product.find({ "inventory.sku": { $in: skus } })
+    .select("inventory.sku inventory.trackInventory inventory.allowBackorder")
+    .session(session)
+    .lean<
+      {
+        inventory: {
+          sku: string;
+          trackInventory: boolean;
+          allowBackorder: boolean;
+        };
+      }[]
+    >();
+  const bySku = new Map(docs.map((d) => [d.inventory.sku, d.inventory]));
+  return items.map((i) => {
+    const inv = bySku.get(i.sku);
+    return {
+      productId: i.productId,
+      sku: i.sku,
+      qty: i.qty,
+      trackInventory: inv?.trackInventory ?? true,
+      allowBackorder: inv?.allowBackorder ?? false,
+    };
   });
-  await order.save();
+}
 
-  await recordPayment({
-    orderId: order._id,
-    orderNumber: order.orderNumber,
-    provider: "razorpay",
-    event: "failed",
-    amountPaise: order.pricing.grandTotalPaise,
-    providerOrderId: order.payment.providerOrderId,
-    providerPaymentId: input.providerPaymentId,
-    providerRefundId: null,
-    method: null,
-    last4: null,
-    upiVpa: null,
-    signatureVerified: input.source === "webhook",
-    source: input.source,
-    webhookEventId: input.webhookEventId ?? null,
-    raw: redact(input.raw),
-    note: input.reason,
-  });
-  // Phase F — one "resume payment" email per order (not per retry).
-  await notifyPaymentFailed(order.orderNumber, input.reason);
-  return { ok: true };
+/**
+ * Refund a captured payment we can't turn into a fulfilled order. Never throws —
+ * a failed refund is logged loudly (orphan payment → manual action) and the
+ * audit trail lets a human retry.
+ */
+async function autoRefund(
+  paymentId: string,
+  amountPaise: number,
+  meta: { targetType: string; targetId: string; reason: string },
+): Promise<void> {
+  try {
+    const rzp = await createRazorpayRefund(paymentId, amountPaise, {
+      reason: meta.reason,
+      ref: meta.targetId,
+    });
+    await recordAudit({
+      actorId: null,
+      actorRole: "system",
+      action: "payment.auto_refund",
+      targetType: meta.targetType,
+      targetId: meta.targetId,
+      after: { reason: meta.reason, paymentId, refundId: rzp.id, amountPaise },
+      ip: null,
+      userAgent: null,
+    });
+  } catch (err) {
+    console.error(
+      "[payments] AUTO-REFUND FAILED — orphan payment, needs manual action",
+      { paymentId, amountPaise, reason: meta.reason, ref: meta.targetId, err },
+    );
+  }
 }
 
 // ── cancel an unpaid order (auto-cancel job / customer / admin) ─────────
@@ -511,21 +739,6 @@ export async function recordRefund(input: {
 }
 
 // ── helpers ────────────────────────────────────────────────────────────
-
-async function findOrder(
-  by: { orderNumber?: string; providerOrderId?: string },
-  session?: ClientSession,
-) {
-  const filter = by.orderNumber
-    ? { orderNumber: by.orderNumber }
-    : by.providerOrderId
-      ? { "payment.providerOrderId": by.providerOrderId }
-      : null;
-  if (!filter) return null;
-  const q = Order.findOne(filter);
-  if (session) q.session(session);
-  return q.exec();
-}
 
 /** Keep only non-sensitive keys from a provider payload for the log. */
 function redact(

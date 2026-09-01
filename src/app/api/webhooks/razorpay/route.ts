@@ -5,8 +5,8 @@ import { WebhookEvent } from "@/server/models";
 import { isRazorpayWebhookConfigured } from "@/server/env";
 import {
   verifyWebhookSignature,
-  confirmPaidOrder,
-  markPaymentFailed,
+  finalizeOnlineCheckout,
+  markIntentFailed,
   recordRefund,
 } from "@/server/payments";
 
@@ -16,8 +16,9 @@ import {
  * answered **200 fast** — Razorpay retries on any non-2xx. No auth, no rate
  * limit. An unverifiable payload is logged and dropped.
  *
- * Events: payment.captured / order.paid → confirm order, commit stock, issue
- * Discovery-Set credit. payment.failed → mark failed (order stays pending).
+ * Events: payment.captured / order.paid → finalize the paid checkout intent
+ * into a confirmed order (commit stock, issue Discovery-Set credit); a capture
+ * that can't be honoured is auto-refunded. payment.failed → flag the intent.
  * refund.processed / refund.failed → update refunds + payment log.
  * payment.dispute.created → flag for operations.
  */
@@ -70,7 +71,7 @@ export async function POST(request: Request) {
       case "payment.captured":
       case "order.paid": {
         if (payment) {
-          const res = await confirmPaidOrder({
+          const res = await finalizeOnlineCheckout({
             providerOrderId: payment.order_id,
             providerPaymentId: payment.id,
             source: "webhook",
@@ -81,21 +82,24 @@ export async function POST(request: Request) {
             amountPaise: payment.amount ?? null,
             raw: payment as unknown as Record<string, unknown>,
           });
-          status = res.ok ? "processed" : "failed";
+          // A sold-out / amount-mismatch capture is auto-refunded inside
+          // `finalizeOnlineCheckout` — the event is handled, don't make
+          // Razorpay retry it.
+          const handled =
+            res.ok ||
+            res.reason === "sold-out-refunded" ||
+            res.reason === "amount-mismatch";
+          status = handled ? "processed" : "failed";
           if (!res.ok) error = res.reason;
         }
         break;
       }
       case "payment.failed": {
         if (payment) {
-          await markPaymentFailed({
-            providerOrderId: payment.order_id,
-            providerPaymentId: payment.id,
-            reason: payment.error_description ?? "declined",
-            source: "webhook",
-            webhookEventId: eventId,
-            raw: payment as unknown as Record<string, unknown>,
-          });
+          await markIntentFailed(
+            payment.order_id,
+            payment.error_description ?? "declined",
+          );
           status = "processed";
         }
         break;

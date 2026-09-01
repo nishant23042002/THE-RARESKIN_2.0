@@ -3,9 +3,9 @@ import { NextResponse } from "next/server";
 import { devPaymentSimulateInput } from "@/lib/validation/commerce";
 import { getAuth } from "@/server/auth";
 import { dbConnect } from "@/server/db";
-import { Order } from "@/server/models";
+import { CheckoutIntent } from "@/server/models";
 import { isProduction, isRazorpayConfigured } from "@/server/env";
-import { confirmPaidOrder, markPaymentFailed } from "@/server/payments";
+import { finalizeOnlineCheckout, markIntentFailed } from "@/server/payments";
 
 /**
  * Local-only: stand in for the Razorpay hosted checkout so the whole payment
@@ -31,36 +31,35 @@ export async function POST(request: Request) {
   if (!parsed.success) {
     return NextResponse.json({ ok: false, error: "bad-request" }, { status: 400 });
   }
-  const { orderNumber, outcome } = parsed.data;
+  const { intentId, outcome } = parsed.data;
 
   await dbConnect();
-  const order = await Order.findOne({ orderNumber, userId: auth.user.id })
-    .select("orderNumber payment.method")
-    .lean<{ orderNumber: string; payment: { method: string } } | null>();
-  if (!order || order.payment.method !== "razorpay") {
+  const intent = await CheckoutIntent.findOne({
+    _id: intentId,
+    userId: auth.user.id,
+  })
+    .select("razorpayOrderId")
+    .lean<{ razorpayOrderId: string } | null>();
+  if (!intent) {
     return NextResponse.json({ ok: false, error: "not-found" });
   }
 
-  const fakePaymentId = `pay_dev_${Date.now().toString(36)}`;
-
   if (outcome === "failed") {
-    await markPaymentFailed({
-      orderNumber,
-      providerPaymentId: fakePaymentId,
-      reason: "simulated failure",
-      source: "dev-simulate",
-    });
-    return NextResponse.json({ ok: false, error: "failed", orderNumber });
+    await markIntentFailed(intent.razorpayOrderId, "simulated failure");
+    return NextResponse.json({ ok: false, error: "failed" });
   }
 
-  const res = await confirmPaidOrder({
-    orderNumber,
-    providerPaymentId: fakePaymentId,
+  const res = await finalizeOnlineCheckout({
+    providerOrderId: intent.razorpayOrderId,
+    providerPaymentId: `pay_dev_${Date.now().toString(36)}`,
     source: "dev-simulate",
     instrument: "upi",
     upiVpa: "test@razorpay",
   });
   if (!res.ok) {
+    if (res.reason === "sold-out-refunded") {
+      return NextResponse.json({ ok: false, error: "sold-out", refunded: true });
+    }
     return NextResponse.json({ ok: false, error: res.reason });
   }
   return NextResponse.json({ ok: true, orderNumber: res.orderNumber });

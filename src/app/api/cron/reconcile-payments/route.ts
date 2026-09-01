@@ -1,20 +1,21 @@
 import { NextResponse } from "next/server";
 
 import { dbConnect } from "@/server/db";
-import { Order, type OrderDoc } from "@/server/models";
+import { CheckoutIntent, Order, type CheckoutIntentDoc } from "@/server/models";
 import { getCronSecret, isRazorpayConfigured } from "@/server/env";
 import {
   fetchRazorpayPayment,
   fetchRazorpayOrderPayments,
-  confirmPaidOrder,
+  finalizeOnlineCheckout,
 } from "@/server/payments";
 
 /**
- * Daily reconciliation — for every recent order that is still `pending` but has
- * a Razorpay order id, ask Razorpay whether a payment was actually captured. If
- * a webhook was missed, `confirmPaidOrder` catches it up; genuine mismatches are
- * logged for a human. (A full settlements-vs-orders sweep lands with the
- * finance export in Phase I.)
+ * Daily reconciliation — the backstop for "the customer paid but BOTH the
+ * checkout callback and the webhook failed to reach us". For every recent
+ * still-`pending` checkout intent, ask Razorpay whether its order was actually
+ * captured; if so and no order exists yet, `finalizeOnlineCheckout` catches it
+ * up. (A full settlements-vs-orders sweep lands with the finance export in
+ * Phase I.)
  */
 export const dynamic = "force-dynamic";
 
@@ -28,36 +29,34 @@ async function run() {
   if (!isRazorpayConfigured()) return { skipped: "razorpay-not-configured" };
 
   const since = new Date(Date.now() - 3 * 86_400_000);
-  const suspects = await Order.find({
-    "payment.method": "razorpay",
-    "payment.status": { $in: ["pending", "failed"] },
-    "payment.providerOrderId": { $type: "string" },
+  const suspects = await CheckoutIntent.find({
+    status: "pending",
     createdAt: { $gt: since },
   })
-    .select("orderNumber payment.providerOrderId pricing.grandTotalPaise")
+    .select("razorpayOrderId amountPaise")
     .limit(200)
     .lean<
-      (Pick<OrderDoc, "orderNumber"> & {
-        payment: { providerOrderId: string };
-        pricing: { grandTotalPaise: number };
-      })[]
+      (Pick<CheckoutIntentDoc, "razorpayOrderId" | "amountPaise">)[]
     >();
 
   let recovered = 0;
+  const autoRefunded: string[] = [];
   const mismatches: string[] = [];
 
-  for (const o of suspects) {
+  for (const s of suspects) {
     try {
-      const { items } = await fetchRazorpayOrderPayments(
-        o.payment.providerOrderId,
-      );
+      const alreadyOrder = await Order.exists({
+        "payment.providerOrderId": s.razorpayOrderId,
+      });
+      if (alreadyOrder) continue;
+
+      const { items } = await fetchRazorpayOrderPayments(s.razorpayOrderId);
       const captured = items?.find((p) => p.status === "captured");
       if (!captured) continue;
 
       const detail = await fetchRazorpayPayment(captured.id);
-      const r = await confirmPaidOrder({
-        orderNumber: o.orderNumber,
-        providerOrderId: o.payment.providerOrderId,
+      const r = await finalizeOnlineCheckout({
+        providerOrderId: s.razorpayOrderId,
         providerPaymentId: captured.id,
         source: "cron",
         instrument: detail.method ?? null,
@@ -66,16 +65,23 @@ async function run() {
         amountPaise: detail.amount ?? null,
       });
       if (r.ok && !r.reused) recovered += 1;
-      else if (!r.ok) mismatches.push(`${o.orderNumber}:${r.reason}`);
+      else if (
+        !r.ok &&
+        (r.reason === "sold-out-refunded" || r.reason === "amount-mismatch")
+      ) {
+        autoRefunded.push(`${s.razorpayOrderId}:${r.reason}`);
+      } else if (!r.ok) {
+        mismatches.push(`${s.razorpayOrderId}:${r.reason}`);
+      }
     } catch (err) {
-      console.error("[cron/reconcile] error for", o.orderNumber, err);
+      console.error("[cron/reconcile] error for", s.razorpayOrderId, err);
     }
   }
 
   if (mismatches.length) {
     console.error("[cron/reconcile] MISMATCHES", mismatches);
   }
-  return { checked: suspects.length, recovered, mismatches };
+  return { checked: suspects.length, recovered, autoRefunded, mismatches };
 }
 
 export async function GET(request: Request) {

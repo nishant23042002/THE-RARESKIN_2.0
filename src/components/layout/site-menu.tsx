@@ -7,13 +7,15 @@ import { gsap } from "@/lib/gsap";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { lockScroll, unlockScroll } from "@/lib/scroll-lock";
 import { Logo } from "@/components/ui/logo";
+import { Icon } from "@/components/ui/icon";
+import { MenuFooter } from "./menu-footer";
 import { useAuth } from "@/components/providers/auth-provider";
 import type { CatalogNavItem } from "@/lib/catalog";
 
-const MORE_LINKS = [
-  { label: "Why Extrait", href: "/#why" },
-  { label: "The Idea", href: "/#idea" },
+// Kept tight on purpose — the routes a shopper actually needs before buying.
+const HELP_LINKS = [
   { label: "Shipping & Returns", href: "/shipping" },
+  { label: "FAQ", href: "/faq" },
   { label: "Contact", href: "/contact" },
 ];
 
@@ -137,7 +139,7 @@ export function SiteMenu({
         ref={panelRef}
         className="menu-panel flex h-full flex-col bg-bg px-6 pt-6 pb-[calc(24px+env(safe-area-inset-bottom))] will-change-transform"
       >
-        <div className="mb-11 flex items-center justify-between">
+        <div className="mb-9 flex shrink-0 items-center justify-between">
           <Logo
             className="text-ink"
             style={{ width: "clamp(112px, 32vw, 132px)", maxWidth: "132px" }}
@@ -145,12 +147,17 @@ export function SiteMenu({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-[2px] border border-ink px-3.5 py-[9px] text-[10px] uppercase tracking-[0.14em] transition-colors hover:bg-ink hover:text-w0"
+            className="inline-flex items-center gap-2 rounded-[2px] border border-ink px-3.5 py-[9px] text-[10px] uppercase tracking-[0.14em] transition-colors hover:bg-ink hover:text-w0"
           >
+            <Icon name="close" className="size-3" />
             Close
           </button>
         </div>
 
+        <div
+          data-lenis-prevent
+          className="-mx-6 flex flex-1 flex-col overflow-y-auto overscroll-contain px-6"
+        >
         <p className="mb-3.5 text-[9px] uppercase tracking-[0.2em] text-ink-3">
           The Three
         </p>
@@ -185,9 +192,9 @@ export function SiteMenu({
         </Link>
 
         <p className="mt-8 mb-3.5 text-[9px] uppercase tracking-[0.2em] text-ink-3">
-          More
+          Help
         </p>
-        {MORE_LINKS.map((l) => (
+        {HELP_LINKS.map((l) => (
           <Link
             key={l.href}
             href={l.href}
@@ -203,8 +210,9 @@ export function SiteMenu({
             href="/account"
             onClick={onClose}
             data-stagger
-            className="py-2 text-[13px] uppercase tracking-[0.08em] text-ink-2 transition-colors hover:text-ink"
+            className="inline-flex items-center gap-2.5 py-2 text-[13px] uppercase tracking-[0.08em] text-ink-2 transition-colors hover:text-ink"
           >
+            <Icon name="user" className="size-[15px] text-ink-3" />
             Account
           </Link>
         ) : (
@@ -215,15 +223,15 @@ export function SiteMenu({
               onClose();
               openSignIn();
             }}
-            className="py-2 text-left text-[13px] uppercase tracking-[0.08em] text-ink-2 transition-colors hover:text-ink"
+            className="inline-flex items-center gap-2.5 py-2 text-left text-[13px] uppercase tracking-[0.08em] text-ink-2 transition-colors hover:text-ink"
           >
+            <Icon name="user" className="size-[15px] text-ink-3" />
             Sign in
           </button>
         )}
+        </div>
 
-        <p className="mt-auto pt-8 text-[10.5px] uppercase tracking-[0.1em] text-ink-3">
-          Cash on delivery &middot; Ships across India
-        </p>
+        <MenuFooter />
       </div>
     </dialog>
   );

@@ -2,19 +2,20 @@ import { NextResponse } from "next/server";
 
 import { razorpayCallbackInput } from "@/lib/validation/commerce";
 import { getAuth } from "@/server/auth";
-import { Order } from "@/server/models";
 import { dbConnect } from "@/server/db";
+import { CheckoutIntent } from "@/server/models";
 import {
   verifyCallbackSignature,
-  confirmPaidOrder,
+  finalizeOnlineCheckout,
   fetchRazorpayPayment,
 } from "@/server/payments";
 
 /**
  * Fast confirmation path after the hosted Razorpay checkout succeeds. The
- * signature is verified here, but the **webhook is authoritative** — this only
- * lets the drawer flip to the confirmation screen without waiting for the
- * webhook. `confirmPaidOrder` is idempotent, so both paths converge.
+ * signature is verified here, then `finalizeOnlineCheckout` turns the paid
+ * `CheckoutIntent` into a real order. The **webhook is authoritative** and calls
+ * the same idempotent path — this just lets the drawer flip to the confirmation
+ * screen without waiting for it.
  */
 export const dynamic = "force-dynamic";
 
@@ -44,13 +45,15 @@ export async function POST(request: Request) {
   }
 
   await dbConnect();
-  const order = await Order.findOne({
-    "payment.providerOrderId": razorpay_order_id,
+  // The intent must belong to this customer (defence in depth — the signature
+  // already proves the payment is genuine).
+  const intent = await CheckoutIntent.findOne({
+    razorpayOrderId: razorpay_order_id,
     userId: auth.user.id,
   })
-    .select("orderNumber")
-    .lean<{ orderNumber: string } | null>();
-  if (!order) {
+    .select("_id")
+    .lean<{ _id: unknown } | null>();
+  if (!intent) {
     return NextResponse.json({ ok: false, error: "not-found" });
   }
 
@@ -69,8 +72,7 @@ export async function POST(request: Request) {
     /* the webhook will fill these in */
   }
 
-  const res = await confirmPaidOrder({
-    orderNumber: order.orderNumber,
+  const res = await finalizeOnlineCheckout({
     providerOrderId: razorpay_order_id,
     providerPaymentId: razorpay_payment_id,
     signature: razorpay_signature,
@@ -82,6 +84,9 @@ export async function POST(request: Request) {
   });
 
   if (!res.ok) {
+    if (res.reason === "sold-out-refunded") {
+      return NextResponse.json({ ok: false, error: "sold-out", refunded: true });
+    }
     return NextResponse.json({ ok: false, error: res.reason });
   }
   return NextResponse.json({ ok: true, orderNumber: res.orderNumber });

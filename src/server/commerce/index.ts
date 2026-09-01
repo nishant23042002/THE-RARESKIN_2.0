@@ -39,4 +39,5 @@ export type {
   QuoteWarning,
   PlaceOrderContext,
   PlaceOrderResult,
+  PlaceOrderFailure,
 } from "./orders";

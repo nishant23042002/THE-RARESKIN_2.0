@@ -20,15 +20,12 @@ export type {
   RazorpayRefund,
 } from "./razorpay";
 
-export { buildCheckoutPayment } from "./checkout";
-export type { CheckoutPayment } from "./checkout";
-
 export {
   canTransition,
   transitionOrder,
-  confirmPaidOrder,
-  markPaymentFailed,
+  finalizeOnlineCheckout,
+  markIntentFailed,
   cancelUnpaidOrder,
   recordRefund,
 } from "./process";
-export type { ConfirmPaymentInput, ConfirmResult } from "./process";
+export type { FinalizeInput, FinalizeResult } from "./process";

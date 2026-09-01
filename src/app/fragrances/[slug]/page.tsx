@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Container } from "@/components/ui/container";
 import { Flacon } from "@/components/ui/flacon";
+import { Icon } from "@/components/ui/icon";
 import { AddToBagButton } from "@/components/cart/add-to-bag-button";
 import { PdpGallery } from "@/components/product/pdp-gallery";
 import { Accordion } from "@/components/ui/accordion";
@@ -49,49 +50,11 @@ export async function generateMetadata({
   };
 }
 
-const iconProps = {
-  viewBox: "0 0 24 24",
-  fill: "none",
-  stroke: "currentColor",
-  strokeWidth: 1.6,
-  strokeLinecap: "round" as const,
-  strokeLinejoin: "round" as const,
-  className: "size-[15px] shrink-0",
-  "aria-hidden": true,
-};
-
 const REASSURE = [
-  {
-    label: "Ships in 24–48 hrs",
-    icon: (
-      <svg {...iconProps}>
-        <path d="M3 7h11v9H3z" />
-        <path d="M14 10h3.5L21 13v3h-7z" />
-        <circle cx="7" cy="18" r="1.6" />
-        <circle cx="17" cy="18" r="1.6" />
-      </svg>
-    ),
-  },
-  {
-    label: "Cash on delivery",
-    icon: (
-      <svg {...iconProps}>
-        <rect x="2.5" y="6.5" width="19" height="11" rx="1.5" />
-        <circle cx="12" cy="12" r="2.6" />
-        <path d="M6 9.5v5M18 9.5v5" />
-      </svg>
-    ),
-  },
-  {
-    label: "Easy returns",
-    icon: (
-      <svg {...iconProps}>
-        <path d="M9 5 4.5 9.5 9 14" />
-        <path d="M4.5 9.5H14a5.5 5.5 0 0 1 0 11H8.5" />
-      </svg>
-    ),
-  },
-];
+  { label: "Ships in 24–48 hrs", icon: "truck" },
+  { label: "Cash on delivery", icon: "banknote" },
+  { label: "Easy returns", icon: "returns" },
+] as const;
 
 const DETAILS = [
   {
@@ -265,7 +228,8 @@ export default async function FragrancePage({
               <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-[10px] tracking-[0.04em] text-ink-3 uppercase">
                 {REASSURE.map((r) => (
                   <span key={r.label} className="inline-flex items-center gap-1.5">
-                    {r.icon} {r.label}
+                    <Icon name={r.icon} className="size-[15px] text-ink-2" />
+                    {r.label}
                   </span>
                 ))}
               </div>

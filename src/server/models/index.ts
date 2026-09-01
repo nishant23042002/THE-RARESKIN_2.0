@@ -8,6 +8,7 @@
  */
 import { AuditLog } from "./audit-log";
 import { Cart } from "./cart";
+import { CheckoutIntent } from "./checkout-intent";
 import { Counter } from "./counter";
 import { Coupon } from "./coupon";
 import { EmailMessage } from "./email-message";
@@ -26,6 +27,10 @@ import { WebhookEvent } from "./webhook-event";
 
 export { AuditLog, recordAudit } from "./audit-log";
 export { Cart } from "./cart";
+export {
+  CheckoutIntent,
+  CHECKOUT_INTENT_STATUSES,
+} from "./checkout-intent";
 export { Counter, nextSequence } from "./counter";
 export { Coupon } from "./coupon";
 export {
@@ -48,6 +53,7 @@ export { WebhookEvent } from "./webhook-event";
 
 export type { AuditLogDoc } from "./audit-log";
 export type { CartDoc, CartItemSub } from "./cart";
+export type { CheckoutIntentDoc } from "./checkout-intent";
 export type { CounterDoc } from "./counter";
 export type { CouponDoc } from "./coupon";
 export type {
@@ -82,6 +88,7 @@ export function registerModels(): void {
   // Touch each model so its `model()` call runs.
   void AuditLog;
   void Cart;
+  void CheckoutIntent;
   void Counter;
   void Coupon;
   void EmailMessage;

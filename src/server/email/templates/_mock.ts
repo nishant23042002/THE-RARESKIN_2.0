@@ -11,6 +11,7 @@ export const mockBase: OrderEmailBase = {
     siteUrl: "https://therareskin.com",
     logoUrl: "https://therareskin.com/email/logo",
     orderUrl: "https://therareskin.com/account/orders/RRS-2026-000042",
+    invoiceUrl: "https://therareskin.com/api/account/orders/RRS-2026-000042/invoice",
   },
   orderNumber: "RRS-2026-000042",
   placedAt: "29 Aug 2026, 8:32 pm",

@@ -5,6 +5,7 @@ import mongoose from "mongoose";
 import { dbConnect } from "@/server/db";
 import {
   Cart,
+  CheckoutIntent,
   Coupon,
   Order,
   Product,
@@ -18,6 +19,9 @@ import { getSiteSettings } from "@/server/data/settings";
 import { hydrateItems, type HydratedCartLine } from "@/server/data/cart";
 import { toPaise } from "@/lib/money";
 import { resolvePincode, stateCodeFromName } from "@/lib/pincode";
+import { isRazorpayConfigured, getRazorpayEnv } from "@/server/env";
+import { createRazorpayOrder } from "@/server/payments/razorpay";
+import type { CheckoutPaymentDirective } from "@/lib/checkout";
 import type {
   CheckoutQuoteInput,
   PlaceOrderInput,
@@ -177,29 +181,42 @@ export interface PlaceOrderContext {
   userAgent: string | null;
 }
 
+export type PlaceOrderFailure = {
+  ok: false;
+  code:
+    | "empty-cart"
+    | "cart-changed"
+    | "address-required"
+    | "not-serviceable"
+    | "method-unavailable"
+    | "coupon-invalid"
+    | "credit-changed"
+    | "sold-out"
+    | "payment-init-failed"
+    | "transaction-unsupported";
+  message: string;
+  details?: unknown;
+};
+
 export type PlaceOrderResult =
   | {
       ok: true;
+      /** COD — a real order exists immediately */
+      kind: "cod";
       orderNumber: string;
       orderId: string;
       pricing: PricingResult;
-      reused: boolean;
+      payment: { kind: "cod" };
     }
   | {
-      ok: false;
-      code:
-        | "empty-cart"
-        | "cart-changed"
-        | "address-required"
-        | "not-serviceable"
-        | "method-unavailable"
-        | "coupon-invalid"
-        | "credit-changed"
-        | "sold-out"
-        | "transaction-unsupported";
-      message: string;
-      details?: unknown;
-    };
+      ok: true;
+      /** online — no order yet; the order is created when payment is verified */
+      kind: "online";
+      intentId: string;
+      pricing: PricingResult;
+      payment: CheckoutPaymentDirective;
+    }
+  | PlaceOrderFailure;
 
 function resolveStateCode(pincode: string, stateName: string): string | null {
   return (
@@ -207,27 +224,50 @@ function resolveStateCode(pincode: string, stateName: string): string | null {
   );
 }
 
-export async function placeOrder(
+// ── shared validation (runs before any order / payment is created) ──────
+
+/** address snapshot, shaped like `Order.shippingAddress` */
+interface AddressSnapshot {
+  label?: string;
+  name: string;
+  phone: string;
+  line1: string;
+  line2?: string;
+  landmark?: string;
+  city: string;
+  state: string;
+  stateCode: string;
+  pincode: string;
+}
+
+interface ValidatedCheckout {
+  ok: true;
+  hydrated: Awaited<ReturnType<typeof hydrateItems>>;
+  pricing: PricingResult;
+  couponEffect: NonNullable<Parameters<typeof computePricing>[0]["coupon"]> | null;
+  shipSnapshot: AddressSnapshot;
+  billingSnapshot: AddressSnapshot;
+  /** order line items, shaped like `Order.items` */
+  items: {
+    productId: string;
+    slug: string;
+    name: string;
+    sku: string;
+    image: string | null;
+    qty: number;
+    unitPricePaise: number;
+    mrpPaise: number;
+    lineTotalPaise: number;
+    hsnCode: string;
+  }[];
+  stockLines: StockLine[];
+  contact: { name: string; phone: string; email: string };
+}
+
+async function validateCheckout(
   input: PlaceOrderInput,
   ctx: PlaceOrderContext,
-): Promise<PlaceOrderResult> {
-  await dbConnect();
-
-  // Fast idempotency path — a retried submit returns the first order.
-  const prior = await Order.findOne({
-    userId: ctx.userId,
-    idempotencyKey: input.idempotencyKey,
-  }).lean<OrderDoc | null>();
-  if (prior) {
-    return {
-      ok: true,
-      reused: true,
-      orderNumber: prior.orderNumber,
-      orderId: String(prior._id),
-      pricing: prior.pricing as unknown as PricingResult,
-    };
-  }
-
+): Promise<ValidatedCheckout | PlaceOrderFailure> {
   const settings = await getSiteSettings();
   const user = await User.findById(ctx.userId);
   if (!user) {
@@ -334,7 +374,7 @@ export async function placeOrder(
   }
 
   // ── coupon ───────────────────────────────────────────────────────────
-  let couponEffect: Parameters<typeof computePricing>[0]["coupon"] = null;
+  let couponEffect: ValidatedCheckout["couponEffect"] = null;
   if (input.couponCode) {
     const v = await validateCoupon(input.couponCode, {
       userId: ctx.userId,
@@ -368,7 +408,103 @@ export async function placeOrder(
     requestedCreditPaise: creditBalance,
   });
 
-  // ── the transaction ──────────────────────────────────────────────────
+  // ── snapshots ────────────────────────────────────────────────────────
+  const productBySku = new Map<string, ProductDoc>();
+  const productDocs = await Product.find({
+    "inventory.sku": { $in: hydrated.lines.map((l) => l.sku) },
+  }).lean<ProductDoc[]>();
+  for (const p of productDocs) productBySku.set(p.inventory.sku, p);
+
+  const items = hydrated.lines.map((l) => ({
+    productId: l.productId,
+    slug: l.slug,
+    name: l.name,
+    sku: l.sku,
+    image: l.image,
+    qty: l.qty,
+    unitPricePaise: toPaise(l.unitPrice),
+    mrpPaise: toPaise(l.mrp),
+    lineTotalPaise: toPaise(l.unitPrice) * l.qty,
+    hsnCode: productBySku.get(l.sku)?.hsnCode ?? settings.gst.hsnCode,
+  }));
+
+  const stockLines: StockLine[] = hydrated.lines.map((l) => {
+    const p = productBySku.get(l.sku);
+    return {
+      productId: l.productId,
+      sku: l.sku,
+      qty: l.qty,
+      trackInventory: p?.inventory.trackInventory ?? true,
+      allowBackorder: p?.inventory.allowBackorder ?? false,
+    };
+  });
+
+  const shipSnapshot = {
+    label: shipAddr.label,
+    name: shipAddr.name,
+    phone: shipAddr.phone,
+    line1: shipAddr.line1,
+    line2: shipAddr.line2,
+    landmark: shipAddr.landmark,
+    city: shipAddr.city,
+    state: shipAddr.state,
+    stateCode: shipStateCode ?? "",
+    pincode: shipAddr.pincode,
+  };
+  const billingSnapshot =
+    input.billingSameAsShipping || !input.billingAddress
+      ? shipSnapshot
+      : (() => {
+          const b = addressSchema.parse(input.billingAddress);
+          return {
+            ...b,
+            stateCode: resolveStateCode(b.pincode, b.state) ?? "",
+          };
+        })();
+
+  return {
+    ok: true,
+    hydrated,
+    pricing,
+    couponEffect,
+    shipSnapshot,
+    billingSnapshot,
+    items,
+    stockLines,
+    contact: input.contact,
+  };
+}
+
+// ── entry point ────────────────────────────────────────────────────────
+
+/**
+ * Validate the bag, then branch:
+ *  - **COD** → create the order now (`placeCodOrder`), stock committed at creation.
+ *  - **online** → create a `CheckoutIntent` + a Razorpay order and stop
+ *    (`startOnlineCheckout`). No order, no stock movement until the payment is
+ *    verified (see `finalizeOnlineCheckout`).
+ */
+export async function placeOrder(
+  input: PlaceOrderInput,
+  ctx: PlaceOrderContext,
+): Promise<PlaceOrderResult> {
+  await dbConnect();
+
+  const v = await validateCheckout(input, ctx);
+  if (v.ok === false) return v;
+
+  return input.method === "cod"
+    ? placeCodOrder(v, input, ctx)
+    : startOnlineCheckout(v, input, ctx);
+}
+
+// ── COD: a real order, created now ─────────────────────────────────────
+
+async function placeCodOrder(
+  v: ValidatedCheckout,
+  input: PlaceOrderInput,
+  ctx: PlaceOrderContext,
+): Promise<PlaceOrderResult> {
   const year = new Date().getFullYear();
   const dbSession = await mongoose.startSession();
   let created: OrderDoc | null = null;
@@ -387,110 +523,51 @@ export async function placeOrder(
 
       const seq = await nextSequence(`order-${year}`);
       const orderNumber = `RRS-${year}-${String(seq).padStart(6, "0")}`;
-
-      const productBySku = new Map<string, ProductDoc>();
-      const productDocs = await Product.find({
-        "inventory.sku": { $in: hydrated.lines.map((l) => l.sku) },
-      })
-        .session(dbSession)
-        .lean<ProductDoc[]>();
-      for (const p of productDocs) productBySku.set(p.inventory.sku, p);
-
-      const items = hydrated.lines.map((l) => ({
-        productId: l.productId,
-        slug: l.slug,
-        name: l.name,
-        sku: l.sku,
-        image: l.image,
-        qty: l.qty,
-        unitPricePaise: toPaise(l.unitPrice),
-        mrpPaise: toPaise(l.mrp),
-        lineTotalPaise: toPaise(l.unitPrice) * l.qty,
-        hsnCode: productBySku.get(l.sku)?.hsnCode ?? settings.gst.hsnCode,
-      }));
-
-      const snapshot = {
-        label: shipAddr!.label,
-        name: shipAddr!.name,
-        phone: shipAddr!.phone,
-        line1: shipAddr!.line1,
-        line2: shipAddr!.line2,
-        landmark: shipAddr!.landmark,
-        city: shipAddr!.city,
-        state: shipAddr!.state,
-        stateCode: shipStateCode ?? "",
-        pincode: shipAddr!.pincode,
-      };
-      const billing =
-        input.billingSameAsShipping || !input.billingAddress
-          ? snapshot
-          : (() => {
-              const b = addressSchema.parse(input.billingAddress);
-              return {
-                ...b,
-                stateCode:
-                  resolveStateCode(b.pincode, b.state) ?? "",
-              };
-            })();
+      const settings = await getSiteSettings();
 
       const [orderDoc] = await Order.create(
         [
           {
             orderNumber,
             userId: ctx.userId,
-            contact: {
-              name: input.contact.name,
-              phone: input.contact.phone,
-              email: input.contact.email,
-            },
-            items,
-            pricing: {
-              itemsSubtotalPaise: pricing.itemsSubtotalPaise,
-              discountPaise: pricing.discountPaise,
-              creditAppliedPaise: pricing.creditAppliedPaise,
-              shippingPaise: pricing.shippingPaise,
-              codFeePaise: pricing.codFeePaise,
-              taxableValuePaise: pricing.taxableValuePaise,
-              gst: pricing.gst,
-              grandTotalPaise: pricing.grandTotalPaise,
-              currency: "INR",
-            },
-            coupon: couponEffect
+            contact: v.contact,
+            items: v.items,
+            pricing: v.pricing,
+            coupon: v.couponEffect
               ? {
-                  code: couponEffect.code,
-                  type: couponEffect.type,
+                  code: v.couponEffect.code,
+                  type: v.couponEffect.type,
                   valuePaise:
-                    couponEffect.type === "fixed" ? couponEffect.value : 0,
+                    v.couponEffect.type === "fixed" ? v.couponEffect.value : 0,
                 }
               : null,
-            shippingAddress: snapshot,
-            billingAddress: billing,
+            shippingAddress: v.shipSnapshot,
+            billingAddress: v.billingSnapshot,
             status: "pending",
             payment: {
-              method: input.method,
+              method: "cod",
               status: "pending",
-              provider: input.method === "razorpay" ? "razorpay" : "cod",
+              provider: "cod",
               providerOrderId: null,
               providerPaymentId: null,
               capturedAt: null,
               last4: null,
               upiVpa: null,
             },
-            invoice: { number: null, hsn: settings.gst.hsnCode, url: null, generatedAt: null },
-            paymentDueBy:
-              input.method === "razorpay"
-                ? new Date(Date.now() + 30 * 60_000)
-                : null,
+            invoice: {
+              number: null,
+              hsn: settings.gst.hsnCode,
+              url: null,
+              generatedAt: null,
+            },
+            paymentDueBy: null,
             timeline: [
               {
                 at: new Date(),
                 status: "pending",
                 actor: "customer",
                 actorId: ctx.userId,
-                note:
-                  input.method === "cod"
-                    ? "Order placed — cash on delivery."
-                    : "Order placed — awaiting payment.",
+                note: "Order placed — cash on delivery.",
               },
             ],
             customerNote: input.customerNote,
@@ -501,19 +578,8 @@ export async function placeOrder(
         { session: dbSession },
       );
 
-      // Atomic stock decrement + ledger.
-      const stockLines: StockLine[] = hydrated.lines.map((l) => {
-        const p = productBySku.get(l.sku);
-        return {
-          productId: l.productId,
-          sku: l.sku,
-          qty: l.qty,
-          trackInventory: p?.inventory.trackInventory ?? true,
-          allowBackorder: p?.inventory.allowBackorder ?? false,
-        };
-      });
       const stock = await commitStockForOrder(
-        stockLines,
+        v.stockLines,
         orderDoc._id,
         dbSession,
       );
@@ -523,26 +589,24 @@ export async function placeOrder(
         throw err;
       }
 
-      // Spend store credit.
-      if (pricing.creditAppliedPaise > 0) {
+      if (v.pricing.creditAppliedPaise > 0) {
         const spent = await spendStoreCredit(
           ctx.userId,
-          pricing.creditAppliedPaise,
+          v.pricing.creditAppliedPaise,
           orderDoc._id,
           dbSession,
         );
-        if (spent !== pricing.creditAppliedPaise) {
+        if (spent !== v.pricing.creditAppliedPaise) {
           const err = new Error("CREDIT_CHANGED");
           err.name = "CreditChangedError";
           throw err;
         }
       }
 
-      // Bump coupon usage, guarded against a concurrent last redemption.
-      if (couponEffect) {
+      if (v.couponEffect) {
         const res = await Coupon.updateOne(
           {
-            code: couponEffect.code,
+            code: v.couponEffect.code,
             $or: [
               { maxUses: 0 },
               { $expr: { $lt: ["$usedCount", "$maxUses"] } },
@@ -558,19 +622,9 @@ export async function placeOrder(
         }
       }
 
-      // The Discovery-Set credit is issued on *verified payment*
-      // (`confirmPaidOrder`), never at order creation.
-
-      // Empty the shopper's cart.
       await Cart.updateOne(
         { userId: ctx.userId },
-        {
-          $set: {
-            items: [],
-            appliedCoupon: null,
-            appliedCredit: false,
-          },
-        },
+        { $set: { items: [], appliedCoupon: null, appliedCredit: false } },
         { session: dbSession },
       );
 
@@ -631,25 +685,111 @@ export async function placeOrder(
     after: {
       orderNumber: order.orderNumber,
       grandTotalPaise: order.pricing.grandTotalPaise,
-      method: order.payment.method,
+      method: "cod",
       items: order.items.map((i) => ({ sku: i.sku, qty: i.qty })),
     },
     ip: ctx.ip,
     userAgent: ctx.userAgent,
   });
 
-  // Phase F — a COD order has no payment step, so its confirmation email is
-  // sent here. Online orders are emailed on verified payment (`confirmPaidOrder`).
-  if (order.payment.method === "cod") {
-    await notifyOrderPlacedCod(order.orderNumber);
-  }
+  await notifyOrderPlacedCod(order.orderNumber);
 
   return {
     ok: true,
-    reused: false,
+    kind: "cod",
     orderNumber: order.orderNumber,
     orderId: String(order._id),
     pricing: order.pricing as unknown as PricingResult,
+    payment: { kind: "cod" },
+  };
+}
+
+// ── online: a Razorpay order + a pre-payment snapshot, nothing more ────
+
+async function startOnlineCheckout(
+  v: ValidatedCheckout,
+  input: PlaceOrderInput,
+  ctx: PlaceOrderContext,
+): Promise<PlaceOrderResult> {
+  const intentId = new mongoose.Types.ObjectId();
+  const amountPaise = v.pricing.grandTotalPaise;
+
+  let razorpayOrderId: string;
+  let dev = false;
+  if (isRazorpayConfigured()) {
+    try {
+      const rzp = await createRazorpayOrder({
+        amountPaise,
+        receipt: intentId.toHexString(),
+        notes: { userId: ctx.userId, intentId: intentId.toHexString() },
+      });
+      razorpayOrderId = rzp.id;
+    } catch (err) {
+      console.error("[checkout] createRazorpayOrder failed", err);
+      return {
+        ok: false,
+        code: "payment-init-failed",
+        message:
+          "We couldn’t reach the payment provider. Please try again in a moment.",
+      };
+    }
+  } else {
+    dev = true;
+    razorpayOrderId = `dev_order_${Date.now().toString(36)}`;
+  }
+
+  const couponSnapshot = v.couponEffect
+    ? {
+        code: v.couponEffect.code,
+        type: v.couponEffect.type,
+        valuePaise: v.couponEffect.type === "fixed" ? v.couponEffect.value : 0,
+      }
+    : null;
+
+  await CheckoutIntent.create({
+    _id: intentId,
+    userId: ctx.userId,
+    status: "pending",
+    razorpayOrderId,
+    amountPaise,
+    items: v.items,
+    pricing: v.pricing,
+    coupon: couponSnapshot,
+    creditAppliedPaise: v.pricing.creditAppliedPaise,
+    contact: v.contact,
+    shippingAddress: v.shipSnapshot as unknown as Record<string, unknown>,
+    billingAddress: v.billingSnapshot as unknown as Record<string, unknown>,
+    customerNote: input.customerNote,
+    orderNumber: null,
+  });
+
+  if (dev) {
+    return {
+      ok: true,
+      kind: "online",
+      intentId: intentId.toHexString(),
+      pricing: v.pricing,
+      payment: { kind: "razorpay-dev", amountPaise },
+    };
+  }
+
+  const { keyId } = getRazorpayEnv();
+  return {
+    ok: true,
+    kind: "online",
+    intentId: intentId.toHexString(),
+    pricing: v.pricing,
+    payment: {
+      kind: "razorpay",
+      razorpayOrderId,
+      keyId,
+      amountPaise,
+      prefill: {
+        name: v.contact.name,
+        email: v.contact.email,
+        contact: v.contact.phone,
+      },
+    },
   };
 }
 

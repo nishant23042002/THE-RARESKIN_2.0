@@ -119,6 +119,25 @@ export interface CatalogNavItem {
 }
 
 /**
+ * One cross-sell card in the bag drawer — the rest of the range, offered as a
+ * one-tap add. Money in rupees, matching the `localStorage` cart line.
+ */
+export interface BagSuggestion {
+  sku: string;
+  slug: string;
+  name: string;
+  /** a fragrance slug drives the vector `<Flacon>` fallback; absent for the set */
+  fragrance?: FragranceSlug;
+  /** real packshot URL when one exists, else null → draw the vector flacon */
+  image: string | null;
+  /** short line under the name — "Extrait · 50 ml" / "3 × 10 ml" */
+  meta: string;
+  price: number;
+  mrp: number;
+  href: string;
+}
+
+/**
  * Brand palette for the vector `<Flacon>` and hero art — the client leaves that
  * only carry a slug (the cart drawer, the sticky bar) and can't be handed a
  * full record. These values mirror the `colour` field on each product document

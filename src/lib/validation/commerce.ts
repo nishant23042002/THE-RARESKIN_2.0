@@ -183,7 +183,7 @@ export type RazorpayCallbackInput = z.infer<typeof razorpayCallbackInput>;
 
 /** Dev-only: simulate a payment outcome when Razorpay isn't configured. */
 export const devPaymentSimulateInput = z.object({
-  orderNumber: z.string().min(6).max(32),
+  intentId: z.string().min(12).max(64),
   outcome: z.enum(["paid", "failed"]),
 });
 

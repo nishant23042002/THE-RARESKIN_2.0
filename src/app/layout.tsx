@@ -4,6 +4,7 @@ import { SmoothScroll } from "@/components/providers/smooth-scroll";
 import { RouteTransitionProvider } from "@/components/providers/route-transition";
 import { AuthProvider } from "@/components/providers/auth-provider";
 import { SignInModalMount } from "@/components/auth/sign-in-modal-mount";
+import { SignInAutoPrompt } from "@/components/auth/sign-in-auto-prompt";
 import { CartProvider } from "@/components/providers/cart-provider";
 import { NavToneProvider } from "@/components/providers/nav-tone";
 import { ScrollbarVar } from "@/components/providers/scrollbar-var";
@@ -16,7 +17,7 @@ import { CartBar } from "@/components/cart/cart-bar";
 import { SvgDefs } from "@/components/ui/svg-defs";
 import { SITE } from "@/lib/site";
 import { organizationJsonLd } from "@/lib/seo";
-import { getCatalogNav } from "@/server/data/catalog";
+import { getCatalogNav, getBagSuggestions } from "@/server/data/catalog";
 import "./globals.css";
 
 const jost = Jost({
@@ -63,7 +64,10 @@ export const viewport: Viewport = {
 };
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
-  const nav = await getCatalogNav();
+  const [nav, bagSuggestions] = await Promise.all([
+    getCatalogNav(),
+    getBagSuggestions(),
+  ]);
 
   return (
     <html lang="en-IN" className={`${jost.variable} ${newsreader.variable}`}>
@@ -83,7 +87,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <SvgDefs />
         <ScrollbarVar />
         <AuthProvider>
-          <CartProvider>
+          <CartProvider suggestions={bagSuggestions}>
             <SmoothScroll>
               <RouteTransitionProvider>
                 <NavToneProvider>
@@ -98,6 +102,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
                 <CartToast />
                 <CartBar />
                 <SignInModalMount />
+                <SignInAutoPrompt />
               </RouteTransitionProvider>
             </SmoothScroll>
           </CartProvider>

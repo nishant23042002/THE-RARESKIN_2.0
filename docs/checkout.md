@@ -1,10 +1,10 @@
 # Checkout & orders (Phase D → E)
 
 The commerce backbone: a server cart, an India GST pricing engine, coupon and
-store-credit application, atomic stock reservation, and order creation
-(Phase D), plus **Razorpay hosted checkout end to end** — verified webhook,
-immutable payment log, refund path, auto-cancel (Phase E, see
-[`docs/payments.md`](payments.md)).
+store-credit application, atomic stock decrement, and order creation, plus
+**Razorpay hosted checkout end to end** — verified webhook, immutable payment
+log, refund path. Checkout is **payment-first**: an online order is created only
+once the payment is verified (see [`docs/payments.md`](payments.md)).
 
 > Guiding rule: **never trust the client with a number.** The checkout request
 > carries SKUs, quantities and an address. Prices, tax, discounts, credit,
@@ -117,9 +117,11 @@ resulting balance. `placeOrder` also does a pre-flight check and returns
 `cart-changed` (with the adjusted quantities) before opening the transaction, so
 the common case is a clean "review your bag again" prompt.
 
-Phase D commits the decrement at order-creation (there is no payment window).
-Phase E moves it behind a short Redis reservation that the verified `order.paid`
-webhook converts to a real decrement.
+**Payment-first:** an online order decrements stock at `finalizeOnlineCheckout`
+(verified payment), not at checkout-start — so stock is not reserved during the
+payment window. A capture that then can't be honoured is auto-refunded in full
+(see [`docs/payments.md`](payments.md)). COD commits the decrement at
+order-creation (no payment step).
 
 ## Store credit
 
@@ -129,8 +131,8 @@ customer's active grants oldest-first inside the order transaction, appending a
 ledger entry per grant and flipping a grant to `spent` at zero — it can never be
 double-spent. `refundStoreCreditForOrder` reverses a spend on cancellation.
 
-> In Phase E the Discovery-Set grant moves to the payment webhook; it is issued
-> at order-creation now purely so the ledger is exercisable without payment.
+> The Discovery-Set grant is issued inside `finalizeOnlineCheckout` (verified
+> payment), or at order-creation for COD.
 
 ## Coupons
 
@@ -149,17 +151,22 @@ pnpm coupon add FREESHIP free_shipping
 pnpm coupon pause WELCOME10
 ```
 
-## Order lifecycle (this phase)
+## Order lifecycle
 
-`placeOrder` creates the order as `status: "pending"`, `payment.status:
-"pending"`, with a full snapshot of every line (price, name, image, HSN), both
-addresses (with the resolved GST state code), the pricing breakdown, the coupon,
-and a `timeline` entry. `idempotencyKey` (a client UUID) is unique per user, so
-a double-submit returns the first order instead of a second.
+- **Online** — `startOnlineCheckout` writes a `CheckoutIntent` (the validated
+  cart snapshot + a Razorpay order) and returns; **no order exists yet**. On
+  verified payment `finalizeOnlineCheckout` creates the order directly as
+  `status: "confirmed"` / `payment.status: "paid"`, with a full snapshot of
+  every line (price, name, image, HSN), both addresses, the pricing breakdown,
+  the coupon, and a two-entry `timeline`. `idempotencyKey` = the Razorpay order
+  id, so the callback and the webhook converge on one order.
+- **COD** — `placeCodOrder` creates the order `status: "pending"` /
+  `payment.method: "cod"` immediately; `idempotencyKey` (a client UUID) dedupes
+  a double-submit.
 
-The state machine (`pending → confirmed → … → delivered`, with `cancelled` /
-`returned` / `refunded`), refunds, and the guarded transitions land with the
-payment integration.
+State machine: `pending → confirmed → … → delivered`, with `cancelled` /
+`returned` / `refunded`; `cancelUnpaidOrder` handles a customer/admin cancelling
+a COD order before dispatch.
 
 ## Checkout flow (UI) — "The Counter"
 

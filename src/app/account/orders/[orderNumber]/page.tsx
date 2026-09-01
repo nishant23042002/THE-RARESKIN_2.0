@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { Container } from "@/components/ui/container";
+import { Icon } from "@/components/ui/icon";
 import { pageMeta } from "@/lib/seo";
 import { formatPaise } from "@/lib/money";
 import { ORDER_STATUS_LABEL } from "@/lib/checkout";
@@ -48,8 +49,6 @@ export default async function OrderDetailPage({
   const a = order.shippingAddress;
   const g = order.pricing.gst;
   const showTax = g.total > 0;
-  const awaitingPayment =
-    order.paymentStatus === "pending" && order.method === "razorpay";
   const paid = order.paymentStatus === "paid";
 
   return (
@@ -85,16 +84,14 @@ export default async function OrderDetailPage({
               <StatusPill status={order.status} />
               <span
                 className={`text-[10px] font-medium tracking-[0.12em] uppercase ${
-                  paid ? "text-ok" : awaitingPayment ? "text-error" : "text-ink-3"
+                  paid ? "text-ok" : "text-ink-3"
                 }`}
               >
                 {paid
                   ? "Paid"
-                  : awaitingPayment
-                    ? "Payment pending"
-                    : order.method === "cod"
-                      ? "Cash on delivery"
-                      : order.paymentStatus}
+                  : order.method === "cod"
+                    ? "Cash on delivery"
+                    : order.paymentStatus}
               </span>
             </div>
           </div>
@@ -103,12 +100,16 @@ export default async function OrderDetailPage({
             <OrderProgress status={order.status} />
           </div>
 
-          {awaitingPayment && (
-            <p className="mt-6 border border-error/30 bg-error/[0.04] px-4 py-3 text-[12.5px] leading-relaxed text-ink-2">
-              We haven’t received payment for this order yet. Reopen your bag to
-              finish paying — the reservation is held for 30 minutes from when it
-              was placed.
-            </p>
+          {order.status !== "cancelled" && (
+            <a
+              href={`/api/account/orders/${encodeURIComponent(
+                order.orderNumber,
+              )}/invoice`}
+              className="mt-6 inline-flex items-center gap-2 border border-line px-3.5 py-2 text-[10.5px] font-medium tracking-[0.12em] text-ink-2 uppercase transition-colors hover:border-ink hover:text-ink"
+            >
+              <Icon name="download" className="size-[15px]" />
+              Download invoice
+            </a>
           )}
         </header>
 
@@ -282,8 +283,8 @@ export default async function OrderDetailPage({
               <span className="text-ink-3">
                 {paid
                   ? "Received in full"
-                  : awaitingPayment
-                    ? "Awaiting payment"
+                  : order.method === "cod"
+                    ? "Due on delivery"
                     : `Status: ${order.paymentStatus}`}
               </span>
             </p>

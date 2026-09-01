@@ -56,6 +56,7 @@ function brandFor(orderNumber: string): EmailBrand {
     siteUrl: SITE.url,
     logoUrl: absoluteUrl("/email/logo"),
     orderUrl: absoluteUrl(`/account/orders/${orderNumber}`),
+    invoiceUrl: absoluteUrl(`/api/account/orders/${orderNumber}/invoice`),
   };
 }
 

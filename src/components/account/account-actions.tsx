@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
 import { useAuth } from "@/components/providers/auth-provider";
 
 export function AccountActions() {
@@ -35,6 +36,7 @@ export function AccountActions() {
         size="sm"
         className="!px-4"
       >
+        <Icon name="logout" className="size-[15px]" />
         {busy === "one" ? "Signing out…" : "Sign out"}
       </Button>
       <Button
