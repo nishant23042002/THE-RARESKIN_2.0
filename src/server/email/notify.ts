@@ -1,6 +1,7 @@
 import "server-only";
 
 import { formatPaise } from "@/lib/money";
+import { absoluteUrl } from "@/lib/site";
 
 import { accountBrand, loadOrderEmailContext, whatsNextLine } from "./order-context";
 import { enqueueAndDrain } from "./outbox";
@@ -185,6 +186,36 @@ export function notifyNewDevice(input: {
         deviceLabel,
         ip: input.ip,
         when: IST_DATETIME.format(at),
+      },
+    });
+  });
+}
+
+/**
+ * Sent a few days after delivery by the `review-requests` cron. One per order
+ * (dedupe key), best-effort — a missing recipient email just skips it.
+ */
+export function notifyReviewRequest(orderNumber: string): Promise<void> {
+  return safely("notifyReviewRequest", async () => {
+    const ctx = await loadOrderEmailContext(orderNumber);
+    if (!ctx?.to) return;
+    if (ctx.status !== "delivered") return;
+    await enqueueAndDrain({
+      template: "review-request",
+      to: ctx.to,
+      orderNumber,
+      dedupeKey: `review-request:${orderNumber}`,
+      props: {
+        brand: ctx.base.brand,
+        customerName: ctx.base.customerName,
+        orderNumber,
+        deliveredAt: ctx.deliveredAt,
+        items: ctx.base.items.map((i) => ({
+          name: i.name,
+          slug: i.slug,
+          image: i.image,
+        })),
+        reviewUrl: absoluteUrl("/account/reviews"),
       },
     });
   });

@@ -20,7 +20,7 @@ export default async function CouponsPage() {
         actions={
           <Link
             href="/admin/coupons/new"
-            className="rounded-[3px] bg-cta px-3 py-1.5 text-[11px] tracking-[0.1em] text-w0 uppercase hover:bg-black"
+            className="rounded-[3px] bg-cta px-3 py-1.5 text-[11px] tracking-[0.1em] text-w0 uppercase hover:bg-cta-hover"
           >
             New coupon
           </Link>

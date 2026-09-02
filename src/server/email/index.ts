@@ -13,6 +13,7 @@ export {
   notifyOrderCancelled,
   notifyRefundProcessed,
   notifyOrderStatus,
+  notifyReviewRequest,
   notifyNewDevice,
 } from "./notify";
 export { suppressEmail, isSuppressed } from "./suppression";

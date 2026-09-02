@@ -274,6 +274,22 @@ type-the-slug confirm. The server refuses unless `status === "draft"` **and** no
 (`status: archived` hides it everywhere while keeping order history intact).
 `MediaAsset.usedIn` back-refs are cleared best-effort; `product.delete` audited.
 
+## Reviews (Phase H)
+
+`/admin/reviews` (`support`+). The default view is the **pending** queue.
+`moderateReview` (`src/server/admin/review-actions.ts`) sets `approved` /
+`rejected`, then recomputes `Product.ratings { average, count }` from the
+product's `approved` set and busts the `reviews` / `reviews:<slug>` / `catalog`
+/ `product:<slug>` cache tags so the storefront refreshes within seconds.
+`review.approve` / `review.reject` are audited. Approve puts a review live;
+**Hide** takes an approved one back down (also `rejected`).
+
+Customers write from `/account/reviews` — one review per product, only for
+products on a `delivered` order, editable by the customer while still `pending`.
+The storefront surfaces (PDP deck, homepage block, star ratings, Product
+JSON-LD `aggregateRating`) are all gated by **`flags.reviewsEnabled`** in Site
+Settings. Full lifecycle: [`reviews.md`](reviews.md).
+
 ## Verifying locally
 
 Blank `RAZORPAY_KEY_ID` / `TWILIO_*` / `RESEND_API_KEY` in `.env.local` to force

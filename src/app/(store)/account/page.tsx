@@ -11,6 +11,7 @@ import { requireUser, listUserSessions, getSignInMethods } from "@/server/auth";
 import { listUserOrders } from "@/server/data/orders";
 import { listAddresses } from "@/server/data/addresses";
 import { getAccountOverview } from "@/server/data/account";
+import { getReviewableItems } from "@/server/data/reviews";
 import { getStoreCreditBalance } from "@/server/commerce";
 
 export const metadata = pageMeta({
@@ -24,15 +25,23 @@ export const dynamic = "force-dynamic";
 
 export default async function AccountPage() {
   const { user, session } = await requireUser("/account");
-  const [sessions, orders, addresses, creditPaise, overview, signInMethods] =
-    await Promise.all([
-      listUserSessions(user.id, session._id),
-      listUserOrders(user.id),
-      listAddresses(user.id),
-      getStoreCreditBalance(user.id),
-      getAccountOverview(user.id),
-      getSignInMethods(user.id),
-    ]);
+  const [
+    sessions,
+    orders,
+    addresses,
+    creditPaise,
+    overview,
+    signInMethods,
+    reviewable,
+  ] = await Promise.all([
+    listUserSessions(user.id, session._id),
+    listUserOrders(user.id),
+    listAddresses(user.id),
+    getStoreCreditBalance(user.id),
+    getAccountOverview(user.id),
+    getSignInMethods(user.id),
+    getReviewableItems(user.id),
+  ]);
   const recent = orders.slice(0, 4);
   const defaultAddress = addresses.find((a) => a.isDefault) ?? addresses[0];
 
@@ -114,6 +123,23 @@ export default async function AccountPage() {
             </>
           )}
         </section>
+
+        {/* ── review prompt ─────────────────────────────────────── */}
+        {reviewable.length > 0 && (
+          <Link
+            href="/account/reviews"
+            className="mt-8 flex items-center justify-between gap-3 border border-line bg-surface px-5 py-4 transition-colors hover:border-ink"
+          >
+            <span className="text-[12.5px] text-ink-2">
+              {reviewable.length === 1
+                ? `Share how ${reviewable[0].name} is wearing`
+                : `${reviewable.length} pieces from your orders are waiting for a review`}
+            </span>
+            <span className="shrink-0 text-[10.5px] font-medium tracking-[0.12em] text-ink-3 uppercase">
+              Review →
+            </span>
+          </Link>
+        )}
 
         {/* ── delivery + support ─────────────────────────────────── */}
         <div className="mt-10 grid gap-px overflow-hidden border border-line bg-line sm:grid-cols-2">

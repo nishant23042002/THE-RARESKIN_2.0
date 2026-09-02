@@ -105,6 +105,8 @@ export interface Fragrance {
   stock: number;
   /** `status === "active"` and buyable */
   available: boolean;
+  /** denormalised from approved reviews; `count === 0` → nothing to show */
+  rating: { average: number; count: number };
   seo: { metaTitle: string | null; metaDescription: string | null };
 }
 

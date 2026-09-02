@@ -115,7 +115,7 @@ export function SignInMethods({ methods }: { methods: Methods }) {
             ) : (
               <a
                 href={linkHref}
-                className="rounded-[2px] border border-ink bg-ink px-3 py-1.5 text-[10px] tracking-[0.12em] text-w0 uppercase hover:bg-black"
+                className="rounded-[2px] border border-ink bg-ink px-3 py-1.5 text-[10px] tracking-[0.12em] text-w0 uppercase hover:bg-cta-hover"
               >
                 Link Google account
               </a>

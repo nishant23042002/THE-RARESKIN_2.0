@@ -13,6 +13,7 @@ import OrderCancelled from "./templates/order-cancelled";
 import RefundProcessed from "./templates/refund-processed";
 import OrderShipped from "./templates/order-shipped";
 import OrderDelivered from "./templates/order-delivered";
+import ReviewRequest from "./templates/review-request";
 import NewDevice from "./templates/new-device";
 
 /** Subject line — pure, computed once at enqueue and stored on the row. */
@@ -40,6 +41,12 @@ export function emailSubject<T extends EmailTemplate>(
       return `Your order ${n} has shipped`;
     case "order-delivered":
       return `Delivered — order ${n}`;
+    case "review-request": {
+      const first =
+        (props as EmailPropsMap["review-request"]).items[0]?.name ??
+        "your fragrance";
+      return `How is ${first} wearing?`;
+    }
     default: {
       const _exhaustive: never = template;
       return _exhaustive;
@@ -57,6 +64,7 @@ const COMPONENTS: {
   "refund-processed": RefundProcessed,
   "order-shipped": OrderShipped,
   "order-delivered": OrderDelivered,
+  "review-request": ReviewRequest,
   "new-device": NewDevice,
 };
 

@@ -84,6 +84,10 @@ function toFragrance(doc: ProductDoc): Fragrance {
     images: imagesFor(doc),
     stock: doc.inventory.stock,
     available: isBuyable(doc),
+    rating: {
+      average: doc.ratings?.average ?? 0,
+      count: doc.ratings?.count ?? 0,
+    },
     seo: {
       metaTitle: doc.seo?.metaTitle ?? null,
       metaDescription: doc.seo?.metaDescription ?? null,

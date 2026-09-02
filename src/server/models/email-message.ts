@@ -22,6 +22,7 @@ export const EMAIL_TEMPLATES = [
   "refund-processed",
   "order-shipped",
   "order-delivered",
+  "review-request",
   "new-device",
 ] as const;
 export type EmailTemplate = (typeof EMAIL_TEMPLATES)[number];

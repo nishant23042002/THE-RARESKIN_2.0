@@ -54,6 +54,12 @@ const NAV: {
     canSee: (role) => roleRankFor(role) >= roleRankFor("support"),
   },
   {
+    href: "/admin/reviews",
+    label: "Reviews",
+    icon: "star",
+    canSee: (role) => roleRankFor(role) >= roleRankFor("support"),
+  },
+  {
     href: "/admin/staff",
     label: "Staff",
     icon: "shield",

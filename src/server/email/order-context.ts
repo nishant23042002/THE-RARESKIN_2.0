@@ -41,6 +41,8 @@ export interface OrderEmailContext {
   status: OrderDoc["status"];
   paymentStatus: OrderDoc["payment"]["status"];
   paymentDueBy: string | null;
+  /** IST-formatted delivery time, when the order is `delivered` */
+  deliveredAt: string | null;
   grandTotalPaise: number;
   /** rupee-formatted, `> 0` only when the Discovery-Set credit landed */
   discoverySetCredit: { amount: string; expires: string | null } | null;
@@ -220,6 +222,7 @@ export async function loadOrderEmailContext(
     status: o.status,
     paymentStatus: o.payment.status,
     paymentDueBy: fmtIST(o.paymentDueBy),
+    deliveredAt: fmtIST(o.fulfilment?.deliveredAt),
     grandTotalPaise: o.pricing.grandTotalPaise,
     discoverySetCredit,
     refunds: o.refunds,

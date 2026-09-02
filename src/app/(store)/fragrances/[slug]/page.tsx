@@ -8,6 +8,7 @@ import { Icon } from "@/components/ui/icon";
 import { AddToBagButton } from "@/components/cart/add-to-bag-button";
 import { PdpGallery } from "@/components/product/pdp-gallery";
 import { Accordion } from "@/components/ui/accordion";
+import { Stars } from "@/components/ui/stars";
 import { PdpReviews } from "@/components/product/pdp-reviews";
 import { cn } from "@/lib/cn";
 import { formatINR } from "@/lib/catalog";
@@ -18,6 +19,8 @@ import {
   getFragranceSlugs,
   getRelatedFragrances,
 } from "@/server/data/catalog";
+import { getProductReviews } from "@/server/data/reviews";
+import { getSiteSettings } from "@/server/data/settings";
 
 // A newly-activated product renders on first request; unknown slugs 404.
 export const dynamicParams = true;
@@ -78,7 +81,12 @@ export default async function FragrancePage({
   const f = await getFragranceBySlug(slug);
   if (!f) notFound();
 
-  const related = await getRelatedFragrances(slug);
+  const [related, reviews, settings] = await Promise.all([
+    getRelatedFragrances(slug),
+    getProductReviews(slug),
+    getSiteSettings(),
+  ]);
+  const reviewsEnabled = settings.flags.reviewsEnabled;
 
   const url = absoluteUrl(`/fragrances/${slug}`);
   const availability = f.available
@@ -110,6 +118,30 @@ export default async function FragrancePage({
       priceValidUntil: "2027-03-31",
       seller: { "@type": "Organization", name: SITE.legalName },
     },
+    ...(reviewsEnabled && reviews.summary.count > 0
+      ? {
+          aggregateRating: {
+            "@type": "AggregateRating",
+            ratingValue: reviews.summary.average.toFixed(1),
+            reviewCount: String(reviews.summary.count),
+            bestRating: "5",
+            worstRating: "1",
+          },
+          review: reviews.items.slice(0, 5).map((r) => ({
+            "@type": "Review",
+            author: { "@type": "Person", name: r.authorName },
+            datePublished: r.publishedAt.slice(0, 10),
+            name: r.title,
+            reviewBody: r.body,
+            reviewRating: {
+              "@type": "Rating",
+              ratingValue: String(r.rating),
+              bestRating: "5",
+              worstRating: "1",
+            },
+          })),
+        }
+      : {}),
   };
 
   const breadcrumbJson = breadcrumbJsonLd([
@@ -169,6 +201,18 @@ export default async function FragrancePage({
             <p className="mt-1 text-[10px] tracking-[0.24em] text-ink-3 uppercase">
               Extrait de Parfum
             </p>
+            {reviewsEnabled && f.rating.count > 0 && (
+              <a
+                href="#reviews"
+                className="mt-2.5 inline-flex items-center gap-2 text-[11px] text-ink-3 hover:text-ink"
+              >
+                <Stars value={f.rating.average} starClassName="size-3.5" />
+                <span className="tabular-nums">
+                  {f.rating.average.toFixed(1)} · {f.rating.count} review
+                  {f.rating.count === 1 ? "" : "s"}
+                </span>
+              </a>
+            )}
             <p className="mt-4 inline-flex items-center gap-2 text-[11px] tracking-[0.18em] text-ink-2 uppercase">
               <span
                 aria-hidden
@@ -310,7 +354,11 @@ export default async function FragrancePage({
           </div>
         </div>
 
-        <PdpReviews fragrance={f} />
+        <PdpReviews
+          enabled={reviewsEnabled}
+          productName={f.name}
+          reviews={reviews}
+        />
 
         <section className="border-t border-line py-[clamp(36px,6vw,64px)]">
           <h2 className="mb-5 text-[10.5px] font-normal tracking-[0.16em] text-ink-3 uppercase">

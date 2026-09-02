@@ -1,4 +1,9 @@
-import type { EmailBrand, NewDeviceProps, OrderEmailBase } from "../types";
+import type {
+  EmailBrand,
+  NewDeviceProps,
+  OrderEmailBase,
+  ReviewRequestProps,
+} from "../types";
 
 const mockBrand: EmailBrand = {
   siteName: "THE RARESKIN",
@@ -70,4 +75,19 @@ export const mockNewDevice: NewDeviceProps = {
   deviceLabel: "Chrome on Windows",
   ip: "203.0.113.42",
   when: "2 Sep 2026, 9:14 am",
+};
+
+export const mockReviewRequest: ReviewRequestProps = {
+  brand: mockBrand,
+  customerName: "Aditi",
+  orderNumber: "RRS-2026-000042",
+  deliveredAt: "1 Sep 2026, 2:14 pm",
+  items: [
+    {
+      name: "AURÉVAN",
+      slug: "aurevan",
+      image: "https://therareskin.com/email/flacon/aurevan",
+    },
+  ],
+  reviewUrl: "https://therareskin.com/account/reviews",
 };

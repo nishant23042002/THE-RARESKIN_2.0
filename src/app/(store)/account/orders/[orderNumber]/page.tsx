@@ -191,6 +191,16 @@ export default async function OrderDetailPage({
                         ))}
                       </ul>
                     )}
+
+                    {order.status === "delivered" && i.href && (
+                      <Link
+                        href="/account/reviews"
+                        className="mt-2.5 inline-flex w-fit items-center gap-1.5 text-[10.5px] font-medium tracking-[0.1em] text-ink-2 uppercase underline-offset-4 hover:text-ink hover:underline"
+                      >
+                        <Icon name="star" className="size-3.5" />
+                        Write a review
+                      </Link>
+                    )}
                   </div>
                 </li>
               );

@@ -9,6 +9,8 @@ import { TheIdea } from "@/components/home/the-idea";
 import { Reviews } from "@/components/home/reviews";
 import { Newsletter } from "@/components/home/newsletter";
 import { getStorefrontCatalog } from "@/server/data/catalog";
+import { getFeaturedReviews } from "@/server/data/reviews";
+import { getSiteSettings } from "@/server/data/settings";
 
 /**
  * Homepage. Catalogue data is read once from the database here (cached, tagged
@@ -16,11 +18,18 @@ import { getStorefrontCatalog } from "@/server/data/catalog";
  * sections never import the catalogue directly.
  */
 export default async function HomePage() {
-  const { fragrances, discoverySet } = await getStorefrontCatalog();
+  const [{ fragrances, discoverySet }, settings] = await Promise.all([
+    getStorefrontCatalog(),
+    getSiteSettings(),
+  ]);
 
   // The store can't render its homepage without a catalogue — treat an empty
   // result as a misconfiguration rather than shipping a blank page.
   if (fragrances.length === 0 || !discoverySet) notFound();
+
+  const featuredReviews = settings.flags.reviewsEnabled
+    ? await getFeaturedReviews(6)
+    : [];
 
   return (
     <main id="main">
@@ -31,7 +40,7 @@ export default async function HomePage() {
       <DiscoverySet set={discoverySet} fragrances={fragrances} />
       <WhyExtrait />
       <TheIdea />
-      <Reviews />
+      <Reviews reviews={featuredReviews} />
       <Newsletter />
     </main>
   );

@@ -88,3 +88,13 @@ export type { AdminStaffRow } from "./staff";
 
 export { createOrPromoteStaff } from "./staff-actions";
 export type { StaffActionResult } from "./staff-actions";
+
+export { listReviews } from "./reviews";
+export type {
+  AdminReviewRow,
+  AdminReviewList,
+  ListReviewsParams,
+} from "./reviews";
+
+export { moderateReview } from "./review-actions";
+export type { ReviewActionResult } from "./review-actions";

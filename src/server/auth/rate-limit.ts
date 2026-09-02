@@ -34,6 +34,8 @@ const RULES = {
   "checkout:quote:ip": { limit: 120, window: "5 m" as Duration },
   "checkout:place:user": { limit: 12, window: "10 m" as Duration },
   "checkout:place:ip": { limit: 20, window: "10 m" as Duration },
+  // Writing / editing a product review — scoped per user.
+  "account:review:user": { limit: 20, window: "1 h" as Duration },
 } as const;
 
 export type RateRule = keyof typeof RULES;

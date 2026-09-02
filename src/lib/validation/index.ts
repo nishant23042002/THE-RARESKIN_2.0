@@ -8,5 +8,6 @@ export * from "./auth";
 export * from "./commerce";
 export * from "./media";
 export * from "./product";
+export * from "./review";
 export * from "./site-settings";
 export * from "./user";

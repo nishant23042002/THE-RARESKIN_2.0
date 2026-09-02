@@ -299,7 +299,12 @@ before going live:
   real photo.
 - **Packaging copy** — the PDP "What's in the box" answer describes a
   recyclable carton + a wear card; confirm this matches the actual packaging.
-- **Reviews** — the PDP "Impressions" deck and the homepage Reviews block are
-  labelled placeholders until verified-buyer reviews exist.
+- **Reviews** — verified buyers review a product from **`/account/reviews`**
+  once their order is `delivered`; every review is moderated in
+  **`/admin/reviews`** before it shows. A `review-request` email goes out ~5
+  days after delivery (daily cron). The PDP "Impressions" deck, the homepage
+  block and the star ratings only render once **`flags.reviewsEnabled`** is
+  turned on in Site Settings — flip it at launch. See
+  [`docs/reviews.md`](docs/reviews.md).
 - **Indexing** — `metadata.robots` in `layout.tsx` is `index: true`. Set it to
   `false` if you want the site hidden from search until launch.

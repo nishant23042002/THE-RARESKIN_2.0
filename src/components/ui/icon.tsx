@@ -50,7 +50,8 @@ export type IconName =
   | "arrowLeft"
   | "clock"
   | "sun"
-  | "moon";
+  | "moon"
+  | "star";
 
 const PATHS: Record<IconName, ReactElement> = {
   bag: (
@@ -205,6 +206,9 @@ const PATHS: Record<IconName, ReactElement> = {
     </>
   ),
   moon: <path d="M20 13.5A8 8 0 0 1 10.5 4 8 8 0 1 0 20 13.5Z" />,
+  star: (
+    <path d="M12 3.5l2.7 5.47 6.05.88-4.38 4.27 1.03 6.02L12 17.3l-5.4 2.84 1.03-6.02L3.25 9.85l6.05-.88z" />
+  ),
 };
 
 export interface IconProps {

@@ -108,6 +108,20 @@ export interface OrderDeliveredProps extends OrderEmailBase {
   deliveredAt: string;
 }
 
+/** Sent a few days after delivery, asking for a review. Not order-shaped —
+ *  it only needs the pieces + a deep link to the review form. */
+export interface ReviewRequestProps {
+  brand: EmailBrand;
+  /** the account holder's first name, or "there" */
+  customerName: string;
+  orderNumber: string;
+  /** IST timestamp, already formatted, or null */
+  deliveredAt: string | null;
+  items: { name: string; slug: string; image: string | null }[];
+  /** deep link to `/account/reviews` */
+  reviewUrl: string;
+}
+
 /** Security notice — not order-related, so it doesn't extend `OrderEmailBase`. */
 export interface NewDeviceProps {
   brand: EmailBrand;
@@ -129,6 +143,7 @@ export interface EmailPropsMap {
   "refund-processed": RefundProcessedProps;
   "order-shipped": OrderShippedProps;
   "order-delivered": OrderDeliveredProps;
+  "review-request": ReviewRequestProps;
   "new-device": NewDeviceProps;
 }
 
