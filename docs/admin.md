@@ -4,8 +4,8 @@ The operator console at `/admin`. Phase G: **G1** — the shell, RBAC, sudo
 re-auth, order management, new-device email; **G2** — catalogue editor +
 product photography + stock ledger; **G2.5** — the 403 "no access" page +
 Google account linking; **G3a** — coupons + Site Settings editor (and wiring
-its loose ends: announcement bar, footer social, the holding page); **G3b**
-(still to come) — customers, staff, product delete.
+its loose ends: announcement bar, footer social, the holding page); **G3b** —
+customers, staff, product delete.
 
 ## Route groups
 
@@ -227,6 +227,52 @@ document that predates a field still gets its default.
 | `announcements` / `announcementRotateSeconds` | `<AnnouncementBar>` rotates the configured active messages; **clear them all** to fall back to the built-in set. |
 | `social.*` | a "Follow" block in the footer + the holding page (`social-links.tsx`) — only the links you set appear. |
 | `shipping` / `cod` / `gst` / `contact` | already flow through the checkout engine + email (`getSiteSettings` in `src/server/commerce/orders.ts`, `order-context.ts`). |
+
+## Customers (G3b)
+
+`/admin/customers` — `support`+ can **view**; `admin`+ can manage.
+
+- **List** (`src/server/admin/users.ts` `listUsers`) — every account, filter by
+  role + status, search phone / name / email, paginated. Phone is masked in
+  every DTO. Order count is one `Order.aggregate` over the page.
+- **Detail** (`getUserForAdmin`) — identity (phone / email / linked Google),
+  at-a-glance stats (reuses `getAccountOverview`), recent orders (link into
+  `/admin/orders/[n]`), addresses, store credit, active sessions
+  (`listUserSessions(id, "")` — nothing is "current" from the admin's view), and
+  an **account-history** trail (the `AuditLog` rows targeting this user).
+- **Manage** (`account-controls.tsx`, `admin`+ only):
+  - **Role** — the `<select>` options are limited by `canEditRole`
+    (`src/server/auth/admin.ts`): `admin` sees only the roles below `admin`;
+    `superadmin` sees all. You can't change your **own** role.
+  - **Suspend / lift** — a suspended account fails `loadSession` immediately
+    (`status !== "active"`).
+  - **Sign out all sessions** — for a lost phone; not sudo-gated (reversible).
+  - Role changes and suspensions are **sudo-gated** and **revoke every session**
+    so the change takes effect at once. Audited as `user.role_change` /
+    `user.status_change` / `user.sessions_revoked`.
+
+## Staff (G3b)
+
+`/admin/staff` — `admin`+. Lists staff by rank; each row links to that person's
+`/admin/customers/[id]` for the full controls (one code path for role changes).
+
+**"Invite" = create-or-promote by phone.** Auth is phone-OTP passwordless, so
+`createOrPromoteStaff` (`src/server/admin/staff-actions.ts`) upserts a `User` by
+phone number with the chosen staff role — no invite email, no password. The
+person signs in with an OTP and lands in `/admin`. If the account already
+existed, its sessions are revoked so the new role applies on next sign-in.
+Sudo-gated; `canEditRole` gate — only a `superadmin` can grant `admin` /
+`superadmin`. `name` / `email` are filled only if they were empty (never
+clobbered).
+
+## Product delete (G3b)
+
+`deleteProduct` (`src/server/admin/catalog-actions.ts`), surfaced as a **Delete**
+button on the product edit page **only for a `draft`**. Sudo-gated + a
+type-the-slug confirm. The server refuses unless `status === "draft"` **and** no
+`Order` references the slug/SKU — otherwise it tells you to archive instead
+(`status: archived` hides it everywhere while keeping order history intact).
+`MediaAsset.usedIn` back-refs are cleared best-effort; `product.delete` audited.
 
 ## Verifying locally
 

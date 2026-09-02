@@ -56,6 +56,23 @@ export function roleRankFor(role: UserRole): number {
 }
 
 /**
+ * Can `actor` set an account's role to / away from `target`?
+ *
+ * - `superadmin` can touch any role.
+ * - `admin` can manage everything **below** `admin` (customer / support /
+ *   catalog_manager / operations) but can neither create nor demote an
+ *   `admin` / `superadmin`.
+ * - anyone else: no.
+ *
+ * A role *change* must satisfy this for both the current and the new role.
+ */
+export function canEditRole(actor: UserRole, target: UserRole): boolean {
+  if (actor === "superadmin") return true;
+  if (actor !== "admin") return false;
+  return roleRank[target] < roleRank.admin;
+}
+
+/**
  * `support` and `catalog_manager` sit at the same rank but are parallel
  * specialisations — a rank check alone lets `support` into the catalogue, which
  * isn't their job. Catalogue work needs the `catalog_manager` role itself, or

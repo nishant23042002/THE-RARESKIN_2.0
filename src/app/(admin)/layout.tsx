@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 
 import {
   requireStaff,
@@ -9,6 +10,7 @@ import { AdminShell } from "@/components/admin/admin-shell";
 import type { AdminNavItem } from "@/components/admin/admin-nav";
 import type { IconName } from "@/components/ui/icon";
 import type { UserRole } from "@/lib/validation/user";
+import { ADMIN_THEME_COOKIE, parseAdminTheme } from "@/lib/admin";
 
 export const metadata: Metadata = {
   title: "Studio",
@@ -46,6 +48,18 @@ const NAV: {
     canSee: (role) => roleRankFor(role) >= roleRankFor("admin"),
   },
   {
+    href: "/admin/customers",
+    label: "Customers",
+    icon: "users",
+    canSee: (role) => roleRankFor(role) >= roleRankFor("support"),
+  },
+  {
+    href: "/admin/staff",
+    label: "Staff",
+    icon: "shield",
+    canSee: (role) => roleRankFor(role) >= roleRankFor("admin"),
+  },
+  {
     href: "/admin/settings",
     label: "Settings",
     icon: "gear",
@@ -58,7 +72,7 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const ctx = await requireStaff();
+  const [ctx, jar] = await Promise.all([requireStaff(), cookies()]);
   const nav: AdminNavItem[] = NAV.filter((n) => n.canSee(ctx.user.role)).map(
     ({ href, label, icon }) => ({ href, label, icon }),
   );
@@ -72,6 +86,7 @@ export default async function AdminLayout({
       user={{ name: ctx.user.name, role: ctx.user.role }}
       sudoUntil={sudoUntil}
       nav={nav}
+      theme={parseAdminTheme(jar.get(ADMIN_THEME_COOKIE)?.value)}
     >
       {children}
     </AdminShell>

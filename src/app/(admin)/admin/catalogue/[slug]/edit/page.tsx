@@ -6,7 +6,10 @@ import { getProductForEdit, fragranceSlugOptions } from "@/server/admin";
 import { PageHeader } from "@/components/admin/ui";
 import { ProductForm } from "@/components/admin/catalogue/product-form";
 import { StockPanel } from "@/components/admin/catalogue/stock-panel";
-import { DuplicateButton } from "@/components/admin/catalogue/product-actions";
+import {
+  DuplicateButton,
+  DeleteButton,
+} from "@/components/admin/catalogue/product-actions";
 import { Icon } from "@/components/ui/icon";
 
 export const dynamic = "force-dynamic";
@@ -53,6 +56,12 @@ export default async function EditProductPage({
           </div>
         }
       />
+
+      {product.status === "draft" && (
+        <div className="mb-4 flex justify-end">
+          <DeleteButton slug={product.slug} />
+        </div>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-[1fr_300px]">
         <ProductForm

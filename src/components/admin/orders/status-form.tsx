@@ -116,7 +116,7 @@ export function OrderStatusForm({
       <button
         onClick={submit}
         disabled={!to || busy}
-        className="mt-3 w-full rounded-[3px] bg-cta px-3 py-2 text-[11px] tracking-[0.1em] text-w0 uppercase hover:bg-black disabled:opacity-40"
+        className="mt-3 w-full rounded-[3px] bg-cta px-3 py-2 text-[11px] tracking-[0.1em] text-w0 uppercase hover:bg-cta-hover disabled:opacity-40"
       >
         {busy ? "Updating…" : "Update status"}
       </button>

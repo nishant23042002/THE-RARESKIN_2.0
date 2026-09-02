@@ -104,6 +104,9 @@ export function ProductPreview({
       onClick={(e) => {
         if (e.target === ref.current) onClose();
       }}
+      // this is a mock of the *storefront*, which is always light — pin the
+      // token scope so it doesn't follow the admin's dark theme
+      data-admin-theme="light"
       className="ui-surface m-auto w-[min(96vw,900px)] border border-line bg-bg p-0 text-ink backdrop:bg-ink/50"
     >
       <div className="flex items-center justify-between border-b border-line bg-surface px-4 py-2.5">

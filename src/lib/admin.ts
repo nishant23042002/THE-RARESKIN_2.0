@@ -4,6 +4,14 @@
  */
 import type { OrderStatus } from "@/lib/validation/commerce";
 
+/** The admin ("Studio") colour theme. Persisted in the `ADMIN_THEME_COOKIE`. */
+export type AdminTheme = "light" | "dark";
+export const ADMIN_THEME_COOKIE = "rrs.admin-theme";
+
+export function parseAdminTheme(value: string | undefined | null): AdminTheme {
+  return value === "dark" ? "dark" : "light";
+}
+
 export const ROLE_LABEL: Record<string, string> = {
   customer: "Customer",
   support: "Support",
@@ -29,8 +37,8 @@ export const ADMIN_STATUS_LABEL: Record<OrderStatus, string> = {
 /** Tailwind classes for a status pill, keyed by status. */
 export const ADMIN_STATUS_TONE: Record<OrderStatus, string> = {
   pending: "border-line-2 text-ink-3",
-  confirmed: "border-gilt/50 text-[#8f6118]",
-  processing: "border-gilt/50 text-[#8f6118]",
+  confirmed: "border-gilt/50 text-warn",
+  processing: "border-gilt/50 text-warn",
   shipped: "border-ink/60 text-ink",
   delivered: "border-ok/50 text-ok",
   cancelled: "border-error/40 text-error",

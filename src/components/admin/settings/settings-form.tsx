@@ -58,6 +58,15 @@ export function SettingsForm({ settings }: { settings: S }) {
   const [saved, setSaved] = useState(false);
   const [sudoOpen, setSudoOpen] = useState(false);
 
+  // Re-sync from the server when it hands back a newer document (after save +
+  // `router.refresh()`) so the form always shows the persisted truth.
+  const incomingJson = JSON.stringify(settings);
+  const [syncedJson, setSyncedJson] = useState(incomingJson);
+  if (incomingJson !== syncedJson) {
+    setSyncedJson(incomingJson);
+    setS(settings);
+  }
+
   const flagsChanged =
     s.flags.storeLive !== settings.flags.storeLive ||
     s.flags.maintenanceMode !== settings.flags.maintenanceMode;
@@ -160,7 +169,7 @@ export function SettingsForm({ settings }: { settings: S }) {
             ))}
           </div>
           {flagsChanged && (
-            <p className="mt-1 flex items-center gap-1.5 text-[11.5px] text-[#8f6118]">
+            <p className="mt-1 flex items-center gap-1.5 text-[11.5px] text-warn">
               <Icon name="lock" className="size-3.5" />
               Saving a change to Store live / Maintenance mode will ask for a
               phone code.
@@ -569,7 +578,7 @@ export function SettingsForm({ settings }: { settings: S }) {
           <button
             onClick={save}
             disabled={busy}
-            className="rounded-[3px] bg-cta px-4 py-2 text-[11px] tracking-[0.1em] text-w0 uppercase hover:bg-black disabled:opacity-40"
+            className="rounded-[3px] bg-cta px-4 py-2 text-[11px] tracking-[0.1em] text-w0 uppercase hover:bg-cta-hover disabled:opacity-40"
           >
             {busy ? "Saving…" : "Save settings"}
           </button>

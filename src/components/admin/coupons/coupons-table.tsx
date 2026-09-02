@@ -10,7 +10,7 @@ import type { AdminCouponRow, CouponEffectiveStatus } from "@/server/admin";
 
 const TONE: Record<CouponEffectiveStatus, string> = {
   active: "border-ok/50 text-ok",
-  scheduled: "border-gilt/50 text-[#8f6118]",
+  scheduled: "border-gilt/50 text-warn",
   paused: "border-line-2 text-ink-3",
   expired: "border-error/40 text-error",
 };

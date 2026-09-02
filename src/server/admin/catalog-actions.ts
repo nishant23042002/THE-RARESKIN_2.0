@@ -4,7 +4,8 @@ import { Types } from "mongoose";
 import { revalidateTag } from "next/cache";
 
 import { dbConnect } from "@/server/db";
-import { Product, recordAudit } from "@/server/models";
+import { Product, Order, MediaAsset, recordAudit } from "@/server/models";
+import { assertSudo } from "@/server/auth/admin";
 import { adjustStock } from "@/server/commerce/inventory";
 import { isFragranceSlug, DISCOVERY_SET_SLUG } from "@/lib/catalog";
 import type { AuthContext } from "@/server/auth/session";
@@ -135,6 +136,11 @@ export async function updateProduct(
   if (!before) return { ok: false, error: "not-found" };
 
   const set = toDotSet(input as Record<string, unknown>);
+  // Defence in depth: the catalogue form must never write stock or SKU — stock
+  // moves only through the ledgered `/stock` endpoint, SKU is immutable. Drop
+  // them here even if the schema ever lets them through.
+  delete set["inventory.stock"];
+  delete set["inventory.sku"];
   if (Object.keys(set).length === 0) return { ok: false, error: "empty" };
   set.updatedBy = actor;
 
@@ -269,6 +275,50 @@ export async function reorderProducts(
     userAgent: req.userAgent,
   });
   return { ok: true };
+}
+
+// ── delete ─────────────────────────────────────────────────────────────
+
+/**
+ * Hard delete. Deliberately narrow: **only a `draft` product that no order has
+ * ever referenced** — anything else is forced to `archived` (which hides it
+ * everywhere while keeping order history intact). Sudo-gated.
+ */
+export async function deleteProduct(
+  slug: string,
+  ctx: AuthContext,
+  req: Req,
+): Promise<CatalogActionResult<{ slug: string }>> {
+  assertSudo(ctx);
+  await dbConnect();
+  const actor = new Types.ObjectId(ctx.user.id);
+
+  const doc = await Product.findOne({ slug })
+    .select("slug status inventory.sku")
+    .lean<{ slug: string; status: string; inventory: { sku: string } } | null>();
+  if (!doc) return { ok: false, error: "not-found" };
+  if (doc.status !== "draft") return { ok: false, error: "not-draft" };
+
+  const referenced = await Order.exists({
+    $or: [{ "items.slug": slug }, { "items.sku": doc.inventory.sku }],
+  });
+  if (referenced) return { ok: false, error: "has-orders" };
+
+  await Product.deleteOne({ slug });
+  // best-effort: drop this product from any media asset's back-references
+  await MediaAsset.updateMany({ usedIn: slug }, { $pull: { usedIn: slug } });
+
+  await recordAudit({
+    actorId: actor,
+    actorRole: ctx.user.role,
+    action: "product.delete",
+    targetType: "Product",
+    targetId: slug,
+    before: { slug, sku: doc.inventory.sku, status: doc.status },
+    ip: req.ip,
+    userAgent: req.userAgent,
+  });
+  return { ok: true, slug };
 }
 
 // ── duplicate ──────────────────────────────────────────────────────────

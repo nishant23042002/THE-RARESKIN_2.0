@@ -263,12 +263,12 @@ before going live:
   `CRON_SECRET`, then flip `flags.checkoutEnabled` in Site Settings. Until then
   the checkout drawer shows "opens with launch" for customers; in dev it uses
   the simulate-payment panel.
-- **Admin** — `/admin` ("Studio"): order management end to end (fulfil, refund,
-  cancel, notes) and the **catalogue editor** (full record, product photos,
-  ledgered stock adjustments), role-gated + phone-OTP sudo for dangerous
-  actions. A non-staff account gets a real 403 "no access" screen. See
-  [`docs/admin.md`](docs/admin.md). The coupon / customer / staff / settings UIs
-  are Phase G3.
+- **Admin** — `/admin` ("Studio"): orders (fulfil, refund, cancel, notes), the
+  **catalogue editor** (full record, product photos, ledgered stock, draft
+  delete), **coupons**, **customers** (role / suspend / revoke sessions),
+  **staff** (add / promote by phone), and **Site Settings**. Role-gated +
+  phone-OTP sudo for dangerous actions; a non-staff account gets a real 403
+  "no access" screen. See [`docs/admin.md`](docs/admin.md).
 - **Google sign-in (optional)** — "Continue with Google" for staff/customers who
   link a Google account from `/account` or `/admin/account`. Off until
   `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` are set, the
@@ -276,6 +276,9 @@ before going live:
   `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=1`. See [`docs/auth.md`](docs/auth.md).
 - **Coupons** — created + edited in `/admin/coupons` (`pnpm coupon` stays for
   bulk / CI). None ship by default.
+- **Staff** — add / promote team members in `/admin/staff` by phone number (they
+  sign in with an OTP). The seed makes the first `superadmin` from
+  `SEED_SUPERADMIN_PHONE`.
 - **Go live** — the storefront shows a **holding page** until `storeLive` is
   flipped on in `/admin/settings` (signed-in staff always see the real site).
   `checkoutEnabled` is a separate switch. Both flips need a phone OTP. Set the

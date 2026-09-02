@@ -75,26 +75,25 @@ const contactSettings = z.object({
   grievanceOfficerEmail: email.optional(),
 });
 
-const socialLinks = z
-  .object({
-    instagram: httpUrl.optional(),
-    facebook: httpUrl.optional(),
-    youtube: httpUrl.optional(),
-    x: httpUrl.optional(),
-    linkedin: httpUrl.optional(),
-  })
-  .prefault({});
+const socialLinksShape = z.object({
+  instagram: httpUrl.optional(),
+  facebook: httpUrl.optional(),
+  youtube: httpUrl.optional(),
+  x: httpUrl.optional(),
+  linkedin: httpUrl.optional(),
+});
+const socialLinks = socialLinksShape.prefault({});
 
-const featureFlags = z
-  .object({
-    /** master switch: false = storefront shows a coming-soon holding page */
-    storeLive: z.boolean().default(false),
-    checkoutEnabled: z.boolean().default(false),
-    codEnabled: z.boolean().default(true),
-    reviewsEnabled: z.boolean().default(false),
-    discoverySetEnabled: z.boolean().default(true),
-    maintenanceMode: z.boolean().default(false),
-  })
+const featureFlagsShape = z.object({
+  /** master switch: false = storefront shows a coming-soon holding page */
+  storeLive: z.boolean().default(false),
+  checkoutEnabled: z.boolean().default(false),
+  codEnabled: z.boolean().default(true),
+  reviewsEnabled: z.boolean().default(false),
+  discoverySetEnabled: z.boolean().default(true),
+  maintenanceMode: z.boolean().default(false),
+});
+const featureFlags = featureFlagsShape
   .prefault({});
 
 export const siteSettingsInput = z.object({
@@ -109,6 +108,24 @@ export const siteSettingsInput = z.object({
 });
 export type SiteSettingsInput = z.infer<typeof siteSettingsInput>;
 
-/** Partial patch used by the admin settings form. */
-export const siteSettingsUpdateInput = siteSettingsInput.partial();
+/**
+ * Partial patch from the admin settings form.
+ *
+ * **Not `siteSettingsInput.partial()`** — Zod keeps a field's `.default()` /
+ * `.prefault()` under `.partial()`, so `siteSettingsInput.partial().parse({ flags })`
+ * silently re-injects `announcements: []`, `shipping: {…defaults}`, etc., which
+ * `updateSiteSettings`'s merge would then write over the stored values. Each
+ * section here is a bare `.optional()` with **no** top-level default, so an
+ * absent section stays `undefined` and is skipped by the merge.
+ */
+export const siteSettingsUpdateInput = z.object({
+  announcements: z.array(announcementMessage).max(8).optional(),
+  announcementRotateSeconds: z.number().int().min(3).max(60).optional(),
+  shipping: shippingSettings.optional(),
+  cod: codSettings.optional(),
+  gst: gstSettings.optional(),
+  contact: contactSettings.optional(),
+  social: socialLinksShape.optional(),
+  flags: featureFlagsShape.optional(),
+});
 export type SiteSettingsUpdateInput = z.infer<typeof siteSettingsUpdateInput>;

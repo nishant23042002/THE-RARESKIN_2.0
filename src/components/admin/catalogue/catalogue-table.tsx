@@ -73,7 +73,7 @@ export function CatalogueTable({ rows: initial }: { rows: AdminProductRow[] }) {
           <button
             onClick={saveOrder}
             disabled={busy}
-            className="rounded-[3px] bg-cta px-3 py-1 text-[10.5px] tracking-[0.1em] text-w0 uppercase hover:bg-black disabled:opacity-40"
+            className="rounded-[3px] bg-cta px-3 py-1 text-[10.5px] tracking-[0.1em] text-w0 uppercase hover:bg-cta-hover disabled:opacity-40"
           >
             {busy ? "Saving…" : "Save order"}
           </button>

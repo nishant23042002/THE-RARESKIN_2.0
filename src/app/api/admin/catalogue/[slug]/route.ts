@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 
 import { productUpdateInput, productActionInput } from "@/lib/validation/product";
-import { requireCatalogueRole } from "@/server/auth/admin";
+import { requireCatalogueRole, SudoRequiredError } from "@/server/auth/admin";
 import { requestContext } from "@/server/auth";
 import {
   updateProduct,
   setProductStatus,
   duplicateProduct,
+  deleteProduct,
   bumpCatalogCache,
 } from "@/server/admin";
 
@@ -60,16 +61,31 @@ export async function POST(
   }
 
   const req = await requestContext();
-  const result =
-    parsed.data.action === "status"
-      ? await setProductStatus(slug, parsed.data.status, ctx, req)
-      : await duplicateProduct(slug, ctx, req);
 
-  if (!result.ok) {
-    return NextResponse.json(result, {
-      status: result.error === "not-found" ? 404 : 422,
-    });
+  try {
+    const result =
+      parsed.data.action === "status"
+        ? await setProductStatus(slug, parsed.data.status, ctx, req)
+        : parsed.data.action === "duplicate"
+          ? await duplicateProduct(slug, ctx, req)
+          : await deleteProduct(slug, ctx, req);
+
+    if (!result.ok) {
+      return NextResponse.json(result, {
+        status: result.error === "not-found" ? 404 : 422,
+      });
+    }
+    bumpCatalogCache(
+      parsed.data.action === "duplicate" ? [slug, result.slug] : slug,
+    );
+    return NextResponse.json(result);
+  } catch (err) {
+    if (err instanceof SudoRequiredError) {
+      return NextResponse.json(
+        { ok: false, error: "sudo-required" },
+        { status: 409 },
+      );
+    }
+    throw err;
   }
-  bumpCatalogCache(parsed.data.action === "duplicate" ? [slug, result.slug] : slug);
-  return NextResponse.json(result);
 }

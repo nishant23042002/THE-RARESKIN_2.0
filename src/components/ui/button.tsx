@@ -23,7 +23,9 @@ const sizes: Record<Size, string> = {
 };
 
 const variants: Record<Variant, string> = {
-  solid: "border-cta bg-cta text-w0 hover:bg-black",
+  // `cta-hover` is `#000` in the storefront's light theme (identical to the old
+  // `hover:bg-black`) and flips with the admin's scoped dark theme.
+  solid: "border-cta bg-cta text-w0 hover:bg-cta-hover",
   // solid white — a primary CTA sitting on a dark ground
   solidLight: "border-w0 bg-w0 text-cta hover:bg-white hover:border-white",
   // tint the fill on hover instead of swapping colours — never hides the label

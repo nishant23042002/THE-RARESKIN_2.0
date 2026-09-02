@@ -46,6 +46,7 @@ export {
   adjustProductStock,
   reorderProducts,
   duplicateProduct,
+  deleteProduct,
   bumpCatalogCache,
 } from "./catalog-actions";
 export type { CatalogActionResult } from "./catalog-actions";
@@ -69,3 +70,21 @@ export {
   updateSiteSettings,
   settingsPatchFlipsLaunchFlag,
 } from "./settings";
+
+export { listUsers, getUserForAdmin } from "./users";
+export type {
+  AdminUserRow,
+  AdminUserList,
+  AdminUserDetail,
+  AdminAuditRow,
+  ListUsersParams,
+} from "./users";
+
+export { updateUserAccount, signOutUserEverywhere } from "./user-actions";
+export type { UserActionResult } from "./user-actions";
+
+export { listStaff } from "./staff";
+export type { AdminStaffRow } from "./staff";
+
+export { createOrPromoteStaff } from "./staff-actions";
+export type { StaffActionResult } from "./staff-actions";

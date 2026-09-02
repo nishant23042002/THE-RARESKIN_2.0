@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 
 import { address as addressSchema } from "@/lib/validation/user";
 import { objectIdString } from "@/lib/validation/primitives";
@@ -7,7 +8,12 @@ import { deleteAddress, updateAddress } from "@/server/data/addresses";
 
 export const dynamic = "force-dynamic";
 
-const patchSchema = addressSchema.partial();
+// `.partial()` keeps `isDefault`'s `.default(false)` — an omitted `isDefault`
+// would then parse to `false` and silently un-set the default address. Redefine
+// it as a bare optional so an absent key stays absent.
+const patchSchema = addressSchema
+  .partial()
+  .extend({ isDefault: z.boolean().optional() });
 
 export async function PATCH(
   request: Request,

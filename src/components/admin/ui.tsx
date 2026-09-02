@@ -132,7 +132,7 @@ export function PaymentBadge({ status }: { status: string }) {
         ? "border-error/40 text-error"
         : status.includes("refund")
           ? "border-line-2 text-ink-3"
-          : "border-gilt/50 text-[#8f6118]";
+          : "border-gilt/50 text-warn";
   return (
     <span
       className={cn(

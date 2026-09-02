@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 
 import { AuthProvider } from "@/components/providers/auth-provider";
 import { SignInForm } from "@/components/auth/sign-in-form";
@@ -14,7 +13,6 @@ import { SignInForm } from "@/components/auth/sign-in-form";
  * machinery, no storefront providers.
  */
 export function HoldingStaffSignIn() {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
 
   return (
@@ -46,8 +44,12 @@ export function HoldingStaffSignIn() {
               variant="studio"
               next="/admin"
               onAuthenticated={() => {
-                router.push("/admin");
-                router.refresh();
+                // Hard reload into Studio — a full navigation is the reliable
+                // way to re-run the holding-page gate in (store)/layout.tsx now
+                // that this account is staff.
+                window.location.assign(
+                  new URL("/admin", window.location.origin).href,
+                );
               }}
             />
           </AuthProvider>

@@ -347,7 +347,7 @@ export function CouponForm({
         <button
           onClick={save}
           disabled={busy}
-          className="rounded-[3px] bg-cta px-4 py-2 text-[11px] tracking-[0.1em] text-w0 uppercase hover:bg-black disabled:opacity-40"
+          className="rounded-[3px] bg-cta px-4 py-2 text-[11px] tracking-[0.1em] text-w0 uppercase hover:bg-cta-hover disabled:opacity-40"
         >
           {busy ? "Saving…" : mode === "create" ? "Create coupon" : "Save changes"}
         </button>

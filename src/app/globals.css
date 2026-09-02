@@ -25,6 +25,7 @@
   --color-line: #dedcd5;
   --color-line-2: #cfcdc6;
   --color-cta: #17140f;
+  --color-cta-hover: #000000;
 
   /* per-fragrance accents (index dots, focus rings, spec bars) */
   --color-aurevan: #a89a7c;
@@ -37,6 +38,8 @@
   /* status — muted so they sit inside the warm palette, still WCAG AA on --color-bg */
   --color-error: #b23a2b;
   --color-ok: #4a7355;
+  /* amber "attention" — replaces the hard-coded #8f6118 in the admin */
+  --color-warn: #8f6118;
 
   /* type */
   --font-sans: var(--font-jost), ui-sans-serif, system-ui, -apple-system, sans-serif;
@@ -121,6 +124,62 @@
   body.is-locked,
   body.route-locked {
     overflow: hidden;
+  }
+
+  /* ---------------------------------------------------------------------
+     Admin ("Studio") theme — scoped to the admin shell so the storefront
+     stays on its single deliberate light theme. `data-admin-theme` is set
+     server-side from a cookie (no flash); the toggle flips it live.
+     The greyscale ramp's ends are swapped so `bg-ink text-w0`-style
+     inversions keep working without touching component markup.
+     --------------------------------------------------------------------- */
+  [data-admin-theme="light"] {
+    color-scheme: light;
+    /* explicit so a light scope nested in a dark one (e.g. the product
+       preview, which mocks the always-light storefront) restores the base
+       palette rather than inheriting the dark tokens */
+    --color-w0: #fafaf7;
+    --color-w1: #efeeea;
+    --color-w2: #cfcdc6;
+    --color-w3: #7c7a74;
+    --color-w4: #2c2a26;
+    --color-bg: #f2f1ed;
+    --color-surface: #fafaf7;
+    --color-surface-2: #eceae4;
+    --color-ink: #232120;
+    --color-ink-2: #6b6963;
+    --color-ink-3: #6c6960;
+    --color-line: #dedcd5;
+    --color-line-2: #cfcdc6;
+    --color-cta: #17140f;
+    --color-cta-hover: #000000;
+    --color-error: #b23a2b;
+    --color-ok: #4a7355;
+    --color-warn: #8f6118;
+  }
+  [data-admin-theme="dark"] {
+    color-scheme: dark;
+
+    --color-w0: #1c1b19;
+    --color-w1: #26241f;
+    --color-w2: #4c4941;
+    --color-w3: #948f86;
+    --color-w4: #ede9e2;
+
+    --color-bg: #161512;
+    --color-surface: #211f1c;
+    --color-surface-2: #2c2925;
+    --color-ink: #ede9e2;
+    --color-ink-2: #aba69c;
+    --color-ink-3: #948f86; /* WCAG AA on --color-bg (>4.5:1) */
+    --color-line: #3a3730;
+    --color-line-2: #4e4a41;
+    --color-cta: #ede9e2;
+    --color-cta-hover: #ffffff;
+
+    --color-error: #e58573;
+    --color-ok: #7fb08f;
+    --color-warn: #dba64e;
   }
 }
 

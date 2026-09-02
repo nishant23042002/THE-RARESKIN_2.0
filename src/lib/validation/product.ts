@@ -101,6 +101,20 @@ const seoUpdate = z.object({
   ogImageRef: mediaRef.nullable().optional(),
 });
 
+/**
+ * Inventory fields the catalogue **form** may change. `stock` and `sku` are
+ * deliberately absent: `stock` moves only through the ledgered `/stock`
+ * endpoint, `sku` is immutable. This is a hand-written schema (not
+ * `inventory.partial()`) because Zod keeps a field's `.default()` under
+ * `.partial()` — so `inventory.partial().parse({...})` silently re-injects
+ * `stock: 0`, which a `$set` would then write on every save.
+ */
+const inventoryUpdate = z.object({
+  lowStockThreshold: z.number().int().min(0).max(100_000).optional(),
+  trackInventory: z.boolean().optional(),
+  allowBackorder: z.boolean().optional(),
+});
+
 /** Fields shared by every product kind. */
 const productBase = z.object({
   slug,
@@ -182,7 +196,7 @@ export const productUpdateInput = z.object({
   pricing: pricing.optional(),
   volumeMl: z.number().int().positive().max(1000).optional(),
   hsnCode: hsnCode.optional(),
-  inventory: inventory.partial().optional(),
+  inventory: inventoryUpdate.optional(),
   media: mediaUpdate.optional(),
   seo: seoUpdate.optional(),
   order: z.number().int().min(0).max(9999).optional(),
@@ -210,6 +224,8 @@ export const stockAdjustmentBody = stockAdjustmentInput.omit({ productId: true }
 export const productActionInput = z.discriminatedUnion("action", [
   z.object({ action: z.literal("status"), status: z.enum(PRODUCT_STATUSES) }),
   z.object({ action: z.literal("duplicate") }),
+  // hard delete — draft-only, zero orders, sudo-gated (see catalog-actions.ts)
+  z.object({ action: z.literal("delete") }),
 ]);
 
 /** `POST /api/admin/catalogue/reorder` — the full ordering of product slugs. */

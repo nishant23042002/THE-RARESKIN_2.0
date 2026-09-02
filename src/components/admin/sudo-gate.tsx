@@ -152,7 +152,7 @@ export function SudoGate({
               type="button"
               onClick={() => code.length === OTP_LENGTH && verify(code)}
               disabled={code.length !== OTP_LENGTH || phase === "verifying"}
-              className="rounded-[3px] bg-cta px-3 py-1.5 text-[11px] tracking-[0.04em] text-w0 uppercase hover:bg-black disabled:opacity-40"
+              className="rounded-[3px] bg-cta px-3 py-1.5 text-[11px] tracking-[0.04em] text-w0 uppercase hover:bg-cta-hover disabled:opacity-40"
             >
               {phase === "verifying" ? "Checking…" : "Confirm"}
             </button>

@@ -276,6 +276,15 @@ export function ProductForm({
   const [saved, setSaved] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
 
+  // Re-sync the form when the server hands back a newer record (after a save +
+  // `router.refresh()`), so what's on screen is always the persisted truth.
+  // "Adjust state during render" — same pattern as `orders-filters.tsx`.
+  const [syncedAt, setSyncedAt] = useState(product?.updatedAt);
+  if (product && product.updatedAt !== syncedAt) {
+    setSyncedAt(product.updatedAt);
+    setF(fromDto(product));
+  }
+
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setF((prev) => ({ ...prev, [key]: value }));
     setSaved(false);
@@ -901,7 +910,7 @@ export function ProductForm({
         <button
           onClick={save}
           disabled={busy}
-          className="rounded-[3px] bg-cta px-4 py-2 text-[11px] tracking-[0.12em] text-w0 uppercase hover:bg-black disabled:opacity-40"
+          className="rounded-[3px] bg-cta px-4 py-2 text-[11px] tracking-[0.12em] text-w0 uppercase hover:bg-cta-hover disabled:opacity-40"
         >
           {busy ? "Saving…" : mode === "create" ? "Create product" : "Save changes"}
         </button>
