@@ -4,12 +4,18 @@
  */
 import type { OrderStatus } from "@/lib/validation/commerce";
 
-/** The admin ("Studio") colour theme. Persisted in the `ADMIN_THEME_COOKIE`. */
+/**
+ * The admin ("Studio") colour theme. **Dark is the default** — Studio only
+ * shows light when the staffer has explicitly chosen it. Persisted in the
+ * `ADMIN_THEME_COOKIE` (server-read, no flash) and mirrored to `localStorage`
+ * under `ADMIN_THEME_STORAGE` for the client.
+ */
 export type AdminTheme = "light" | "dark";
 export const ADMIN_THEME_COOKIE = "rrs.admin-theme";
+export const ADMIN_THEME_STORAGE = "rrs.admin-theme";
 
 export function parseAdminTheme(value: string | undefined | null): AdminTheme {
-  return value === "dark" ? "dark" : "light";
+  return value === "light" ? "light" : "dark";
 }
 
 export const ROLE_LABEL: Record<string, string> = {

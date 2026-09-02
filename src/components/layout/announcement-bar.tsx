@@ -1,29 +1,30 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useMemo, useRef, type ReactNode } from "react";
 import { gsap, useGSAP } from "@/lib/gsap";
+import { Mark } from "@/components/ui/mark";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { useScrolled } from "@/hooks/use-scrolled";
 
 /**
- * Rotating promo bar. One line, changes every few seconds with a short
- * blur-lifted fade; pauses on hover and while the tab is hidden. Collapses to
- * nothing once the visitor scrolls, and does not return — a first-impression
- * element, not a permanent fixture (matches the "Campaign" prototype).
+ * Announcement marquee. One seamless horizontal loop — the phrase group is laid
+ * down twice and GSAP slides the track exactly one group width, forever
+ * (`ease: "none"`, `repeat: -1`), so there is no jump at the seam. Pauses on
+ * hover (so a linked promo can be clicked) and while the tab is hidden (rAF
+ * stops for free). Collapses to nothing once the visitor scrolls, and does not
+ * return — a first-impression element, not a permanent fixture. Frozen under
+ * reduced motion, where it shows the messages as a static centred line.
  *
  * Messages come from Site Settings (`announcements`) when any are configured;
  * otherwise the built-in `FALLBACK` set is used.
  */
-
-const DEFAULT_ROTATE_MS = 4200;
 
 export interface AnnouncementItem {
   text: string;
   href?: string;
 }
 
-// Kept short so they hold one line down to ~360px; `truncate` is the backstop.
 const FALLBACK: ReactNode[] = [
   <>
     <b className="font-normal">Launch offer</b>
@@ -39,19 +40,41 @@ const FALLBACK: ReactNode[] = [
   <>Extrait de Parfum. Nothing lighter.</>,
 ];
 
+function Group({ items, ariaHidden }: { items: ReactNode[]; ariaHidden?: boolean }) {
+  return (
+    <div
+      className="flex flex-none items-center"
+      aria-hidden={ariaHidden || undefined}
+    >
+      {items.map((node, i) => (
+        <span key={i} className="flex flex-none items-center">
+          <span className="px-6 text-[11.5px] leading-none tracking-[0.16em] whitespace-nowrap uppercase">
+            {node}
+          </span>
+          <Mark className="w-[9px] shrink-0 text-gilt/70" strokeWidth={1.6} />
+        </span>
+      ))}
+    </div>
+  );
+}
+
 export function AnnouncementBar({
   messages,
   rotateSeconds,
 }: {
   messages?: AnnouncementItem[];
+  /** Site Settings dial — repurposed as a marquee speed control: seconds of
+   *  travel per message (higher = slower). */
   rotateSeconds?: number;
 } = {}) {
+  const perItem =
+    rotateSeconds && rotateSeconds >= 3 ? Math.min(rotateSeconds, 12) : 5.5;
   const items: ReactNode[] = useMemo(() => {
     const active = (messages ?? []).filter((m) => m.text.trim());
     if (active.length === 0) return FALLBACK;
     return active.map((m, i) =>
       m.href ? (
-        <Link key={i} href={m.href} className="hover:underline">
+        <Link key={i} href={m.href} className="hover:underline underline-offset-4">
           {m.text}
         </Link>
       ) : (
@@ -60,50 +83,36 @@ export function AnnouncementBar({
     );
   }, [messages]);
 
-  const rotateMs =
-    rotateSeconds && rotateSeconds >= 3
-      ? rotateSeconds * 1000
-      : DEFAULT_ROTATE_MS;
-
-  const [index, setIndex] = useState(0);
-  const pausedRef = useRef(false);
   const barRef = useRef<HTMLDivElement>(null);
-  const msgRef = useRef<HTMLParagraphElement>(null);
+  const trackRef = useRef<HTMLDivElement>(null);
   const reduced = useReducedMotion();
   const scrolled = useScrolled();
 
-  const count = items.length;
-  useEffect(() => {
-    if (count <= 1) return;
-    const id = window.setInterval(() => {
-      if (document.hidden || pausedRef.current) return;
-      setIndex((i) => (i + 1) % count);
-    }, rotateMs);
-    return () => window.clearInterval(id);
-  }, [count, rotateMs]);
-
-  // incoming message
+  // seamless loop — killed while scrolled away (bar height is 0) so it isn't
+  // spinning rAF off-screen; recreated when the bar returns.
   useGSAP(
     () => {
-      const el = msgRef.current;
-      if (!el) return;
-      if (reduced) {
-        gsap.fromTo(el, { opacity: 0 }, { opacity: 1, duration: 0.18 });
-        return;
-      }
-      gsap.fromTo(
-        el,
-        { opacity: 0, yPercent: 55, filter: "blur(3px)" },
-        {
-          opacity: 1,
-          yPercent: 0,
-          filter: "blur(0px)",
-          duration: 0.34,
-          ease: "power2.out",
-        },
-      );
+      const track = trackRef.current;
+      if (!track || reduced || scrolled) return;
+      gsap.set(track, { xPercent: 0 });
+      const tween = gsap.to(track, {
+        xPercent: -50,
+        duration: Math.max(16, items.length * perItem),
+        ease: "none",
+        repeat: -1,
+      });
+      const onEnter = () => tween.timeScale(0);
+      const onLeave = () => tween.timeScale(1);
+      const root = barRef.current;
+      root?.addEventListener("pointerenter", onEnter);
+      root?.addEventListener("pointerleave", onLeave);
+      return () => {
+        tween.kill();
+        root?.removeEventListener("pointerenter", onEnter);
+        root?.removeEventListener("pointerleave", onLeave);
+      };
     },
-    { dependencies: [index, reduced], scope: barRef },
+    { dependencies: [reduced, scrolled, items.length, perItem], scope: barRef },
   );
 
   // collapse once scrolled
@@ -131,24 +140,24 @@ export function AnnouncementBar({
       ref={barRef}
       role="region"
       aria-label="Announcement"
-      onPointerEnter={() => {
-        pausedRef.current = true;
-      }}
-      onPointerLeave={() => {
-        pausedRef.current = false;
-      }}
       className="relative z-[60] overflow-hidden bg-w4 font-light text-[#e9e7e0]"
       style={{ height: "var(--announce-h)" }}
     >
-      <div className="grid h-[var(--announce-h)] place-items-center">
-        <p
-          key={index}
-          ref={msgRef}
-          className="col-start-1 row-start-1 max-w-[92vw] truncate px-4 text-center text-[12px] leading-none tracking-[0.15em] uppercase"
+      {reduced ? (
+        <div className="grid h-[var(--announce-h)] place-items-center">
+          <p className="max-w-[92vw] truncate px-4 text-center text-[12px] leading-none tracking-[0.15em] uppercase">
+            {items[0]}
+          </p>
+        </div>
+      ) : (
+        <div
+          ref={trackRef}
+          className="flex h-full w-max items-center will-change-transform"
         >
-          {items[index % count]}
-        </p>
-      </div>
+          <Group items={items} />
+          <Group items={items} ariaHidden />
+        </div>
+      )}
     </div>
   );
 }

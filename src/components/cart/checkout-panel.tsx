@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Flacon } from "@/components/ui/flacon";
 import { Mark } from "@/components/ui/mark";
 import { Icon, type IconName } from "@/components/ui/icon";
-import { PaymentBadges } from "@/components/ui/payment-marks";
+import { PaymentBadges, UpiAppStrip } from "@/components/ui/payment-marks";
 import { useAuth } from "@/components/providers/auth-provider";
 import { useCart } from "@/components/providers/cart-provider";
 import { cn } from "@/lib/cn";
@@ -1012,9 +1012,27 @@ export function CheckoutPanel() {
 
         {/* ── payment ────────────────────────────────────────────── */}
         <section className="space-y-4 px-6 py-5">
-          <h3 className="text-[11px] font-medium tracking-[0.16em] text-ink uppercase">
-            Payment
-          </h3>
+          <div className="flex items-center justify-between">
+            <h3 className="text-[11px] font-medium tracking-[0.16em] text-ink uppercase">
+              Payment
+            </h3>
+            <span className="inline-flex items-center gap-1.5 text-[9px] font-medium tracking-[0.1em] text-ok uppercase">
+              <span className="relative flex size-1.5">
+                <span className="absolute inline-flex size-full animate-ping rounded-full bg-ok/50" />
+                <span className="relative inline-flex size-1.5 rounded-full bg-ok" />
+              </span>
+              Encrypted
+            </span>
+          </div>
+
+          <div className="flex items-start gap-3 border border-line bg-bg/60 px-3.5 py-3">
+            <Icon name="shield" className="mt-0.5 size-[18px] shrink-0 text-ink-2" />
+            <p className="text-[11.5px] leading-relaxed text-ink-2">
+              Processed by <span className="text-ink">Razorpay</span>, India&rsquo;s
+              largest payments gateway. Your card and UPI details are handled by
+              the bank — they never reach THE RARESKIN.
+            </p>
+          </div>
 
           {cartChanged && (
             <div className="border border-error/40 bg-error/5 px-3.5 py-2.5 text-[12px] text-ink">
@@ -1102,40 +1120,46 @@ export function CheckoutPanel() {
           )}
 
           {/* method */}
-          <div className="space-y-2">
+          <div className="space-y-2.5">
             {(["razorpay", "cod"] as PaymentMethod[]).map((m) => {
               const allowed = !quote || quote.methods.includes(m);
+              const active = method === m;
               return (
                 <label
                   key={m}
                   className={cn(
-                    "flex items-start gap-2.5 border px-3 py-3 text-[12.5px]",
+                    "block border px-3.5 py-3 text-[12.5px] transition-colors",
                     !allowed && "opacity-40",
-                    method === m ? "border-ink bg-bg" : "border-line",
+                    active ? "border-ink bg-bg" : "border-line hover:border-line-2",
                     allowed ? "cursor-pointer" : "cursor-not-allowed",
                   )}
                 >
-                  <input
-                    type="radio"
-                    name="method"
-                    value={m}
-                    checked={method === m}
-                    disabled={!allowed}
-                    onChange={() => setMethod(m)}
-                    className="mt-0.5 accent-[var(--color-ink)]"
-                  />
-                  <span className="min-w-0 flex-1 text-ink">
-                    {m === "razorpay"
-                      ? "Card · UPI · Netbanking · Wallet"
-                      : "Cash on delivery"}
-                    <span className="mt-0.5 block text-[11px] text-ink-3">
+                  <span className="flex items-start gap-2.5">
+                    <input
+                      type="radio"
+                      name="method"
+                      value={m}
+                      checked={active}
+                      disabled={!allowed}
+                      onChange={() => setMethod(m)}
+                      className="mt-0.5 accent-[var(--color-ink)]"
+                    />
+                    <span className="min-w-0 flex-1 text-ink">
                       {m === "razorpay"
-                        ? "Google Pay, PhonePe, Paytm and every UPI app. Secured by Razorpay — card details never reach us."
-                        : allowed
-                          ? "Pay the courier on arrival."
-                          : "Not available for this order."}
+                        ? "UPI · Card · Netbanking · Wallet"
+                        : "Cash on delivery"}
+                      <span className="mt-0.5 block text-[11px] text-ink-3">
+                        {m === "razorpay"
+                          ? "Pay with any UPI app, or a card you already have."
+                          : allowed
+                            ? "Pay the courier on arrival."
+                            : "Not available for this order."}
+                      </span>
                     </span>
                   </span>
+                  {m === "razorpay" && (
+                    <UpiAppStrip className="mt-2.5 pl-[26px]" />
+                  )}
                 </label>
               );
             })}
@@ -1219,13 +1243,22 @@ export function CheckoutPanel() {
               disabled={placing || paying || !canPay}
               onClick={onPay}
             >
-              <span className="tracking-[0.1em] whitespace-nowrap">
+              <span className="inline-flex items-center justify-center gap-2 tracking-[0.1em] whitespace-nowrap">
+                {!placing && !paying && (
+                  <Icon
+                    name={method === "cod" ? "banknote" : "lock"}
+                    className="size-[15px]"
+                  />
+                )}
                 {footerLabel}
                 {total != null ? ` · ${formatPaise(total)}` : ""}
               </span>
             </Button>
-            <div className="mt-2.5 flex justify-center">
+            <div className="mt-3 flex flex-col items-center gap-1.5">
               <PaymentBadges />
+              <p className="text-[9px] tracking-[0.12em] text-ink-3 uppercase">
+                256-bit encrypted &middot; Razorpay
+              </p>
             </div>
           </>
         )}

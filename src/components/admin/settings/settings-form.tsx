@@ -301,7 +301,7 @@ export function SettingsForm({ settings }: { settings: S }) {
               </button>
             )}
           </div>
-          <Field label="Rotate every (seconds)" hint="3–60">
+          <Field label="Marquee speed (seconds / message)" hint="3–12 · higher = slower">
             <TextInput
               inputMode="numeric"
               value={String(s.announcementRotateSeconds)}

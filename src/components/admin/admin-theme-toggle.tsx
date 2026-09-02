@@ -1,27 +1,65 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Icon } from "@/components/ui/icon";
-import { ADMIN_THEME_COOKIE, type AdminTheme } from "@/lib/admin";
+import {
+  ADMIN_THEME_COOKIE,
+  ADMIN_THEME_STORAGE,
+  type AdminTheme,
+} from "@/lib/admin";
 
 /**
- * Light / dark toggle for Studio. The initial value is resolved server-side
- * from the `ADMIN_THEME_COOKIE` (so there's no flash); this just flips the
- * `data-admin-theme` attribute on the shell live and re-writes the cookie.
- * Scoped to the admin — the storefront keeps its single light theme.
+ * Light / dark toggle for Studio. Dark is the default; a choice is stored in
+ * both a cookie (server-read → no flash) and `localStorage`. On the client we
+ * reconcile once against `localStorage` so a preference set on one visit sticks
+ * even if the cookie was cleared, and a stale pre-default `light` cookie with no
+ * stored choice falls back to dark. Scoped to the admin — the storefront keeps
+ * its single light theme.
  */
+
+function readStored(): AdminTheme | null {
+  try {
+    const v = localStorage.getItem(ADMIN_THEME_STORAGE);
+    return v === "light" || v === "dark" ? v : null;
+  } catch {
+    return null;
+  }
+}
+
+function persist(next: AdminTheme) {
+  document.cookie = `${ADMIN_THEME_COOKIE}=${next}; path=/; max-age=31536000; samesite=lax`;
+  try {
+    localStorage.setItem(ADMIN_THEME_STORAGE, next);
+  } catch {
+    /* private mode */
+  }
+  const root =
+    document.querySelector<HTMLElement>("[data-admin-theme]") ??
+    document.documentElement;
+  root.setAttribute("data-admin-theme", next);
+}
+
 export function AdminThemeToggle({ initial }: { initial: AdminTheme }) {
   const [theme, setTheme] = useState<AdminTheme>(initial);
 
+  // reconcile with localStorage once, during render (the "adjust state during
+  // render" pattern — no effect setState). `readStored()` is client-only, so
+  // this branch never runs on the server.
+  const [reconciled, setReconciled] = useState(false);
+  if (!reconciled && typeof window !== "undefined") {
+    setReconciled(true);
+    const want = readStored() ?? "dark";
+    if (want !== theme) setTheme(want);
+  }
+
+  // keep the cookie / localStorage / DOM attribute in sync with `theme`
+  useEffect(() => {
+    persist(theme);
+  }, [theme]);
+
   function toggle() {
-    const next: AdminTheme = theme === "dark" ? "light" : "dark";
-    setTheme(next);
-    document.cookie = `${ADMIN_THEME_COOKIE}=${next}; path=/; max-age=31536000; samesite=lax`;
-    const root =
-      document.querySelector<HTMLElement>("[data-admin-theme]") ??
-      document.documentElement;
-    root.setAttribute("data-admin-theme", next);
+    setTheme((t) => (t === "dark" ? "light" : "dark"));
   }
 
   return (

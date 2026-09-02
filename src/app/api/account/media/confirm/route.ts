@@ -40,44 +40,72 @@ export async function POST(request: Request) {
   }
   const d = parsed.data;
 
-  await dbConnect();
-  let asset;
   try {
-    asset = await MediaAsset.create({
-      cloudinaryPublicId: d.cloudinaryPublicId,
-      secureUrl: d.secureUrl,
-      format: d.format,
-      width: d.width,
-      height: d.height,
-      bytes: d.bytes,
-      folder: d.folder,
-      alt: d.alt ?? "",
-      tags: d.tags,
-      uploadedBy: new Types.ObjectId(auth.user.id),
-      usedIn:
-        d.folder === "avatars" ? [`avatar:${auth.user.id}`] : ["review:pending"],
-    });
-  } catch (e) {
-    if ((e as { code?: number }).code === 11000) {
-      asset = await MediaAsset.findOne({
-        cloudinaryPublicId: d.cloudinaryPublicId,
-      }).lean();
-    } else {
-      throw e;
-    }
-  }
-  if (!asset) {
-    return NextResponse.json({ ok: false, error: "not-saved" }, { status: 500 });
-  }
+    await dbConnect();
+    let asset: {
+      _id: unknown;
+      secureUrl: string;
+      alt?: string;
+      width: number;
+      height: number;
+    } | null = null;
 
-  return NextResponse.json({
-    ok: true,
-    ref: {
-      assetId: String(asset._id),
-      url: asset.secureUrl,
-      alt: asset.alt ?? "",
-      width: asset.width,
-      height: asset.height,
-    },
-  });
+    try {
+      const doc = await MediaAsset.create({
+        cloudinaryPublicId: d.cloudinaryPublicId,
+        secureUrl: d.secureUrl,
+        format: d.format,
+        width: d.width,
+        height: d.height,
+        bytes: d.bytes,
+        folder: d.folder,
+        alt: d.alt ?? "",
+        tags: d.tags,
+        uploadedBy: new Types.ObjectId(auth.user.id),
+        usedIn:
+          d.folder === "avatars"
+            ? [`avatar:${auth.user.id}`]
+            : ["review:pending"],
+      });
+      asset = doc;
+    } catch (e) {
+      // an earlier confirm for the same file — reuse the existing row
+      if ((e as { code?: number }).code === 11000) {
+        asset = await MediaAsset.findOne({
+          cloudinaryPublicId: d.cloudinaryPublicId,
+        }).lean();
+      } else {
+        throw e;
+      }
+    }
+
+    if (!asset) {
+      return NextResponse.json(
+        { ok: false, error: "not-saved" },
+        { status: 500 },
+      );
+    }
+
+    return NextResponse.json({
+      ok: true,
+      ref: {
+        assetId: String(asset._id),
+        url: asset.secureUrl,
+        alt: asset.alt ?? "",
+        width: asset.width,
+        height: asset.height,
+      },
+    });
+  } catch (err) {
+    console.error("[account/media] confirm failed", {
+      folder: d.folder,
+      format: d.format,
+      publicId: d.cloudinaryPublicId,
+      err,
+    });
+    return NextResponse.json(
+      { ok: false, error: "save-failed" },
+      { status: 502 },
+    );
+  }
 }

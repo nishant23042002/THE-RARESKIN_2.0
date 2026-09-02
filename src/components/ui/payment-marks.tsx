@@ -1,18 +1,27 @@
 import { cn } from "@/lib/cn";
 
 /**
- * Accepted-payment marks for the footer. Razorpay is the payment partner.
+ * Accepted-payment marks.
  *
- * Visa / Mastercard / RuPay and the BHIM (UPI) tile are the official SVGs from
- * `payments-icons-library` (Cashfree), vendored into `/public/pay/` with their
- * white backing plate stripped so the marks sit directly on the footer ground.
- * COD is not a network, so it stays a small first-party glyph.
+ * Card networks (Visa / Mastercard / RuPay) and the BHIM (UPI) tile are the
+ * official SVGs from `payments-icons-library` (Cashfree), vendored into
+ * `/public/pay/` with their white backing plate stripped. Google Pay, PhonePe
+ * and Paytm are the brand marks — every UPI app settles over UPI, so they stand
+ * in for "pay with any UPI app". COD is not a network, so it stays a small
+ * first-party glyph.
  */
-const MARKS = [
+const CARD_MARKS = [
   { src: "/pay/visa.svg", label: "Visa" },
   { src: "/pay/mastercard.svg", label: "Mastercard" },
   { src: "/pay/rupay.svg", label: "RuPay" },
   { src: "/pay/bhim.svg", label: "UPI" },
+];
+
+/** UPI apps — shown on trust surfaces so the shopper sees their app is accepted. */
+export const UPI_APP_MARKS = [
+  { src: "/pay/gpay.svg", label: "Google Pay" },
+  { src: "/pay/phonepe.svg", label: "PhonePe" },
+  { src: "/pay/paytm.svg", label: "Paytm" },
 ];
 
 export function PaymentMarks({
@@ -23,7 +32,7 @@ export function PaymentMarks({
   /** smaller marks for tight surfaces (the menu overlay) */
   compact?: boolean;
 }) {
-  const h = compact ? 19 : 30;
+  const h = compact ? 20 : 30;
   return (
     <div
       className={cn(
@@ -32,7 +41,7 @@ export function PaymentMarks({
         className,
       )}
     >
-      {MARKS.map((m) => (
+      {CARD_MARKS.map((m) => (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           key={m.label}
@@ -90,28 +99,68 @@ export function PaymentMarks({
 }
 
 /**
- * Compact payment marks for a **dark** surface (the "Place order" CTA). Each
- * mark sits on its own white tile so the network colours read at any size. The
- * UPI (BHIM) tile stands in for every UPI app — Google Pay, PhonePe, Paytm,
- * Navi and the rest all settle over UPI.
+ * A quiet strip of UPI-app marks (Google Pay · PhonePe · Paytm · UPI) for use
+ * beside the "Card · UPI · Netbanking" option in checkout — it turns an abstract
+ * label into "yes, my app works here". Each mark sits on its own white tile so
+ * the brand colours read on any ground.
  */
-export function PaymentBadges({ className }: { className?: string }) {
+export function UpiAppStrip({ className }: { className?: string }) {
+  const marks = [...UPI_APP_MARKS, { src: "/pay/bhim.svg", label: "UPI" }];
   return (
-    <span className={cn("flex items-center gap-1", className)} aria-hidden>
-      {MARKS.map((m) => (
+    <span className={cn("flex items-center gap-1.5", className)} aria-hidden>
+      {marks.map((m) => (
         <span
           key={m.label}
-          className="grid h-[18px] w-[26px] place-items-center rounded-[3px] bg-white"
+          className="grid h-[22px] w-[34px] place-items-center rounded-[4px] bg-white ring-1 ring-black/[0.06]"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={m.src}
             alt=""
-            width={22}
-            height={14}
             loading="lazy"
             decoding="async"
-            className="h-[13px] w-auto"
+            className="h-[15px] w-auto"
+          />
+        </span>
+      ))}
+    </span>
+  );
+}
+
+/**
+ * Payment marks for the checkout CTA area. Larger, clearly legible tiles — a mix
+ * of card networks and the UPI apps a shopper actually uses. Each mark sits on
+ * its own white tile so the network / brand colours read at any size against the
+ * dark footer.
+ */
+export function PaymentBadges({ className }: { className?: string }) {
+  const marks = [
+    { src: "/pay/visa.svg", label: "Visa" },
+    { src: "/pay/mastercard.svg", label: "Mastercard" },
+    { src: "/pay/rupay.svg", label: "RuPay" },
+    { src: "/pay/gpay.svg", label: "Google Pay" },
+    { src: "/pay/phonepe.svg", label: "PhonePe" },
+    { src: "/pay/paytm.svg", label: "Paytm" },
+  ];
+  return (
+    <span
+      className={cn("flex flex-wrap items-center justify-center gap-1.5", className)}
+      aria-hidden
+    >
+      {marks.map((m) => (
+        <span
+          key={m.label}
+          className="grid h-[26px] w-[38px] place-items-center rounded-[4px] bg-white shadow-[0_1px_2px_rgba(0,0,0,0.18)]"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={m.src}
+            alt=""
+            width={30}
+            height={18}
+            loading="lazy"
+            decoding="async"
+            className="h-[17px] w-auto"
           />
         </span>
       ))}

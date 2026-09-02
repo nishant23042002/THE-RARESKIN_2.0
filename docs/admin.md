@@ -224,8 +224,8 @@ document that predates a field still gets its default.
 | --- | --- |
 | `flags.storeLive` / `flags.maintenanceMode` | `(store)/layout.tsx` shows a **holding page** (`holding-page.tsx`) for the whole storefront — *except* signed-in staff, who keep working it. The holding page carries its own minimal "team member sign-in" (`holding-staff-signin.tsx`) since the normal modal isn't mounted there. `/admin` is a separate route group and is never gated. |
 | `flags.checkoutEnabled` / `codEnabled` / etc. | consumed by the checkout engine + storefront (unchanged from before). |
-| `announcements` / `announcementRotateSeconds` | `<AnnouncementBar>` rotates the configured active messages; **clear them all** to fall back to the built-in set. |
-| `social.*` | a "Follow" block in the footer + the holding page (`social-links.tsx`) — only the links you set appear. |
+| `announcements` / `announcementRotateSeconds` | `<AnnouncementBar>` runs the configured active messages as a seamless horizontal **marquee** (∧-separated), paused on hover, collapsed on scroll; **clear them all** to fall back to the built-in set. `announcementRotateSeconds` is repurposed as a speed dial — seconds of travel per message (3–12; higher = slower). |
+| `social.*` | full-colour brand marks in the footer + holding page (`social-links.tsx`, assets in `/public/social/`) — every network shows, links you set are live and the rest sit dimmed. |
 | `shipping` / `cod` / `gst` / `contact` | already flow through the checkout engine + email (`getSiteSettings` in `src/server/commerce/orders.ts`, `order-context.ts`). |
 
 ## Customers (G3b)
