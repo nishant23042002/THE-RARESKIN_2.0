@@ -16,39 +16,39 @@ import type { FeaturedReview } from "@/server/data/reviews";
  * Homepage social proof as two slow, opposing marquee rows — same seamless-loop
  * mechanic as `cart-marquee.tsx` (a `w-max` track holding the card group twice,
  * GSAP slides it exactly one group width forever, `ease: "none"`, `repeat: -1`),
- * one drifting left and one right so the band fills the viewport without dead
- * space. Pauses on hover / focus so the cards stay clickable. Under reduced
- * motion each row becomes a plain swipeable strip.
+ * one drifting left and one right. The band is sized by its content — two
+ * compact card rows — not the viewport. Pauses on hover / focus so the cards
+ * stay clickable. Under reduced motion each row becomes a plain swipeable strip.
  */
 
 function ReviewCard({ r }: { r: FeaturedReview }) {
   const photo = r.photos[0];
   const inner = (
-    <div className="flex h-full w-[clamp(288px,86vw,400px)] shrink-0 flex-col rounded-[5px] border border-line bg-surface p-[clamp(20px,2.6vw,30px)]">
-      <div className="flex items-center gap-3">
-        <Avatar src={r.avatarUrl} initials={r.initials} size={40} />
+    <div className="flex h-full w-[clamp(272px,78vw,352px)] shrink-0 flex-col rounded-[5px] border border-line bg-surface p-[clamp(16px,2vw,22px)]">
+      <div className="flex items-center gap-2.5">
+        <Avatar src={r.avatarUrl} initials={r.initials} size={34} />
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[12.5px] text-ink">{r.authorName}</p>
-          <p className="text-[9.5px] tracking-[0.12em] text-ink-3 uppercase">
+          <p className="truncate text-[12px] text-ink">{r.authorName}</p>
+          <p className="text-[9px] tracking-[0.12em] text-ink-3 uppercase">
             Verified Buyer
           </p>
         </div>
+        <Stars value={r.rating} starClassName="size-3" />
         {photo && (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={cloudinaryVariant(photo.url, { w: 160, h: 160, fill: true }) ?? photo.url}
+            src={cloudinaryVariant(photo.url, { w: 128, h: 128, fill: true }) ?? photo.url}
             alt=""
             loading="lazy"
             decoding="async"
-            className="size-11 shrink-0 rounded-[3px] border border-line-2 object-cover"
+            className="size-9 shrink-0 rounded-[3px] border border-line-2 object-cover"
           />
         )}
       </div>
-      <Stars value={r.rating} className="mt-3.5" starClassName="size-3.5" />
-      <p className="serif-italic mt-3 line-clamp-4 flex-1 text-[clamp(1rem,1.7vw,1.15rem)] leading-[1.55] text-ink-2">
+      <p className="serif-italic mt-2.5 line-clamp-3 flex-1 text-[clamp(0.92rem,1.4vw,1.02rem)] leading-[1.5] text-ink-2">
         &ldquo;{r.body}&rdquo;
       </p>
-      <p className="mt-4 text-[10.5px] tracking-[0.08em] text-ink-3 uppercase">
+      <p className="mt-2.5 text-[9.5px] tracking-[0.08em] text-ink-3 uppercase">
         {r.productName}
       </p>
     </div>
@@ -80,7 +80,7 @@ function Track({
   const grp = (key: string, hidden: boolean) => (
     <div key={key} className="flex shrink-0" aria-hidden={hidden || undefined}>
       {cards.map((r, i) => (
-        <div key={`${key}-${r.id}-${i}`} className="mr-4 shrink-0">
+        <div key={`${key}-${r.id}-${i}`} className="mr-3 shrink-0">
           <ReviewCard r={r} />
         </div>
       ))}
@@ -151,11 +151,11 @@ export function Reviews({ reviews }: { reviews: FeaturedReview[] }) {
   };
 
   return (
-    <section className="flex min-h-svh flex-col justify-center scroll-mt-[calc(var(--announce-h)+var(--header-h)+16px)] border-t border-line py-[clamp(48px,9vh,110px)]">
+    <section className="scroll-mt-[calc(var(--announce-h)+var(--header-h)+16px)] border-t border-line py-[clamp(40px,7vh,76px)]">
       <Container>
-        <Reveal className="mb-[clamp(28px,5vh,56px)]">
+        <Reveal className="mb-[clamp(22px,4vh,40px)]">
           <span className="eyebrow mb-3 block">In their words</span>
-          <h2 className="text-[clamp(1.9rem,4vw,2.9rem)]">
+          <h2 className="text-[clamp(1.8rem,3.4vw,2.6rem)]">
             Worn, not just bought.
           </h2>
         </Reveal>
@@ -169,11 +169,11 @@ export function Reviews({ reviews }: { reviews: FeaturedReview[] }) {
         onBlurCapture={() => setPaused(false)}
       >
         {reduced ? (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {[cardsA, cardsB].map((set, r) => (
               <div
                 key={r}
-                className="no-scrollbar flex gap-4 overflow-x-auto px-[clamp(16px,4vw,64px)] [scroll-snap-type:x_proximity]"
+                className="no-scrollbar flex gap-3 overflow-x-auto px-[clamp(16px,4vw,64px)] [scroll-snap-type:x_proximity]"
               >
                 {set.map((rv, i) => (
                   <div key={`${rv.id}-${i}`} className="[scroll-snap-align:start]">
@@ -184,7 +184,7 @@ export function Reviews({ reviews }: { reviews: FeaturedReview[] }) {
             ))}
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3">
             <Track cards={cardsA} dir="left" duration={44} trackRef={rowA} />
             <Track cards={cardsB} dir="right" duration={52} trackRef={rowB} />
           </div>
