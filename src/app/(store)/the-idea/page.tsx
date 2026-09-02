@@ -3,6 +3,8 @@ import { Container } from "@/components/ui/container";
 import { Mark } from "@/components/ui/mark";
 import { PageIntro } from "@/components/layout/page-intro";
 import { pageMeta } from "@/lib/seo";
+import { cloudinaryVariant } from "@/lib/catalog";
+import { getSiteSettings } from "@/server/data/settings";
 
 export const metadata = pageMeta({
   title: "Our Story",
@@ -30,20 +32,31 @@ const PROMISE = [
   "Exceptional customer experience",
 ];
 
-function FounderCard() {
+function FounderCard({ src }: { src?: string }) {
   return (
     <figure className="overflow-hidden rounded-[4px] border border-line">
       <div
-        className="relative flex aspect-[4/5] items-center justify-center"
+        className="relative flex aspect-[4/5] items-center justify-center overflow-hidden"
         style={{
           background:
             "linear-gradient(160deg, var(--color-w0), var(--color-w1) 55%, var(--color-w2))",
         }}
       >
-        <Mark className="w-16 text-ink/15" />
-        <span className="absolute bottom-3 left-3 text-[9px] tracking-[0.14em] text-ink-3 uppercase">
-          [Founder portrait]
-        </span>
+        {src ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={cloudinaryVariant(src, { w: 760, h: 950, fill: true }) ?? src}
+            alt="Vijay More, founder of THE RARESKIN"
+            className="absolute inset-0 size-full object-cover"
+          />
+        ) : (
+          <>
+            <Mark className="w-16 text-ink/15" />
+            <span className="absolute bottom-3 left-3 text-[9px] tracking-[0.14em] text-ink-3 uppercase">
+              [Founder portrait]
+            </span>
+          </>
+        )}
       </div>
       <figcaption className="flex items-baseline justify-between gap-3 border-t border-line px-4 py-3">
         <span className="text-[13px] tracking-[0.08em]">Vijay More</span>
@@ -55,7 +68,8 @@ function FounderCard() {
   );
 }
 
-export default function OurStoryPage() {
+export default async function OurStoryPage() {
+  const settings = await getSiteSettings();
   return (
     <main id="main">
       <PageIntro
@@ -69,7 +83,7 @@ export default function OurStoryPage() {
       <section className="border-t border-line">
         <Container className="grid gap-[clamp(28px,6vw,56px)] py-[clamp(52px,9vw,110px)] lg:grid-cols-[minmax(0,340px)_minmax(0,1fr)] lg:gap-[clamp(44px,7vw,92px)]">
           <div className="lg:sticky lg:top-[calc(var(--announce-h)+var(--header-h)+40px)] lg:self-start">
-            <FounderCard />
+            <FounderCard src={settings.founderPortrait?.url} />
           </div>
 
           <div>

@@ -13,9 +13,11 @@ import {
   Row,
 } from "@/components/admin/field";
 import { InfoTip } from "@/components/admin/info-tip";
+import { UploadField } from "@/components/admin/media/upload-field";
 import { Icon } from "@/components/ui/icon";
 import { SudoGate } from "@/components/admin/sudo-gate";
 import { cn } from "@/lib/cn";
+import type { MediaRefDTO } from "@/server/admin";
 import { toPaise, toRupees } from "@/lib/money";
 import {
   siteSettingsUpdateInput,
@@ -96,6 +98,7 @@ export function SettingsForm({ settings }: { settings: S }) {
       announcements: s.announcements.filter((a) => a.text.trim()),
       announcementRotateSeconds: s.announcementRotateSeconds,
       campaign: s.campaign,
+      founderPortrait: s.founderPortrait,
       shipping: s.shipping,
       cod: s.cod,
       gst: s.gst,
@@ -385,6 +388,20 @@ export function SettingsForm({ settings }: { settings: S }) {
               />
             </Field>
           </Row>
+        </FormSection>
+
+        {/* ── Founder ─────────────────────────────────────────────── */}
+        <FormSection
+          title="Founder"
+          description="The photo shown on the homepage “first letter” card and the /the-idea page. Portrait, about 4:5 (e.g. 1000×1250+). Leave empty for the placeholder panel."
+        >
+          <UploadField
+            label="Founder portrait"
+            folder="content"
+            value={(s.founderPortrait ?? null) as MediaRefDTO | null}
+            onChange={(v) => patch("founderPortrait", v)}
+            className="max-w-[200px]"
+          />
         </FormSection>
 
         {/* ── Shipping ────────────────────────────────────────────── */}

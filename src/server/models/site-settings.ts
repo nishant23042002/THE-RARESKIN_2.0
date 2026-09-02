@@ -2,6 +2,18 @@ import { Schema, model, models, type Model, type Types } from "mongoose";
 
 import type { SiteSettingsInput } from "@/lib/validation/site-settings";
 
+/** One embedded reference to a Cloudinary asset (mirrors `mediaRef` in Zod). */
+const mediaRefSchema = new Schema(
+  {
+    assetId: { type: Schema.Types.ObjectId, ref: "MediaAsset", required: true },
+    url: { type: String, required: true },
+    alt: { type: String, default: "" },
+    width: Number,
+    height: Number,
+  },
+  { _id: false },
+);
+
 /**
  * The one editable configuration document (`key: "singleton"`). Shape mirrors
  * `siteSettingsInput` in the validation layer; that Zod schema is the contract,
@@ -47,6 +59,8 @@ const siteSettingsSchema = new Schema<SiteSettingsDoc>(
       href: { type: String, default: "" },
       endsAt: { type: String, default: "" },
     },
+
+    founderPortrait: { type: mediaRefSchema, default: null },
 
     shipping: {
       freeAbovePaise: { type: Number, default: 0 },

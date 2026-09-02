@@ -69,7 +69,10 @@ const inventory = z.object({
 });
 
 const media = z.object({
+  /** homepage hero banner — landscape (16:9) */
   hero: mediaRef.optional(),
+  /** homepage hero banner — mobile crop (9:16) */
+  heroPortrait: mediaRef.optional(),
   flat: mediaRef.optional(),
   box: mediaRef.optional(),
   gallery: z.array(mediaRef).max(12).default([]),
@@ -89,6 +92,7 @@ const seo = z.object({
  */
 const mediaUpdate = z.object({
   hero: mediaRef.nullable().optional(),
+  heroPortrait: mediaRef.nullable().optional(),
   flat: mediaRef.nullable().optional(),
   box: mediaRef.nullable().optional(),
   gallery: z.array(mediaRef).max(12).optional(),

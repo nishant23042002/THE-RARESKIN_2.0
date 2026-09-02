@@ -1,5 +1,10 @@
 import type { CSSProperties } from "react";
-import { FRAGRANCE_PALETTE, type FragranceSlug } from "@/lib/catalog";
+import {
+  cloudinaryVariant,
+  FRAGRANCE_PALETTE,
+  type FragranceImages,
+  type FragranceSlug,
+} from "@/lib/catalog";
 
 interface HeroArt {
   theme: "light" | "dark";
@@ -62,70 +67,108 @@ export const HERO_ART: Record<FragranceSlug, HeroArt> = {
 };
 
 /**
- * Art-directed backdrop for a hero slide: a lit gradient ground, raking light
- * bands, the campaign flacon (`#cbtl`, tinted to the juice), a grain pass and a
- * directional scrim. Placeholder for real campaign photography — swap the
- * `<svg>` for `<Image fill>` when it lands, the rest stays.
+ * Art-directed backdrop for a hero slide.
+ *
+ * When a hero banner has been uploaded in the admin (`images.hero`), it fills
+ * the frame as a full-bleed `object-cover` photograph — a portrait crop
+ * (`images.heroPortrait`) swaps in on phones. The `bloom` + `scrim` gradients
+ * stay layered on top so the headline always has enough contrast, whatever the
+ * photo does in that corner.
+ *
+ * With no banner yet, it falls back to the vector placeholder scene: a lit
+ * gradient ground, raking light bands and the campaign flacon tinted to the
+ * juice.
  */
-export function HeroScene({ fragrance }: { fragrance: FragranceSlug }) {
+export function HeroScene({
+  fragrance,
+  images,
+}: {
+  fragrance: FragranceSlug;
+  images?: FragranceImages;
+}) {
   const art = HERO_ART[fragrance];
   const juice = FRAGRANCE_PALETTE[fragrance].juice;
+  const banner = images?.hero ?? null;
+  const bannerPortrait = images?.heroPortrait ?? images?.hero ?? null;
 
   return (
     <div
       className="absolute inset-0 overflow-hidden"
       style={{ background: art.bg }}
     >
-      <div className="absolute inset-0" style={{ background: art.bloom }} />
-      <svg
-        className="absolute inset-0 h-full w-full"
-        viewBox="0 0 1600 1000"
-        preserveAspectRatio="xMidYMid slice"
-        aria-hidden
-      >
-        <g opacity={art.bandOpacity}>
-          <rect
-            x="180"
-            y="-200"
-            width="300"
-            height="1500"
-            transform="rotate(20 800 500)"
-            fill={art.bandTone}
-            opacity="0.55"
+      {banner ? (
+        <picture>
+          {bannerPortrait && (
+            <source
+              media="(max-width: 767px)"
+              srcSet={cloudinaryVariant(bannerPortrait, { w: 1400 }) ?? bannerPortrait}
+            />
+          )}
+          <img
+            src={cloudinaryVariant(banner, { w: 2880 }) ?? banner}
+            alt=""
+            fetchPriority="high"
+            decoding="async"
+            className="absolute inset-0 h-full w-full object-cover"
           />
-          <rect
-            x="620"
-            y="-200"
-            width="150"
-            height="1500"
-            transform="rotate(20 800 500)"
-            fill={art.bandTone}
-            opacity="0.3"
-          />
-          <rect
-            x="1140"
-            y="-200"
-            width="230"
-            height="1500"
-            transform="rotate(20 800 500)"
-            fill={art.bandTone}
-            opacity="0.18"
-          />
-        </g>
-        <g transform={`translate(${art.bottleX} 830)`}>
-          <use
-            href="#cbtl"
-            style={{ "--cj": juice } as CSSProperties}
-            transform={`scale(${art.bottleScale})`}
-          />
-        </g>
-        <rect
-          width="1600"
-          height="1000"
-          filter="url(#grain)"
-          opacity="0.05"
+        </picture>
+      ) : (
+        <>
+          <div className="absolute inset-0" style={{ background: art.bloom }} />
+          <svg
+            className="absolute inset-0 h-full w-full"
+            viewBox="0 0 1600 1000"
+            preserveAspectRatio="xMidYMid slice"
+            aria-hidden
+          >
+            <g opacity={art.bandOpacity}>
+              <rect
+                x="180"
+                y="-200"
+                width="300"
+                height="1500"
+                transform="rotate(20 800 500)"
+                fill={art.bandTone}
+                opacity="0.55"
+              />
+              <rect
+                x="620"
+                y="-200"
+                width="150"
+                height="1500"
+                transform="rotate(20 800 500)"
+                fill={art.bandTone}
+                opacity="0.3"
+              />
+              <rect
+                x="1140"
+                y="-200"
+                width="230"
+                height="1500"
+                transform="rotate(20 800 500)"
+                fill={art.bandTone}
+                opacity="0.18"
+              />
+            </g>
+            <g transform={`translate(${art.bottleX} 830)`}>
+              <use
+                href="#cbtl"
+                style={{ "--cj": juice } as CSSProperties}
+                transform={`scale(${art.bottleScale})`}
+              />
+            </g>
+            <rect width="1600" height="1000" filter="url(#grain)" opacity="0.05" />
+          </svg>
+        </>
+      )}
+
+      {/* bloom + scrim always sit on top so the headline keeps its contrast */}
+      {banner && (
+        <div
+          className="absolute inset-0"
+          style={{ background: art.bloom, mixBlendMode: "soft-light" }}
         />
-      </svg>
+      )}
       <div className="absolute inset-0" style={{ background: art.scrim }} />
     </div>
   );

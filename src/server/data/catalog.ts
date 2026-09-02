@@ -42,6 +42,7 @@ function realPackshot(url: string | undefined): string | null {
 function imagesFor(doc: ProductDoc): FragranceImages {
   return {
     hero: realPackshot(doc.media?.hero?.url),
+    heroPortrait: realPackshot(doc.media?.heroPortrait?.url),
     flat: realPackshot(doc.media?.flat?.url),
     box: realPackshot(doc.media?.box?.url),
   };

@@ -42,7 +42,11 @@ export const getSiteSettings = unstable_cache(
     await dbConnect();
     const doc = await SiteSettings.findOne({ key: "singleton" }).lean();
     if (!doc) return fallbackSettings();
-    const parsed = siteSettingsInput.safeParse(doc);
+    // serialise first — a lean doc carries ObjectId / Date instances (e.g. the
+    // `founderPortrait.assetId` ref) that the isomorphic Zod schema rejects.
+    const parsed = siteSettingsInput.safeParse(
+      JSON.parse(JSON.stringify(doc)),
+    );
     return parsed.success ? parsed.data : fallbackSettings();
   },
   ["site-settings:singleton"],

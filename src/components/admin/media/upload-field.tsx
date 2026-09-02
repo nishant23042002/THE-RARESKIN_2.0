@@ -5,6 +5,7 @@ import { useRef, useState, type ReactNode } from "react";
 import { Icon } from "@/components/ui/icon";
 import { InfoTip } from "@/components/admin/info-tip";
 import { cn } from "@/lib/cn";
+import type { MediaFolder } from "@/lib/validation/media";
 import type { MediaRefDTO } from "@/server/admin";
 
 /**
@@ -30,6 +31,7 @@ export function UploadField({
   value,
   onChange,
   className,
+  folder = "products",
 }: {
   label: string;
   /** a "where does this image go" note behind a `?` on hover */
@@ -37,6 +39,8 @@ export function UploadField({
   value: MediaRefDTO | null;
   onChange: (ref: MediaRefDTO | null) => void;
   className?: string;
+  /** Cloudinary folder — pins where the file lands + the confirm record */
+  folder?: MediaFolder;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState<null | "signing" | "uploading" | "saving">(null);
@@ -53,7 +57,7 @@ export function UploadField({
       const signRes = await fetch("/api/admin/media/sign", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ folder: "products" }),
+        body: JSON.stringify({ folder }),
       });
       const signJson = await signRes.json();
       if (!signJson.ok) {
@@ -102,7 +106,7 @@ export function UploadField({
           width: cloud.width,
           height: cloud.height,
           bytes: cloud.bytes,
-          folder: "products",
+          folder,
         }),
       });
       const confirmJson = await confirmRes.json();

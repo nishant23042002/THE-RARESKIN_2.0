@@ -322,10 +322,14 @@ before going live:
   "Bottled in Roha, Maharashtra". Confirm each with the perfumer / QA before
   launch and adjust the copy in that file. The animal-testing line is
   deliberately omitted until the position is set (see FAQ item above).
-- **Founder portrait** — two placeholders await the real photo: the `/the-idea`
-  page card, and the homepage "first letter" card (`FounderPortrait` in
-  `home/founder-note.tsx` — drop a file at `/public/brand/founder.jpg` and swap
-  the panel body for the `<img>` noted in the comment).
+- **Founder portrait** — a placeholder panel until a photo is uploaded in
+  **Admin → Settings → Founder**. Once set it fills the homepage "first letter"
+  card (left column) and the `/the-idea` card. Portrait, ~4:5.
+- **Homepage hero banners** — each fragrance's homepage-carousel slide shows the
+  vector placeholder scene until a banner is uploaded in
+  **Admin → Catalogue → \<fragrance\> → Homepage hero banner** (a 16:9 desktop
+  crop + an optional 9:16 mobile crop). The `bloom`/`scrim` overlays keep the
+  headline legible on top.
 - **Packaging copy** — the PDP "What's in the box" answer describes a
   recyclable carton + a wear card; confirm this matches the actual packaging.
 - **Reviews** — verified buyers review a product from **`/account/reviews`**

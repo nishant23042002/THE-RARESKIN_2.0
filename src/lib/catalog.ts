@@ -37,8 +37,10 @@ export function formatINR(rupees: number): string {
 }
 
 export interface FragranceImages {
-  /** full-bleed campaign / hero scene — null until real photography is attached */
+  /** homepage hero banner — landscape (16:9); null until one is uploaded */
   hero: string | null;
+  /** homepage hero banner — mobile crop (9:16); falls back to `hero` */
+  heroPortrait: string | null;
   /** packshot on a plain ground — null until real photography is attached */
   flat: string | null;
   /** carton or lifestyle — null until real photography is attached */

@@ -16,6 +16,7 @@ import {
   pincode,
   shortText,
 } from "./primitives";
+import { mediaRef } from "./media";
 
 const announcementMessage = z.object({
   text: shortText(140),
@@ -125,6 +126,8 @@ export const siteSettingsInput = z.object({
   announcements: z.array(announcementMessage).max(8).default([]),
   announcementRotateSeconds: z.number().int().min(3).max(60).default(6),
   campaign: campaignSettings.prefault({}),
+  /** the founder photo shown on the homepage "first letter" card + /the-idea */
+  founderPortrait: mediaRef.nullable().default(null),
   shipping: shippingSettings.prefault({}),
   cod: codSettings.prefault({}),
   gst: gstSettings.prefault({}),
@@ -148,6 +151,7 @@ export const siteSettingsUpdateInput = z.object({
   announcements: z.array(announcementMessage).max(8).optional(),
   announcementRotateSeconds: z.number().int().min(3).max(60).optional(),
   campaign: campaignSettings.optional(),
+  founderPortrait: mediaRef.nullable().optional(),
   shipping: shippingSettings.optional(),
   cod: codSettings.optional(),
   gst: gstSettings.optional(),

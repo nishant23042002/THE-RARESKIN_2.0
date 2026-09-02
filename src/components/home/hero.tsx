@@ -265,7 +265,7 @@ export function Hero({ fragrances }: { fragrances: Fragrance[] }) {
               aria-hidden={i !== active}
               className="relative h-full w-full flex-none snap-start snap-always"
             >
-              <HeroScene fragrance={f.slug} />
+              <HeroScene fragrance={f.slug} images={f.images} />
               <div
                 className={cn(
                   "absolute inset-0 flex flex-col justify-end px-[clamp(24px,6vw,88px)] pb-[clamp(88px,12vh,132px)]",

@@ -68,6 +68,7 @@ interface FormState {
   metaTitle: string;
   metaDescription: string;
   hero: MediaSlot;
+  heroPortrait: MediaSlot;
   flat: MediaSlot;
   box: MediaSlot;
   og: MediaSlot;
@@ -118,6 +119,7 @@ function fromDto(p: ProductEditDTO): FormState {
     metaTitle: p.seo.metaTitle,
     metaDescription: p.seo.metaDescription,
     hero: p.media.hero,
+    heroPortrait: p.media.heroPortrait,
     flat: p.media.flat,
     box: p.media.box,
     og: p.media.og,
@@ -170,6 +172,7 @@ const EMPTY: FormState = {
   metaTitle: "",
   metaDescription: "",
   hero: null,
+  heroPortrait: null,
   flat: null,
   box: null,
   og: null,
@@ -249,7 +252,8 @@ const INFO = {
 
 const IMG_INFO = {
   flat: "The bottle on a plain background. This is the main storefront image — it replaces the vector flacon on the product-page gallery and the home collection card. Portrait, about 4:5 (e.g. 1200×1500+). JPG / PNG / WebP, ≤ 10 MB.",
-  hero: "A full-bleed campaign or lifestyle shot. Shows as a gallery slide after the packshot, and stands in for the packshot when there isn't one.",
+  hero: "The homepage hero-carousel banner for this fragrance — the full-screen image behind the headline on the first slide. Landscape 16:9 (generate at least 2560×1440, ideal 3840×2160). Keep the bottle centred with wide margins and the lower-left corner calm for the headline. Also used as a product-page gallery slide.",
+  heroPortrait: "The mobile crop of the hero banner — shown on phones (under ~768px) where the 16:9 image would be cut too tight. Portrait 9:16 (1440×2560+). Same scene, more head- and foot-room. Falls back to the landscape banner if left empty.",
   box: "The carton or a close-up detail. Adds another slide to the product-page gallery.",
   og: "The image used in link previews when this product's page is shared on social / messaging. Landscape, 1200×630. Falls back to the site default if empty.",
   gallery:
@@ -359,6 +363,7 @@ export function ProductForm({
       hsnCode: f.hsnCode.trim(),
       media: {
         hero: f.hero,
+        heroPortrait: f.heroPortrait,
         flat: f.flat,
         box: f.box,
         og: f.og,
@@ -694,10 +699,29 @@ export function ProductForm({
           )}
         </FormSection>
 
-        <FormSection title="Images" description="A photo replaces the vector flacon on the product-page gallery and the collection card.">
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <FormSection
+          title="Homepage hero banner"
+          description="The full-screen image behind the headline on this fragrance's slide of the homepage carousel. Upload a landscape crop for desktop and a portrait crop for phones."
+        >
+          <div className="grid grid-cols-2 gap-3 sm:max-w-[360px]">
+            <UploadField
+              label="Desktop · 16:9"
+              info={IMG_INFO.hero}
+              value={f.hero}
+              onChange={(v) => set("hero", v)}
+            />
+            <UploadField
+              label="Mobile · 9:16"
+              info={IMG_INFO.heroPortrait}
+              value={f.heroPortrait}
+              onChange={(v) => set("heroPortrait", v)}
+            />
+          </div>
+        </FormSection>
+
+        <FormSection title="Product images" description="A photo replaces the vector flacon on the product-page gallery and the collection card.">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <UploadField label="Flat (packshot)" info={IMG_INFO.flat} value={f.flat} onChange={(v) => set("flat", v)} />
-            <UploadField label="Hero" info={IMG_INFO.hero} value={f.hero} onChange={(v) => set("hero", v)} />
             <UploadField label="Box" info={IMG_INFO.box} value={f.box} onChange={(v) => set("box", v)} />
             <UploadField label="OG image" info={IMG_INFO.og} value={f.og} onChange={(v) => set("og", v)} />
           </div>

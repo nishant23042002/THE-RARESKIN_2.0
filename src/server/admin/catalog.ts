@@ -160,6 +160,7 @@ export interface ProductEditDTO {
   };
   media: {
     hero: MediaRefDTO | null;
+    heroPortrait: MediaRefDTO | null;
     flat: MediaRefDTO | null;
     box: MediaRefDTO | null;
     og: MediaRefDTO | null;
@@ -231,6 +232,7 @@ export async function getProductForEdit(
     },
     media: {
       hero: mediaRefDto(d.media?.hero),
+      heroPortrait: mediaRefDto(d.media?.heroPortrait),
       flat: mediaRefDto(d.media?.flat),
       box: mediaRefDto(d.media?.box),
       og: mediaRefDto(d.media?.og),

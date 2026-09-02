@@ -99,7 +99,7 @@ export default async function HomePage() {
       <DiscoverySet set={discoverySet} fragrances={fragrances} />
       <WhyExtrait />
       <MadeDeliberately />
-      <FounderNote />
+      <FounderNote portraitUrl={settings.founderPortrait?.url} />
       <Reviews reviews={featuredReviews} />
       <InstagramStrip
         photos={strip}

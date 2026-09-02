@@ -75,6 +75,7 @@ export interface ProductDoc {
 
   media: {
     hero?: MediaRefSub;
+    heroPortrait?: MediaRefSub;
     flat?: MediaRefSub;
     box?: MediaRefSub;
     gallery: MediaRefSub[];
@@ -172,6 +173,7 @@ const productSchema = new Schema<ProductDoc>(
 
     media: {
       hero: mediaRefSchema,
+      heroPortrait: mediaRefSchema,
       flat: mediaRefSchema,
       box: mediaRefSchema,
       gallery: { type: [mediaRefSchema], default: [] },
