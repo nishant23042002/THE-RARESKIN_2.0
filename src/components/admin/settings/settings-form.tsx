@@ -8,13 +8,14 @@ import {
   Field,
   TextInput,
   TextArea,
-  Checkbox,
+  Toggle,
   FormSection,
   Row,
 } from "@/components/admin/field";
 import { InfoTip } from "@/components/admin/info-tip";
 import { Icon } from "@/components/ui/icon";
 import { SudoGate } from "@/components/admin/sudo-gate";
+import { cn } from "@/lib/cn";
 import { toPaise, toRupees } from "@/lib/money";
 import {
   siteSettingsUpdateInput,
@@ -23,30 +24,40 @@ import {
 
 type S = SiteSettingsInput;
 
-const FLAG_LABELS: Record<keyof S["flags"], { label: string; info: string }> = {
+type FlagCopy = { label: string; on: string; off: string; sudo?: boolean };
+
+const FLAG_LABELS: Record<keyof S["flags"], FlagCopy> = {
   storeLive: {
     label: "Store live",
-    info: "Master switch. Off → every storefront URL shows a coming-soon holding page. Changing this needs a fresh phone check.",
+    on: "The storefront is public — anyone can browse and buy.",
+    off: "Every storefront page shows a coming-soon holding screen. Signed-in staff still see the real site.",
+    sudo: true,
   },
   checkoutEnabled: {
     label: "Checkout enabled",
-    info: "Off → the cart shows 'opens with launch' and no orders can be placed.",
+    on: "Shoppers can place orders.",
+    off: "The cart shows “opens with launch” — no orders go through.",
   },
   codEnabled: {
     label: "Cash on delivery",
-    info: "Off → COD is hidden at checkout (online payment only).",
+    on: "Cash on delivery is offered as a payment method at checkout.",
+    off: "Checkout is online-payment only.",
   },
   reviewsEnabled: {
     label: "Reviews",
-    info: "Shows the reviews block on the PDP + homepage once you have verified-buyer reviews.",
+    on: "The reviews block shows on product pages and the homepage.",
+    off: "Reviews are hidden across the storefront.",
   },
   discoverySetEnabled: {
     label: "Discovery Set",
-    info: "Off → the Discovery Set is hidden from the storefront and can't be bought.",
+    on: "The Discovery Set is listed and can be bought.",
+    off: "The Discovery Set is hidden from the storefront.",
   },
   maintenanceMode: {
     label: "Maintenance mode",
-    info: "On → the storefront shows a 'back shortly' page for everyone. Use for a short planned outage. Needs a fresh phone check.",
+    on: "Everyone sees a “back shortly” page — for a short planned outage.",
+    off: "The storefront runs normally.",
+    sudo: true,
   },
 };
 
@@ -152,21 +163,66 @@ export function SettingsForm({ settings }: { settings: S }) {
         {/* ── Launch switches ─────────────────────────────────────── */}
         <FormSection
           title="Launch switches"
-          description="What the storefront does. Store live / maintenance mode need a phone re-check on save."
+          description="Each switch flips one behaviour on the storefront. The bold line is what it does right now."
         >
           <div className="grid gap-2.5 sm:grid-cols-2">
-            {(Object.keys(FLAG_LABELS) as (keyof S["flags"])[]).map((f) => (
-              <div key={f} className="flex items-center gap-1.5">
-                <Checkbox
-                  label={FLAG_LABELS[f].label}
-                  checked={s.flags[f]}
-                  onChange={(e) =>
-                    patchGroup("flags", { [f]: e.target.checked })
-                  }
-                />
-                <InfoTip>{FLAG_LABELS[f].info}</InfoTip>
-              </div>
-            ))}
+            {(Object.keys(FLAG_LABELS) as (keyof S["flags"])[]).map((f) => {
+              const on = s.flags[f];
+              const c = FLAG_LABELS[f];
+              return (
+                <div
+                  key={f}
+                  className={cn(
+                    "rounded-[4px] border bg-surface p-3 transition-colors",
+                    on ? "border-ok/40" : "border-line-2",
+                  )}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <Toggle
+                      stateText
+                      checked={on}
+                      onChange={(e) =>
+                        patchGroup("flags", { [f]: e.target.checked })
+                      }
+                      label={<span className="font-medium">{c.label}</span>}
+                    />
+                    {c.sudo && (
+                      <span
+                        className="flex shrink-0 items-center gap-1 text-[9.5px] font-medium tracking-[0.1em] text-warn uppercase"
+                        title="Changing this asks for a phone code on save"
+                      >
+                        <Icon name="lock" className="size-3" />
+                        Code
+                      </span>
+                    )}
+                  </div>
+                  <dl className="mt-2 grid gap-1 text-[11px] leading-snug">
+                    <div
+                      className={cn(
+                        "flex gap-2",
+                        on ? "text-ink" : "text-ink-3",
+                      )}
+                    >
+                      <dt className="w-6 shrink-0 font-semibold tracking-[0.06em] uppercase">
+                        On
+                      </dt>
+                      <dd>{c.on}</dd>
+                    </div>
+                    <div
+                      className={cn(
+                        "flex gap-2",
+                        on ? "text-ink-3" : "text-ink",
+                      )}
+                    >
+                      <dt className="w-6 shrink-0 font-semibold tracking-[0.06em] uppercase">
+                        Off
+                      </dt>
+                      <dd>{c.off}</dd>
+                    </div>
+                  </dl>
+                </div>
+              );
+            })}
           </div>
           {flagsChanged && (
             <p className="mt-1 flex items-center gap-1.5 text-[11.5px] text-warn">
@@ -206,19 +262,16 @@ export function SettingsForm({ settings }: { settings: S }) {
                     patch("announcements", next);
                   }}
                 />
-                <label className="flex items-center gap-1.5 text-[11px] text-ink-2">
-                  <input
-                    type="checkbox"
-                    checked={a.active}
-                    className="size-3.5 accent-ink"
-                    onChange={(e) => {
-                      const next = [...s.announcements];
-                      next[i] = { ...a, active: e.target.checked };
-                      patch("announcements", next);
-                    }}
-                  />
-                  on
-                </label>
+                <Toggle
+                  stateText
+                  className="self-center"
+                  checked={a.active}
+                  onChange={(e) => {
+                    const next = [...s.announcements];
+                    next[i] = { ...a, active: e.target.checked };
+                    patch("announcements", next);
+                  }}
+                />
                 <button
                   type="button"
                   onClick={() =>
@@ -351,7 +404,8 @@ export function SettingsForm({ settings }: { settings: S }) {
         {/* ── Cash on delivery ────────────────────────────────────── */}
         <FormSection title="Cash on delivery">
           <div className="flex items-center gap-1.5">
-            <Checkbox
+            <Toggle
+              stateText
               label="Offer COD at checkout"
               checked={s.cod.enabled}
               onChange={(e) => patchGroup("cod", { enabled: e.target.checked })}
@@ -424,7 +478,8 @@ export function SettingsForm({ settings }: { settings: S }) {
               />
             </Field>
           </Row>
-          <Checkbox
+          <Toggle
+            stateText
             label="Displayed prices already include tax"
             checked={s.gst.pricesIncludeTax}
             onChange={(e) =>

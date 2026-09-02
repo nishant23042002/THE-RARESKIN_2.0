@@ -80,7 +80,7 @@ export async function Footer() {
           >
             The Letter <span aria-hidden>&rarr;</span>
           </Link>
-          <SocialLinks social={settings.social} className="mt-7 flex flex-wrap gap-x-4 gap-y-1 text-[10.5px] tracking-[0.1em] text-ink-3 uppercase" />
+          <SocialLinks social={settings.social} idp="footer" className="mt-7" />
         </div>
 
         <nav

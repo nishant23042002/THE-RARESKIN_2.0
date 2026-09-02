@@ -77,21 +77,49 @@ export function Select({
   );
 }
 
-export function Checkbox({
+/**
+ * A switch, not a tickbox — reads as "on / off" at a glance. Keeps the checkbox
+ * API (`checked` + `onChange` with `e.target.checked`) so it drops in wherever
+ * `Checkbox` was. Pass `stateText` to print ON / OFF next to the track.
+ */
+export function Toggle({
   label,
+  stateText = false,
+  className,
   ...props
-}: { label: string } & React.InputHTMLAttributes<HTMLInputElement>) {
+}: {
+  label?: ReactNode;
+  stateText?: boolean;
+  className?: string;
+} & React.InputHTMLAttributes<HTMLInputElement>) {
   return (
-    <label className="flex items-center gap-2 text-[12.5px] text-ink">
-      <input
-        type="checkbox"
-        {...props}
-        className="size-3.5 accent-ink"
-      />
-      {label}
+    <label
+      className={cn(
+        "group/toggle inline-flex items-center gap-2.5 text-[12.5px] text-ink",
+        props.disabled ? "cursor-not-allowed opacity-55" : "cursor-pointer",
+        className,
+      )}
+    >
+      <input type="checkbox" role="switch" {...props} className="sr-only" />
+      <span
+        aria-hidden
+        className="relative inline-flex h-[18px] w-8 shrink-0 items-center rounded-full bg-line-2 transition-colors duration-200 group-has-[:checked]/toggle:bg-cta group-has-[:focus-visible]/toggle:ring-2 group-has-[:focus-visible]/toggle:ring-ink/35"
+      >
+        <span className="absolute left-[3px] size-3 rounded-full bg-surface shadow-sm transition-transform duration-200 ease-out group-has-[:checked]/toggle:translate-x-[14px]" />
+      </span>
+      {stateText && (
+        <span className="w-7 shrink-0 text-[9.5px] font-semibold tracking-[0.12em] text-ink-3 uppercase group-has-[:checked]/toggle:text-ink">
+          <span className="group-has-[:checked]/toggle:hidden">Off</span>
+          <span className="hidden group-has-[:checked]/toggle:inline">On</span>
+        </span>
+      )}
+      {label != null && <span>{label}</span>}
     </label>
   );
 }
+
+/** @deprecated use {@link Toggle} — same component, clearer name. */
+export const Checkbox = Toggle;
 
 export function FormSection({
   title,

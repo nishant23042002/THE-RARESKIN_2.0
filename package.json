@@ -13,6 +13,7 @@
     "catalog": "tsx scripts/catalog.ts",
     "coupon": "tsx scripts/coupon.ts",
   "reset:commerce": "tsx scripts/reset-commerce.ts",
+    "reset:stock": "tsx scripts/reset-stock.ts",
     "revalidate": "tsx scripts/catalog.ts revalidate",
     "db:migrate": "migrate-mongo up",
     "db:migrate:down": "migrate-mongo down",

@@ -44,7 +44,7 @@ export function HoldingPage({ settings }: { settings: SiteSettingsInput }) {
         </p>
 
         <div className="mt-6 flex justify-center">
-          <SocialLinks social={settings.social} />
+          <SocialLinks social={settings.social} idp="holding" />
         </div>
 
         <HoldingStaffSignIn />
