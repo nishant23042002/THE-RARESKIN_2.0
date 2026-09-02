@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
 
+import { notifyNewsletterSubscribed } from "@/server/notifications";
+
 /**
- * Newsletter sign-up — stub. Validates the address and returns success; no mail
- * is sent yet. Wire a real provider (Buttondown / Resend / Mailchimp) here when
- * the list exists; the client contract (`{ email }` in, `{ ok }` / `{ error }`
- * out) stays the same.
+ * Newsletter sign-up — validates the address, raises a low-priority admin
+ * notification, and returns success. Forwarding to a real list provider
+ * (Buttondown / Resend / Mailchimp) still goes here when the list exists; the
+ * client contract (`{ email }` in, `{ ok }` / `{ error }` out) is unchanged.
  */
+export const dynamic = "force-dynamic";
+
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function POST(request: Request) {
@@ -22,6 +26,8 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
+
+  await notifyNewsletterSubscribed(email.trim());
 
   // TODO: forward to the email provider once the list is live.
   return NextResponse.json({ ok: true });

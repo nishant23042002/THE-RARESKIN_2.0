@@ -286,7 +286,19 @@ before going live:
 - **Stock** — every product seeds at `stock: 0`; set real levels in
   `/admin/catalogue/<slug>/edit` (or `pnpm catalog set <slug> stock <n>`) before
   launch.
-- **Contact & newsletter** — connect the API stubs to a real inbox / ESP.
+- **Contact & newsletter** — the contact form now saves every enquiry to
+  **`/admin/messages`** and raises a notification; wiring a real ESP for the
+  newsletter list still goes in `/api/newsletter`.
+- **Notifications** — Studio has a live activity feed (topbar bell + toasts +
+  `/admin/notifications` + a dashboard panel) covering orders, payments,
+  disputes, reviews, staff sign-ins, low stock, email bounces and enquiries.
+  Polls every 20 s; no extra infrastructure. See
+  [`docs/notifications.md`](docs/notifications.md).
+- **Demo reviews** — `pnpm seed:reviews` adds 4 sample approved reviews (with
+  throwaway customer accounts + delivered orders) so the storefront + admin can
+  be seen with content; `flags.reviewsEnabled` is currently **on**. Remove both
+  before launch: `pnpm seed:reviews --remove`, then turn `reviewsEnabled` off
+  until real reviews exist.
 - **Legal pages** — Shipping / Returns / Privacy / Terms carry real,
   brand-specific copy but should get a final legal review. Confirm the values
   chosen as sensible defaults: 7-day return window, 48-hour damage-report
@@ -303,8 +315,9 @@ before going live:
   once their order is `delivered`; every review is moderated in
   **`/admin/reviews`** before it shows. A `review-request` email goes out ~5
   days after delivery (daily cron). The PDP "Impressions" deck, the homepage
-  block and the star ratings only render once **`flags.reviewsEnabled`** is
-  turned on in Site Settings — flip it at launch. See
-  [`docs/reviews.md`](docs/reviews.md).
+  block and the star ratings render only while **`flags.reviewsEnabled`** is on
+  in Site Settings — currently **on** for the demo (see "Demo reviews" above);
+  turn it off after removing the demo data and leave it off until real reviews
+  exist. See [`docs/reviews.md`](docs/reviews.md).
 - **Indexing** — `metadata.robots` in `layout.tsx` is `index: true`. Set it to
   `false` if you want the site hidden from search until launch.

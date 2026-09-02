@@ -35,6 +35,10 @@ import {
   type ServiceabilityResult,
 } from "./serviceability";
 import { notifyOrderPlacedCod } from "@/server/email";
+import {
+  checkLowStockForOrder,
+  notifyOrderPlaced,
+} from "@/server/notifications";
 
 import { validateCoupon, couponRejectionMessage } from "./coupons";
 import { commitStockForOrder, type StockLine } from "./inventory";
@@ -693,6 +697,21 @@ async function placeCodOrder(
   });
 
   await notifyOrderPlacedCod(order.orderNumber);
+  await notifyOrderPlaced({
+    orderNumber: order.orderNumber,
+    customerName: order.contact.name,
+    totalPaise: order.pricing.grandTotalPaise,
+    method: "cod",
+    paid: false,
+  });
+  await checkLowStockForOrder(
+    order.items.map((i) => ({
+      productId: i.productId,
+      slug: i.slug,
+      sku: i.sku,
+      qty: i.qty,
+    })),
+  );
 
   return {
     ok: true,

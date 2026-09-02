@@ -9,6 +9,7 @@ import {
   markIntentFailed,
   recordRefund,
 } from "@/server/payments";
+import { notifyPaymentDispute } from "@/server/notifications";
 
 /**
  * The authoritative Razorpay webhook. Verified by HMAC against
@@ -124,7 +125,12 @@ export async function POST(request: Request) {
           eventId,
           paymentId: payment?.id,
         });
-        // TODO(phase-j): alert operations + freeze fulfilment
+        await notifyPaymentDispute({
+          paymentId: payment?.id ?? eventId,
+          // the order isn't joined here; ops opens Razorpay from the link
+          orderNumber: null,
+        });
+        // Fulfilment-freeze on dispute is a later ops task.
         status = "processed";
         break;
       }

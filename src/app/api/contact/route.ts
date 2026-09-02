@@ -1,40 +1,61 @@
 import { NextResponse } from "next/server";
 
+import { contactMessageInput } from "@/lib/validation/contact";
+import { dbConnect } from "@/server/db";
+import { ContactMessage } from "@/server/models";
+import { getAuth, requestContext } from "@/server/auth";
+import { notifyContactMessage } from "@/server/notifications";
+
 /**
- * Contact form — stub. Validates the payload and returns success; no message is
- * delivered yet. Wire an inbox / helpdesk (email, Zoho, Freshdesk…) here when
- * it's ready; the client contract stays the same.
+ * Contact form. Persists a `ContactMessage` for staff to work in
+ * `/admin/messages` and raises a `customer.message` notification. The client
+ * contract is unchanged (`{ name, email, message, topic? }` in, `{ ok }` /
+ * `{ error }` out).
  */
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
-  let body: Record<string, unknown>;
+  const parsed = contactMessageInput.safeParse(
+    await request.json().catch(() => null),
+  );
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: parsed.error.issues[0]?.message ?? "Please check the form." },
+      { status: 400 },
+    );
+  }
+
+  const [auth, ctx] = await Promise.all([getAuth(), requestContext()]);
+
   try {
-    body = (await request.json()) as Record<string, unknown>;
-  } catch {
-    return NextResponse.json({ error: "Malformed request." }, { status: 400 });
-  }
+    await dbConnect();
+    const doc = await ContactMessage.create({
+      name: parsed.data.name,
+      email: parsed.data.email,
+      phone: parsed.data.phone ?? null,
+      message: parsed.data.message,
+      topic: parsed.data.subject ?? null,
+      userId: auth?.user.id ?? null,
+      ip: ctx.ip,
+      userAgent: ctx.userAgent,
+    });
 
-  const name = typeof body.name === "string" ? body.name.trim() : "";
-  const email = typeof body.email === "string" ? body.email.trim() : "";
-  const message = typeof body.message === "string" ? body.message.trim() : "";
-
-  if (name.length < 2) {
-    return NextResponse.json({ error: "Please enter your name." }, { status: 400 });
-  }
-  if (!EMAIL_RE.test(email)) {
+    await notifyContactMessage({
+      id: String(doc._id),
+      name: doc.name,
+      email: doc.email,
+      preview:
+        doc.message.length > 120
+          ? `${doc.message.slice(0, 120)}…`
+          : doc.message,
+    });
+  } catch (err) {
+    console.error("[contact] failed to save message", err);
     return NextResponse.json(
-      { error: "Enter a valid email address." },
-      { status: 400 },
+      { error: "Something went wrong. Please try again." },
+      { status: 500 },
     );
   }
-  if (message.length < 10) {
-    return NextResponse.json(
-      { error: "Tell us a little more so we can help." },
-      { status: 400 },
-    );
-  }
 
-  // TODO: forward to the support inbox once it's connected.
   return NextResponse.json({ ok: true });
 }

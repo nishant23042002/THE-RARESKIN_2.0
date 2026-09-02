@@ -5,6 +5,7 @@ import { AdminNav, type AdminNavItem } from "./admin-nav";
 import { AdminTopbar } from "./admin-topbar";
 import { AdminScrollGuard } from "./admin-scroll-guard";
 import type { AdminTheme } from "@/lib/admin";
+import type { NotificationSummary } from "@/server/admin";
 
 /**
  * The admin frame: a quiet left rail + a top bar, on the storefront's own
@@ -27,12 +28,14 @@ export function AdminShell({
   sudoUntil,
   nav,
   theme,
+  notifications,
   children,
 }: {
   user: { name: string; role: string };
   sudoUntil: string | null;
   nav: AdminNavItem[];
   theme: AdminTheme;
+  notifications: NotificationSummary;
   children: ReactNode;
 }) {
   return (
@@ -71,6 +74,7 @@ export function AdminShell({
             role={user.role}
             sudoUntil={sudoUntil}
             theme={theme}
+            notifications={notifications}
           />
 
           <div className="border-b border-line bg-surface md:hidden">

@@ -12,6 +12,8 @@ import {
   upsertVerifiedUser,
 } from "@/server/auth";
 import { notifyNewDevice } from "@/server/email";
+import { notifyStaffLogin } from "@/server/notifications";
+import { STAFF_ROLES } from "@/lib/validation/user";
 
 /**
  * Finish a login: check the code, get-or-create the account, mint a session.
@@ -84,6 +86,17 @@ export async function POST(request: Request) {
             device: session.device,
             ip: ctx.ip,
           });
+          if ((STAFF_ROLES as readonly string[]).includes(user.role)) {
+            await notifyStaffLogin({
+              name: user.name || "A staff member",
+              role: user.role,
+              device:
+                [session.device.browser, session.device.os]
+                  .filter(Boolean)
+                  .join(" on ") || "a new device",
+              ip: ctx.ip,
+            });
+          }
         }
       } catch (err) {
         console.error("[auth] new-device notice failed", err);

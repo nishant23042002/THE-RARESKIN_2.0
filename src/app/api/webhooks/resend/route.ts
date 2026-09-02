@@ -4,6 +4,7 @@ import { dbConnect } from "@/server/db";
 import { EmailMessage, WebhookEvent } from "@/server/models";
 import { isResendWebhookConfigured } from "@/server/env";
 import { suppressEmail, verifyResendSignature } from "@/server/email";
+import { notifyEmailBounced } from "@/server/notifications";
 
 /**
  * Resend delivery webhook. Svix-signed against `RESEND_WEBHOOK_SECRET`, deduped
@@ -66,6 +67,7 @@ export async function POST(request: Request) {
             reason: "bounced",
             source: "resend-webhook",
           });
+          await notifyEmailBounced({ email: to, reason: "bounced" });
         }
         if (emailId) {
           await EmailMessage.updateOne(
@@ -88,6 +90,7 @@ export async function POST(request: Request) {
             reason: "complained",
             source: "resend-webhook",
           });
+          await notifyEmailBounced({ email: to, reason: "complained" });
         }
         status = "processed";
         break;

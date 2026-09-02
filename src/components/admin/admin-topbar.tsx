@@ -6,7 +6,9 @@ import { useRouter } from "next/navigation";
 
 import { Icon } from "@/components/ui/icon";
 import { ROLE_LABEL, type AdminTheme } from "@/lib/admin";
+import type { NotificationSummary } from "@/server/admin";
 import { AdminThemeToggle } from "./admin-theme-toggle";
+import { NotificationBell } from "./notifications/notification-bell";
 
 /**
  * Admin top bar — who's signed in, the live sudo window, the theme toggle, a
@@ -21,11 +23,13 @@ export function AdminTopbar({
   role,
   sudoUntil,
   theme,
+  notifications,
 }: {
   name: string;
   role: string;
   sudoUntil: string | null;
   theme: AdminTheme;
+  notifications: NotificationSummary;
 }) {
   const router = useRouter();
   const [now, setNow] = useState(() => Date.now());
@@ -70,6 +74,7 @@ export function AdminTopbar({
       </div>
 
       <div className="flex shrink-0 items-center gap-1.5 sm:gap-2.5">
+        <NotificationBell initial={notifications} />
         <AdminThemeToggle initial={theme} />
         <Link
           href="/admin/account"

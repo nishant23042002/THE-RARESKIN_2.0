@@ -290,6 +290,22 @@ The storefront surfaces (PDP deck, homepage block, star ratings, Product
 JSON-LD `aggregateRating`) are all gated by **`flags.reviewsEnabled`** in Site
 Settings. Full lifecycle: [`reviews.md`](reviews.md).
 
+## Notifications + Messages (Phase I)
+
+A live activity feed for staff. Events across the app — orders, payments (incl.
+**disputes** and oversell auto-refunds), review submissions, staff sign-ins from
+a new device, staff/role changes, low stock, email bounces, contact enquiries,
+newsletter sign-ups — raise a `Notification` that shows in the topbar **bell**
+(20 s poll, unread badge, one-shot wobble, `(N)` tab-title badge, and a slide-in
+**toast** for high-priority events). Full feed at `/admin/notifications` (category
+filter, mark-all-read); the dashboard gets a "Latest activity" panel. Per-staff
+read state; 60-day TTL. Admin-only events (`payment.dispute`, `staff.*`,
+`auth.staff_login`, `email.bounced`) are hidden from a `support` account.
+
+`/admin/messages` (`support`+) — the contact form persists a `ContactMessage`
+and pings a notification. Filter, expand, **Reply by email**, **Mark handled**
+(audited). Full detail: [`notifications.md`](notifications.md).
+
 ## Verifying locally
 
 Blank `RAZORPAY_KEY_ID` / `TWILIO_*` / `RESEND_API_KEY` in `.env.local` to force

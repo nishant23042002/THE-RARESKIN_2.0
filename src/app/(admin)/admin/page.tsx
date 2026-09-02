@@ -1,16 +1,20 @@
 import Link from "next/link";
 
 import { requireAdminRole } from "@/server/auth/admin";
-import { getAdminDashboard } from "@/server/admin";
+import { getAdminDashboard, notificationSummary } from "@/server/admin";
 import { PageHeader, StatTile, Card, EmptyState, StatusBadge } from "@/components/admin/ui";
+import { NotificationList } from "@/components/admin/notifications/notification-list";
 import { formatPaise } from "@/lib/money";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Dashboard · Studio" };
 
 export default async function AdminDashboardPage() {
-  await requireAdminRole("support");
-  const d = await getAdminDashboard();
+  const ctx = await requireAdminRole("support");
+  const [d, activity] = await Promise.all([
+    getAdminDashboard(),
+    notificationSummary({ userId: ctx.user.id, role: ctx.user.role }),
+  ]);
 
   const weekRevenue = d.last7Days.reduce((s, x) => s + x.revenuePaise, 0);
   const peak = Math.max(1, ...d.last7Days.map((x) => x.revenuePaise));
@@ -66,6 +70,21 @@ export default async function AdminDashboardPage() {
           ))}
         </div>
       </Card>
+
+      <section className="mt-6 border border-line bg-surface">
+        <div className="flex items-center justify-between border-b border-line px-4 py-2.5">
+          <h2 className="text-[10.5px] font-medium tracking-[0.14em] text-ink-3 uppercase">
+            Latest activity
+          </h2>
+          <Link
+            href="/admin/notifications"
+            className="text-[10px] tracking-[0.1em] text-ink-3 uppercase hover:text-ink"
+          >
+            All →
+          </Link>
+        </div>
+        <NotificationList rows={activity.latest.slice(0, 8)} mode="page" />
+      </section>
 
       <Card
         title="Fulfilment queue"

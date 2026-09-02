@@ -4,6 +4,7 @@ import { Types } from "mongoose";
 
 import { dbConnect } from "@/server/db";
 import { User, recordAudit } from "@/server/models";
+import { notifyStaffInvited } from "@/server/notifications";
 import { assertSudo, canEditRole } from "@/server/auth/admin";
 import { revokeAllSessions } from "@/server/auth";
 import { normalizeIndianMobile } from "@/lib/auth";
@@ -66,6 +67,12 @@ export async function createOrPromoteStaff(
       ip: req.ip,
       userAgent: req.userAgent,
     });
+    await notifyStaffInvited({
+      name: existing.name || input.name,
+      role: input.role,
+      by: ctx.user.name || "an admin",
+      created: false,
+    });
     return { ok: true, id: String(existing._id), created: false };
   }
 
@@ -85,6 +92,12 @@ export async function createOrPromoteStaff(
     after: { phone, role: input.role, created: true },
     ip: req.ip,
     userAgent: req.userAgent,
+  });
+  await notifyStaffInvited({
+    name: input.name,
+    role: input.role,
+    by: ctx.user.name || "an admin",
+    created: true,
   });
   return { ok: true, id: String(user._id), created: true };
 }

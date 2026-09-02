@@ -9,11 +9,13 @@
 import { AuditLog } from "./audit-log";
 import { Cart } from "./cart";
 import { CheckoutIntent } from "./checkout-intent";
+import { ContactMessage } from "./contact-message";
 import { Counter } from "./counter";
 import { Coupon } from "./coupon";
 import { EmailMessage } from "./email-message";
 import { EmailSuppression } from "./email-suppression";
 import { MediaAsset } from "./media-asset";
+import { Notification } from "./notification";
 import { Order } from "./order";
 import { OtpChallenge } from "./otp-challenge";
 import { Payment } from "./payment";
@@ -32,6 +34,7 @@ export {
   CheckoutIntent,
   CHECKOUT_INTENT_STATUSES,
 } from "./checkout-intent";
+export { ContactMessage } from "./contact-message";
 export { Counter, nextSequence } from "./counter";
 export { Coupon } from "./coupon";
 export {
@@ -41,6 +44,7 @@ export {
 } from "./email-message";
 export { EmailSuppression, SUPPRESSION_REASONS } from "./email-suppression";
 export { MediaAsset } from "./media-asset";
+export { Notification } from "./notification";
 export { Order } from "./order";
 export { OtpChallenge } from "./otp-challenge";
 export { Payment, recordPayment } from "./payment";
@@ -56,6 +60,7 @@ export { WebhookEvent } from "./webhook-event";
 export type { AuditLogDoc } from "./audit-log";
 export type { CartDoc, CartItemSub } from "./cart";
 export type { CheckoutIntentDoc } from "./checkout-intent";
+export type { ContactMessageDoc } from "./contact-message";
 export type { CounterDoc } from "./counter";
 export type { CouponDoc } from "./coupon";
 export type {
@@ -68,6 +73,7 @@ export type {
   SuppressionReason,
 } from "./email-suppression";
 export type { MediaAssetDoc } from "./media-asset";
+export type { NotificationDoc } from "./notification";
 export type {
   OrderDoc,
   OrderPricing,
@@ -92,11 +98,13 @@ export function registerModels(): void {
   void AuditLog;
   void Cart;
   void CheckoutIntent;
+  void ContactMessage;
   void Counter;
   void Coupon;
   void EmailMessage;
   void EmailSuppression;
   void MediaAsset;
+  void Notification;
   void Order;
   void OtpChallenge;
   void Payment;

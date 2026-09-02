@@ -15,6 +15,7 @@ import {
   requestContext,
 } from "@/server/auth";
 import { notifyNewDevice } from "@/server/email";
+import { notifyStaffLogin } from "@/server/notifications";
 import { dbConnect } from "@/server/db";
 import { User, recordAudit, type UserDoc } from "@/server/models";
 import { STAFF_ROLES } from "@/lib/validation/user";
@@ -252,6 +253,17 @@ export async function GET(request: Request) {
           device: session.device,
           ip: reqCtx.ip,
         });
+        if (isStaffRole(user!.role)) {
+          await notifyStaffLogin({
+            name: user!.name || "A staff member",
+            role: user!.role,
+            device:
+              [session.device.browser, session.device.os]
+                .filter(Boolean)
+                .join(" on ") || "a new device",
+            ip: reqCtx.ip,
+          });
+        }
       }
     } catch (err) {
       console.error("[auth] new-device notice failed", err);

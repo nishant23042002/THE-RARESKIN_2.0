@@ -11,6 +11,7 @@ import type { AdminNavItem } from "@/components/admin/admin-nav";
 import type { IconName } from "@/components/ui/icon";
 import type { UserRole } from "@/lib/validation/user";
 import { ADMIN_THEME_COOKIE, parseAdminTheme } from "@/lib/admin";
+import { notificationSummary } from "@/server/admin";
 
 export const metadata: Metadata = {
   title: "Studio",
@@ -60,6 +61,18 @@ const NAV: {
     canSee: (role) => roleRankFor(role) >= roleRankFor("support"),
   },
   {
+    href: "/admin/messages",
+    label: "Messages",
+    icon: "mail",
+    canSee: (role) => roleRankFor(role) >= roleRankFor("support"),
+  },
+  {
+    href: "/admin/notifications",
+    label: "Notifications",
+    icon: "bell",
+    canSee: () => true,
+  },
+  {
     href: "/admin/staff",
     label: "Staff",
     icon: "shield",
@@ -82,6 +95,10 @@ export default async function AdminLayout({
   const nav: AdminNavItem[] = NAV.filter((n) => n.canSee(ctx.user.role)).map(
     ({ href, label, icon }) => ({ href, label, icon }),
   );
+  const notifications = await notificationSummary({
+    userId: ctx.user.id,
+    role: ctx.user.role,
+  });
 
   const sudoUntil = ctx.session.sudoUntil
     ? new Date(ctx.session.sudoUntil).toISOString()
@@ -93,6 +110,7 @@ export default async function AdminLayout({
       sudoUntil={sudoUntil}
       nav={nav}
       theme={parseAdminTheme(jar.get(ADMIN_THEME_COOKIE)?.value)}
+      notifications={notifications}
     >
       {children}
     </AdminShell>

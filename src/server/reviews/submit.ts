@@ -2,6 +2,7 @@ import "server-only";
 
 import { dbConnect } from "@/server/db";
 import { Order, Review, type OrderDoc } from "@/server/models";
+import { notifyReviewSubmitted } from "@/server/notifications";
 import { firstNameLastInitial } from "@/lib/reviews";
 import type {
   ReviewEditInput,
@@ -45,6 +46,7 @@ export async function submitReview(
   if (!item) return { ok: false, error: "item-not-in-order" };
 
   try {
+    const authorName = firstNameLastInitial(userName);
     const doc = await Review.create({
       userId,
       productId: item.productId,
@@ -55,8 +57,14 @@ export async function submitReview(
       rating: input.rating,
       title: input.title,
       body: input.body,
-      authorName: firstNameLastInitial(userName),
+      authorName,
       status: "pending",
+    });
+    await notifyReviewSubmitted({
+      reviewId: String(doc._id),
+      productName: item.name,
+      authorName,
+      rating: input.rating,
     });
     return { ok: true, id: String(doc._id) };
   } catch (err) {

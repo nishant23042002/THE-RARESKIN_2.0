@@ -4,6 +4,7 @@ import { Types } from "mongoose";
 
 import { dbConnect } from "@/server/db";
 import { User, recordAudit } from "@/server/models";
+import { notifyUserAccountChange } from "@/server/notifications";
 import { assertSudo, canEditRole } from "@/server/auth/admin";
 import { revokeAllSessions } from "@/server/auth";
 import type { AuthContext } from "@/server/auth/session";
@@ -97,6 +98,26 @@ export async function updateUserAccount(
       after: { status: user.status, reason: user.suspendedReason },
       ip: req.ip,
       userAgent: req.userAgent,
+    });
+  }
+
+  const by = ctx.user.name || "an admin";
+  if (touchedRole) {
+    await notifyUserAccountChange({
+      name: user.name || "an account",
+      change: `role ${before.role} → ${user.role}`,
+      by,
+    });
+  }
+  if (touchedStatus) {
+    await notifyUserAccountChange({
+      name: user.name || "an account",
+      change:
+        user.status === "suspended"
+          ? `suspended${user.suspendedReason ? ` — ${user.suspendedReason}` : ""}`
+          : "reinstated",
+      by,
+      severity: user.status === "suspended" ? "attention" : "info",
     });
   }
   return { ok: true };

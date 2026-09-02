@@ -30,6 +30,14 @@ import {
   notifyOrderConfirmed,
   notifyRefundProcessed,
 } from "@/server/email";
+import {
+  checkLowStockForOrder,
+  notifyOrderCancelled as notifyAdminOrderCancelled,
+  notifyOrderPlaced as notifyAdminOrderPlaced,
+  notifyOversoldRefund,
+  notifyPaymentFailed as notifyAdminPaymentFailed,
+  notifyPaymentRefunded,
+} from "@/server/notifications";
 import { DISCOVERY_SET_SLUG } from "@/lib/catalog";
 import type {
   OrderStatus,
@@ -155,6 +163,11 @@ export async function finalizeOnlineCheckout(
     await autoRefund(input.providerPaymentId, capturedPaise, {
       targetType: "CheckoutIntent",
       targetId: String(intent._id),
+      reason: "amount-mismatch",
+    });
+    await notifyOversoldRefund({
+      providerOrderId: input.providerOrderId,
+      sku: null,
       reason: "amount-mismatch",
     });
     return { ok: false, reason: "amount-mismatch" };
@@ -392,6 +405,11 @@ export async function finalizeOnlineCheckout(
         ip: null,
         userAgent: null,
       });
+      await notifyOversoldRefund({
+        providerOrderId: input.providerOrderId,
+        sku: oversoldSku,
+        reason: "sold-out",
+      });
       return { ok: false, reason: "sold-out-refunded" };
     }
     throw err;
@@ -421,6 +439,31 @@ export async function finalizeOnlineCheckout(
     await notifyOrderConfirmed(result.orderNumber);
     // The invoice PDF is generated on demand — see `src/server/invoice/` and
     // `GET /api/account/orders/[orderNumber]/invoice` (linked from the email).
+
+    const placed = await Order.findOne({ orderNumber: result.orderNumber })
+      .select("contact.name pricing.grandTotalPaise items.productId items.slug items.sku items.qty")
+      .lean<{
+        contact: { name: string };
+        pricing: { grandTotalPaise: number };
+        items: { productId: unknown; slug: string; sku: string; qty: number }[];
+      } | null>();
+    if (placed) {
+      await notifyAdminOrderPlaced({
+        orderNumber: result.orderNumber,
+        customerName: placed.contact.name,
+        totalPaise: placed.pricing.grandTotalPaise,
+        method: "razorpay",
+        paid: true,
+      });
+      await checkLowStockForOrder(
+        placed.items.map((i) => ({
+          productId: i.productId,
+          slug: i.slug,
+          sku: i.sku,
+          qty: i.qty,
+        })),
+      );
+    }
   }
   return result;
 }
@@ -437,6 +480,7 @@ export async function markIntentFailed(
   );
   if (res.modifiedCount > 0) {
     console.info("[checkout] payment attempt failed", { razorpayOrderId, reason });
+    await notifyAdminPaymentFailed({ reference: razorpayOrderId, reason });
   }
 }
 
@@ -609,6 +653,11 @@ export async function cancelUnpaidOrder(
     // Phase F — "your order was cancelled" (nothing charged).
     if (result.orderNumber) {
       await notifyOrderCancelled(result.orderNumber, opts.reason);
+      await notifyAdminOrderCancelled({
+        orderNumber: result.orderNumber,
+        reason: opts.reason,
+        by: "System",
+      });
     }
   }
   return result;
@@ -745,6 +794,11 @@ export async function recordRefund(input: {
       amountPaise: input.amountPaise,
       reason: input.reason,
       fullRefund: refundEmail.fullRefund,
+    });
+    await notifyPaymentRefunded({
+      orderNumber: refundEmail.orderNumber,
+      amountPaise: input.amountPaise,
+      full: refundEmail.fullRefund,
     });
   }
 
