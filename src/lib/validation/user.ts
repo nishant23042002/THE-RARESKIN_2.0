@@ -8,6 +8,7 @@
 import { z } from "zod";
 import {
   email,
+  httpUrl,
   indianMobileE164,
   pincode,
   shortText,
@@ -62,6 +63,8 @@ export const profileUpdateInput = z.object({
   name: shortText(120).optional(),
   email: email.optional(),
   marketingConsent: marketingConsent.optional(),
+  /** a stored Cloudinary URL from `/api/account/media/confirm`, or null to clear */
+  avatarUrl: httpUrl.nullable().optional(),
 });
 export type ProfileUpdateInput = z.infer<typeof profileUpdateInput>;
 

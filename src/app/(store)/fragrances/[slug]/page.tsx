@@ -133,6 +133,9 @@ export default async function FragrancePage({
             datePublished: r.publishedAt.slice(0, 10),
             name: r.title,
             reviewBody: r.body,
+            ...(r.photos.length > 0
+              ? { image: r.photos.map((p) => p.url) }
+              : {}),
             reviewRating: {
               "@type": "Rating",
               ratingValue: String(r.rating),

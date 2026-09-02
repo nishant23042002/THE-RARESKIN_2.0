@@ -24,6 +24,8 @@ export interface AdminReviewRow {
   title: string;
   body: string;
   authorName: string;
+  avatarUrl: string | null;
+  photos: { url: string; alt: string }[];
   productName: string;
   productSlug: string;
   orderNumber: string;
@@ -89,8 +91,8 @@ export async function listReviews(
       .select("slug name")
       .lean<Pick<ProductDoc, "slug" | "name">[]>(),
     User.find({ _id: { $in: userIds } })
-      .select("name email phone")
-      .lean<Pick<UserDoc, "_id" | "name" | "email" | "phone">[]>(),
+      .select("name email phone avatarUrl")
+      .lean<Pick<UserDoc, "_id" | "name" | "email" | "phone" | "avatarUrl">[]>(),
   ]);
   const nameBySlug = new Map(products.map((p) => [p.slug, p.name]));
   const userById = new Map(users.map((u) => [String(u._id), u]));
@@ -105,6 +107,8 @@ export async function listReviews(
         title: d.title,
         body: d.body,
         authorName: d.authorName,
+        avatarUrl: u?.avatarUrl ?? null,
+        photos: (d.photos ?? []).map((p) => ({ url: p.url, alt: p.alt || "" })),
         productName: nameBySlug.get(d.productSlug) ?? d.productSlug,
         productSlug: d.productSlug,
         orderNumber: d.orderNumber,

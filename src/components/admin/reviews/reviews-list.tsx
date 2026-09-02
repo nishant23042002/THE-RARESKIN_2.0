@@ -5,8 +5,15 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { Icon } from "@/components/ui/icon";
+import { Avatar } from "@/components/ui/avatar";
 import { Stars } from "@/components/ui/stars";
+import {
+  ReviewLightbox,
+  type LightboxPhoto,
+} from "@/components/product/review-lightbox";
 import { cn } from "@/lib/cn";
+import { cloudinaryVariant } from "@/lib/catalog";
+import { initialsFrom } from "@/lib/reviews";
 import type { AdminReviewRow } from "@/server/admin";
 import type { ReviewStatus } from "@/lib/validation/review";
 
@@ -33,6 +40,12 @@ function Row({ review }: { review: AdminReviewRow }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(false);
+  const [lightbox, setLightbox] = useState<number | null>(null);
+
+  const photos: LightboxPhoto[] = review.photos.map((p) => ({
+    url: p.url,
+    alt: p.alt || `Photo from ${review.authorName}`,
+  }));
 
   async function moderate(action: "approve" | "reject") {
     setBusy(true);
@@ -58,32 +71,40 @@ function Row({ review }: { review: AdminReviewRow }) {
   return (
     <div className="border-b border-line p-4 last:border-b-0">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2.5">
-            <span className="text-[13px] font-medium tracking-[0.04em]">
-              {review.productName}
-            </span>
-            <Stars value={review.rating} starClassName="size-3.5" />
-            <span
-              className={cn(
-                "rounded-full border px-2 py-0.5 text-[9px] font-medium tracking-[0.1em] uppercase",
-                TONE[review.status],
-              )}
-            >
-              {STATUS_LABEL[review.status]}
-            </span>
+        <div className="flex min-w-0 gap-3">
+          <Avatar
+            src={review.avatarUrl}
+            initials={initialsFrom(review.authorName)}
+            size={34}
+            className="mt-0.5"
+          />
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <span className="text-[13px] font-medium tracking-[0.04em]">
+                {review.productName}
+              </span>
+              <Stars value={review.rating} starClassName="size-3.5" />
+              <span
+                className={cn(
+                  "rounded-full border px-2 py-0.5 text-[9px] font-medium tracking-[0.1em] uppercase",
+                  TONE[review.status],
+                )}
+              >
+                {STATUS_LABEL[review.status]}
+              </span>
+            </div>
+            <p className="mt-1 text-[11px] text-ink-3">
+              {review.authorName}
+              {review.customer ? ` · ${review.customer.contact}` : ""} ·{" "}
+              <Link
+                href={`/admin/orders/${review.orderNumber}`}
+                className="hover:text-ink hover:underline"
+              >
+                {review.orderNumber}
+              </Link>{" "}
+              · {fmtDate(review.createdAt)}
+            </p>
           </div>
-          <p className="mt-1 text-[11px] text-ink-3">
-            {review.authorName}
-            {review.customer ? ` · ${review.customer.contact}` : ""} ·{" "}
-            <Link
-              href={`/admin/orders/${review.orderNumber}`}
-              className="hover:text-ink hover:underline"
-            >
-              {review.orderNumber}
-            </Link>{" "}
-            · {fmtDate(review.createdAt)}
-          </p>
         </div>
 
         <div className="flex shrink-0 items-center gap-1.5">
@@ -114,12 +135,41 @@ function Row({ review }: { review: AdminReviewRow }) {
       <p className="mt-1 max-w-[70ch] text-[12.5px] leading-relaxed text-ink-2">
         {review.body}
       </p>
+
+      {photos.length > 0 && (
+        <div className="mt-2.5 flex flex-wrap gap-1.5">
+          {photos.map((p, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => setLightbox(i)}
+              className="size-14 overflow-hidden rounded-[3px] border border-line-2 transition-opacity hover:opacity-90"
+              aria-label="View photo"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={cloudinaryVariant(p.url, { w: 200, h: 200, fill: true }) ?? p.url}
+                alt=""
+                className="h-full w-full object-cover"
+              />
+            </button>
+          ))}
+        </div>
+      )}
+
       {err && (
         <p className="mt-2 flex items-center gap-1.5 text-[11px] text-error">
           <Icon name="alert" className="size-3.5" />
           Couldn&rsquo;t save. Try again.
         </p>
       )}
+
+      <ReviewLightbox
+        photos={photos}
+        index={lightbox}
+        onClose={() => setLightbox(null)}
+        onIndex={setLightbox}
+      />
     </div>
   );
 }

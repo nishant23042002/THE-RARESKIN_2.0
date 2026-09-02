@@ -1,9 +1,16 @@
-import Link from "next/link";
+"use client";
 
+import Link from "next/link";
+import { useMemo, useState } from "react";
+
+import { Avatar } from "@/components/ui/avatar";
 import { Reveal } from "@/components/ui/reveal";
 import { Star, Stars } from "@/components/ui/stars";
+import { cloudinaryVariant } from "@/lib/catalog";
 import { distributionPercents, formatRating } from "@/lib/reviews";
-import type { ProductReviews } from "@/server/data/reviews";
+import type { ProductReviews, ReviewPhoto } from "@/server/data/reviews";
+
+import { ReviewLightbox, type LightboxPhoto } from "./review-lightbox";
 
 function reviewDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-IN", {
@@ -13,32 +20,31 @@ function reviewDate(iso: string): string {
   });
 }
 
-function ReviewCard({
-  authorName,
-  rating,
-  title,
-  body,
-  publishedAt,
-}: ProductReviews["items"][number]) {
+function Thumb({
+  photo,
+  onOpen,
+  className = "size-16 sm:size-20",
+}: {
+  photo: ReviewPhoto;
+  onOpen: () => void;
+  className?: string;
+}) {
   return (
-    <article className="rounded-[4px] border border-line bg-surface p-[clamp(18px,3vw,28px)]">
-      <div className="flex items-center justify-between gap-3">
-        <Stars value={rating} starClassName="size-3.5" />
-        <span className="text-[10px] tracking-[0.06em] text-ink-3 tabular-nums">
-          {reviewDate(publishedAt)}
-        </span>
-      </div>
-      <h3 className="mt-3 text-[14.5px] font-medium tracking-[0.01em]">{title}</h3>
-      <p className="mt-1.5 text-[13px] leading-relaxed text-ink-2">{body}</p>
-      <p className="mt-3 flex items-center gap-2 text-[11px] tracking-[0.04em] text-ink-3">
-        <span className="text-ink-2">{authorName}</span>
-        <span
-          aria-hidden
-          className="inline-block h-2.5 w-px bg-line-2"
-        />
-        <span className="tracking-[0.1em] uppercase">Verified Buyer</span>
-      </p>
-    </article>
+    <button
+      type="button"
+      onClick={onOpen}
+      className={`${className} shrink-0 overflow-hidden rounded-[3px] border border-line-2 transition-opacity hover:opacity-90`}
+      aria-label="View photo"
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={cloudinaryVariant(photo.url, { w: 300, h: 300, fill: true }) ?? photo.url}
+        alt={photo.alt}
+        loading="lazy"
+        decoding="async"
+        className="h-full w-full object-cover"
+      />
+    </button>
   );
 }
 
@@ -51,10 +57,26 @@ export function PdpReviews({
   productName: string;
   reviews: ProductReviews;
 }) {
-  if (!enabled) return null;
-
   const { summary, items } = reviews;
+
+  // one flat photo list for the lightbox + a lookup from a review's photo to its
+  // global index
+  const { allPhotos, indexOf } = useMemo(() => {
+    const flat: LightboxPhoto[] = [];
+    const map = new Map<string, number>();
+    for (const r of items) {
+      r.photos.forEach((p, i) => {
+        map.set(`${r.id}:${i}`, flat.length);
+        flat.push({ url: p.url, alt: p.alt || `Photo from ${r.authorName}` });
+      });
+    }
+    return { allPhotos: flat, indexOf: map };
+  }, [items]);
+
+  const [lightbox, setLightbox] = useState<number | null>(null);
   const percents = distributionPercents(summary.distribution);
+
+  if (!enabled) return null;
 
   return (
     <section
@@ -85,6 +107,7 @@ export function PdpReviews({
           </div>
         ) : (
           <>
+            {/* summary */}
             <div className="grid gap-8 rounded-[4px] border border-line bg-surface p-[clamp(22px,4vw,40px)] sm:grid-cols-[220px_1fr] sm:items-center">
               <div className="text-center sm:text-left">
                 <p className="serif text-[clamp(2.6rem,5vw,3.4rem)] leading-none">
@@ -123,7 +146,39 @@ export function PdpReviews({
               </div>
             </div>
 
-            <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+            {/* customer photos strip */}
+            {allPhotos.length > 0 && (
+              <div className="mt-6">
+                <p className="mb-2 text-[10.5px] font-medium tracking-[0.14em] text-ink-3 uppercase">
+                  Photos from customers
+                </p>
+                <div className="no-scrollbar -mx-6 flex gap-2 overflow-x-auto px-6 sm:mx-0 sm:flex-wrap sm:px-0">
+                  {allPhotos.slice(0, 10).map((p, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => setLightbox(i)}
+                      className="size-[72px] shrink-0 overflow-hidden rounded-[3px] border border-line-2 transition-opacity hover:opacity-90 sm:size-[84px]"
+                      aria-label="View photo"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={
+                          cloudinaryVariant(p.url, { w: 260, h: 260, fill: true }) ??
+                          p.url
+                        }
+                        alt={p.alt}
+                        loading="lazy"
+                        decoding="async"
+                        className="h-full w-full object-cover"
+                      />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
               <p className="text-[11px] tracking-[0.04em] text-ink-3">
                 Every review is from a verified, delivered order.
               </p>
@@ -135,14 +190,66 @@ export function PdpReviews({
               </Link>
             </div>
 
-            <div className="mt-6 grid gap-3.5 sm:grid-cols-2">
+            {/* review cards */}
+            <div className="mt-4 grid gap-3.5 sm:grid-cols-2">
               {items.slice(0, 8).map((r) => (
-                <ReviewCard key={r.id} {...r} />
+                <article
+                  key={r.id}
+                  className="rounded-[4px] border border-line bg-surface p-[clamp(18px,3vw,26px)]"
+                >
+                  <div className="flex items-start gap-3">
+                    <Avatar src={r.avatarUrl} initials={r.initials} size={40} />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                        <span className="text-[12.5px] text-ink">
+                          {r.authorName}
+                        </span>
+                        <span className="text-[9.5px] tracking-[0.12em] text-ink-3 uppercase">
+                          Verified Buyer
+                        </span>
+                      </div>
+                      <div className="mt-1 flex items-center gap-2">
+                        <Stars value={r.rating} starClassName="size-3" />
+                        <span className="text-[10px] text-ink-3 tabular-nums">
+                          {reviewDate(r.publishedAt)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <h3 className="mt-3 text-[14px] font-medium tracking-[0.01em]">
+                    {r.title}
+                  </h3>
+                  <p className="mt-1.5 text-[13px] leading-relaxed text-ink-2">
+                    {r.body}
+                  </p>
+
+                  {r.photos.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {r.photos.map((p, i) => (
+                        <Thumb
+                          key={i}
+                          photo={p}
+                          onOpen={() =>
+                            setLightbox(indexOf.get(`${r.id}:${i}`) ?? 0)
+                          }
+                        />
+                      ))}
+                    </div>
+                  )}
+                </article>
               ))}
             </div>
           </>
         )}
       </Reveal>
+
+      <ReviewLightbox
+        photos={allPhotos}
+        index={lightbox}
+        onClose={() => setLightbox(null)}
+        onIndex={setLightbox}
+      />
     </section>
   );
 }

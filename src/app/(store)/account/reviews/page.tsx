@@ -44,7 +44,12 @@ export default async function AccountReviewsPage() {
         </p>
 
         <div className="mt-9">
-          <AccountReviews reviewable={reviewable} mine={mine} />
+          <AccountReviews
+            reviewable={reviewable}
+            mine={mine}
+            avatarUrl={user.avatarUrl}
+            userName={user.name}
+          />
         </div>
       </Container>
     </main>

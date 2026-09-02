@@ -50,6 +50,8 @@ export interface UserDoc {
   name: string;
   email: string | null;
   emailVerifiedAt: Date | null;
+  /** customer-set profile photo (a stored Cloudinary URL); shown on their reviews */
+  avatarUrl: string | null;
   role: (typeof USER_ROLES)[number];
   status: (typeof USER_STATUSES)[number];
   suspendedReason: string | null;
@@ -96,6 +98,7 @@ const userSchema = new Schema<UserDoc>(
     },
     phoneVerifiedAt: { type: Date, default: null },
     name: { type: String, default: "" },
+    avatarUrl: { type: String, default: null },
     email: {
       type: String,
       default: null,

@@ -1,6 +1,25 @@
 import { Schema, model, models, type Model, type Types } from "mongoose";
 
-import { REVIEW_STATUSES } from "@/lib/validation/review";
+import { REVIEW_MAX_PHOTOS, REVIEW_STATUSES } from "@/lib/validation/review";
+
+interface ReviewPhotoSub {
+  assetId: Types.ObjectId;
+  url: string;
+  alt: string;
+  width?: number;
+  height?: number;
+}
+
+const reviewPhotoSchema = new Schema<ReviewPhotoSub>(
+  {
+    assetId: { type: Schema.Types.ObjectId, ref: "MediaAsset", required: true },
+    url: { type: String, required: true },
+    alt: { type: String, default: "" },
+    width: Number,
+    height: Number,
+  },
+  { _id: false },
+);
 
 /**
  * A product review from a verified buyer.
@@ -26,6 +45,8 @@ export interface ReviewDoc {
   rating: number;
   title: string;
   body: string;
+  /** 0–3 customer photos of the product, snapshotted at submit */
+  photos: ReviewPhotoSub[];
   /** "Nishant S." — computed at submit, never rewritten */
   authorName: string;
   status: (typeof REVIEW_STATUSES)[number];
@@ -51,6 +72,14 @@ const reviewSchema = new Schema<ReviewDoc>(
     rating: { type: Number, required: true, min: 1, max: 5 },
     title: { type: String, required: true },
     body: { type: String, required: true },
+    photos: {
+      type: [reviewPhotoSchema],
+      default: [],
+      validate: {
+        validator: (v: unknown[]) => v.length <= REVIEW_MAX_PHOTOS,
+        message: `At most ${REVIEW_MAX_PHOTOS} photos`,
+      },
+    },
     authorName: { type: String, required: true },
     status: { type: String, enum: REVIEW_STATUSES, default: "pending" },
     moderation: {

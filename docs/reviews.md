@@ -78,14 +78,39 @@ stops a backlog being mailed at once on first deploy. **No-ops entirely while
 
 Surfaces:
 
-- **PDP** `src/components/product/pdp-reviews.tsx` — summary panel + review
-  cards, or a "be the first" prompt at zero. A compact star line by the product
-  title links to `#reviews`. The page adds `aggregateRating` + up to 5 `review`
-  entries to the Product JSON-LD when `count > 0`.
-- **Homepage** `src/components/home/reviews.tsx` — quote cards; the section
-  hides itself when there's nothing to show.
-- `Fragrance.rating { average, count }` is carried on the catalogue DTO
-  (`toFragrance`) for anywhere else that wants it.
+- **PDP** `src/components/product/pdp-reviews.tsx` (client) — summary panel, a
+  "Photos from customers" strip, and review cards with an avatar + a per-review
+  photo strip; every thumbnail opens `review-lightbox.tsx` (Esc / arrows /
+  click-scrim, `scroll-lock`ed). A compact star line by the product title links
+  to `#reviews`. The page adds `aggregateRating` + up to 5 `review` entries
+  (with `image[]` when the review has photos) to the Product JSON-LD.
+- **Homepage** `src/components/home/reviews.tsx` (client) — a **GSAP marquee**
+  (same mechanic as `cart-marquee.tsx`: doubled `w-max` track, `xPercent: -50`,
+  `ease: "none"`, `repeat: -1`) of avatar + stars + quote + name/product cards,
+  pausing on hover / focus; `prefers-reduced-motion` → a plain swipeable strip.
+  Hidden when there's nothing to show.
+- `Fragrance.rating { average, count }` is on the catalogue DTO (`toFragrance`).
 
-With the flag **off** none of these render — the store looks exactly as it did
-before the feature. Flip it on in Site Settings at launch.
+## Photos & avatars
+
+- **Customer profile photo** — `user.avatarUrl` (also on `SessionUser`). Set on
+  `/account` (`ProfilePhoto` → `PATCH /api/account/profile`, which busts the
+  `reviews` tag) and promptable inside the review form. **Live-joined** onto every
+  one of that customer's reviews (`avatarsFor` in `src/server/data/reviews.ts`),
+  so changing it updates old reviews. `<Avatar>` (`src/components/ui/avatar.tsx`)
+  shows it or an initials monogram (`initialsFrom`).
+- **Review photos** — `review.photos` (0–3, `REVIEW_MAX_PHOTOS`), snapshotted at
+  submit, editable while `pending`. Uploaded via `image-uploader.tsx`
+  (`ReviewPhotoUploader`) through `POST /api/account/media/{sign,confirm}`
+  (`requireUser`, `checkRate("account:upload:user")`, folder pinned to
+  `reviews` / `avatars`). `submitReview` re-verifies each asset is a `reviews`
+  MediaAsset `uploadedBy` the caller and tags it `usedIn: review:<id>`.
+- **Moderation** shows the avatar + a photo strip (same lightbox). Approve /
+  reject act on the whole review — no per-photo control.
+
+With `reviewsEnabled` **off** none of the storefront surfaces render.
+
+`pnpm seed:reviews` seeds 4 demo reviews — two with product photos (picsum) and
+two customers with avatars (pravatar) — so all of this is visible without a
+manual upload. `pnpm seed:reviews --remove` deletes the reviews, orders, users
+and the demo `reviews`-folder MediaAssets.

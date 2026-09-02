@@ -36,6 +36,8 @@ const RULES = {
   "checkout:place:ip": { limit: 20, window: "10 m" as Duration },
   // Writing / editing a product review — scoped per user.
   "account:review:user": { limit: 20, window: "1 h" as Duration },
+  // Customer image uploads (avatar + review photos) — scoped per user.
+  "account:upload:user": { limit: 40, window: "1 h" as Duration },
 } as const;
 
 export type RateRule = keyof typeof RULES;

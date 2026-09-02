@@ -3,7 +3,7 @@ import "./_bootstrap";
 import mongoose, { Types } from "mongoose";
 
 import { dbConnect, dbDisconnect } from "@/server/db";
-import { Order, Product, Review, User } from "@/server/models";
+import { MediaAsset, Order, Product, Review, User } from "@/server/models";
 import { isProduction } from "@/server/env";
 import { firstNameLastInitial } from "@/lib/reviews";
 
@@ -51,6 +51,10 @@ type Seed = {
   title: string;
   body: string;
   daysAgo: number;
+  /** demo profile photo (pravatar) */
+  avatar?: string;
+  /** demo product photos (picsum) — non-Cloudinary, pass through untransformed */
+  photos?: string[];
 };
 
 const SEEDS: Seed[] = [
@@ -65,6 +69,11 @@ const SEEDS: Seed[] = [
     title: "Turns heads without trying",
     body: "Wore this to work for a week straight and had three people ask what I had on. It opens sharp and citrusy, then about an hour in it settles into something warm and a little skin-like that lasts till I get home. Not loud, just very put-together. Already thinking about a backup bottle.",
     daysAgo: 12,
+    avatar: "https://i.pravatar.cc/240?img=12",
+    photos: [
+      "https://picsum.photos/seed/rareskin-a1/900/900",
+      "https://picsum.photos/seed/rareskin-a2/900/900",
+    ],
   },
   {
     slug: "aurevan",
@@ -89,6 +98,8 @@ const SEEDS: Seed[] = [
     title: "This became my signature in a week",
     body: "I've been through a lot of bottles and nothing has clicked like this. It's warm and a bit resinous without being heavy, and it wears close in the day then opens up in the evening. My partner keeps stealing it. Bought a second one so I'm never caught without it.",
     daysAgo: 6,
+    avatar: "https://i.pravatar.cc/240?img=33",
+    photos: ["https://picsum.photos/seed/rareskin-k1/900/900"],
   },
   {
     slug: "vayren",
@@ -127,6 +138,9 @@ async function remove() {
     orderNumber: new RegExp(`^${SEED_ORDER_PREFIX}`),
   });
   const usr = await User.deleteMany({ _id: { $in: userIds } });
+  const med = await MediaAsset.deleteMany({
+    cloudinaryPublicId: new RegExp(`^seed/review-${SEED_ORDER_PREFIX}`),
+  });
   const aud = await db.collection("auditlogs").deleteMany({
     targetType: "Review",
     actorRole: "system",
@@ -141,7 +155,7 @@ async function remove() {
   }
 
   console.log(
-    `  removed — reviews ${rev.deletedCount}, orders ${ord.deletedCount}, users ${usr.deletedCount}, audit ${aud.deletedCount}`,
+    `  removed — reviews ${rev.deletedCount}, orders ${ord.deletedCount}, users ${usr.deletedCount}, media ${med.deletedCount}, audit ${aud.deletedCount}`,
   );
   await dbDisconnect();
 }
@@ -173,6 +187,7 @@ async function add() {
           email,
           role: "customer",
           status: "active",
+          avatarUrl: s.avatar ?? null,
         },
       },
       { upsert: true, returnDocument: "after" },
@@ -269,6 +284,45 @@ async function add() {
     const order = await Order.findOne({ orderNumber });
     if (!order) continue;
 
+    // demo product photos → MediaAsset rows (folder "reviews", so `--remove`
+    // can find them) + snapshot refs
+    const photos: {
+      assetId: Types.ObjectId;
+      url: string;
+      alt: string;
+      width: number;
+      height: number;
+    }[] = [];
+    for (const [pi, url] of (s.photos ?? []).entries()) {
+      const publicId = `seed/review-${orderNumber}-${pi}`;
+      const asset = await MediaAsset.findOneAndUpdate(
+        { cloudinaryPublicId: publicId },
+        {
+          $setOnInsert: {
+            cloudinaryPublicId: publicId,
+            secureUrl: url,
+            format: "jpg",
+            width: 900,
+            height: 900,
+            bytes: 120_000,
+            folder: "reviews",
+            alt: "",
+            tags: ["seed"],
+            uploadedBy: user._id,
+            usedIn: ["seed"],
+          },
+        },
+        { upsert: true, returnDocument: "after" },
+      );
+      photos.push({
+        assetId: asset._id,
+        url,
+        alt: "",
+        width: 900,
+        height: 900,
+      });
+    }
+
     await Review.findOneAndUpdate(
       { userId: user._id, productId: product._id },
       {
@@ -282,6 +336,7 @@ async function add() {
           rating: s.rating,
           title: s.title,
           body: s.body,
+          photos,
           authorName: firstNameLastInitial(s.name),
           status: "approved",
           moderation: { byId: null, at: deliveredAt, note: "seed" },

@@ -60,6 +60,7 @@ function toSessionUser(user: UserDoc): SessionUser {
     phone: user.phone,
     name: user.name,
     email: user.email,
+    avatarUrl: user.avatarUrl ?? null,
     role: user.role,
     isStaff: isStaffRole(user.role),
   };

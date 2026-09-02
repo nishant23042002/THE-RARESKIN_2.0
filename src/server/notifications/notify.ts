@@ -163,14 +163,18 @@ export function notifyReviewSubmitted(input: {
   productName: string;
   authorName: string;
   rating: number;
+  photoCount?: number;
 }): Promise<void> {
+  const photos = input.photoCount
+    ? ` · ${input.photoCount} photo${input.photoCount === 1 ? "" : "s"}`
+    : "";
   return safely("reviewSubmitted", () =>
     createNotification({
       type: "review.submitted",
       category: "reviews",
       severity: "attention",
       title: `New review · ${input.productName}`,
-      body: `${input.rating}★ from ${input.authorName} — awaiting moderation`,
+      body: `${input.rating}★ from ${input.authorName}${photos} — awaiting moderation`,
       href: "/admin/reviews",
       entity: { type: "Review", id: input.reviewId, label: input.productName },
       actor: input.authorName,

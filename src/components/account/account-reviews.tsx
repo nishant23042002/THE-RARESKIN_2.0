@@ -6,12 +6,17 @@ import { useState } from "react";
 
 import { Icon } from "@/components/ui/icon";
 import { OrderThumb } from "@/components/account/order-thumb";
+import { ProfilePhoto } from "@/components/account/profile-photo";
+import { ReviewPhotoUploader } from "@/components/account/image-uploader";
 import { Star, Stars } from "@/components/ui/stars";
 import { cn } from "@/lib/cn";
+import { cloudinaryVariant } from "@/lib/catalog";
 import {
   REVIEW_BODY_MAX,
+  REVIEW_MAX_PHOTOS,
   REVIEW_TITLE_MAX,
 } from "@/lib/validation/review";
+import type { MediaRef } from "@/lib/validation/media";
 import type { MyReview, ReviewableItem } from "@/server/data/reviews";
 
 const STATUS_COPY: Record<
@@ -60,18 +65,27 @@ function RatingPicker({
 
 // ── the form (submit new / edit existing) ──────────────────────────────
 
-type FormState = { rating: number; title: string; body: string };
+type FormState = {
+  rating: number;
+  title: string;
+  body: string;
+  photos: MediaRef[];
+};
 
 function ReviewForm({
   initial,
   submitLabel,
   onCancel,
   onSubmit,
+  avatarUrl,
+  userName,
 }: {
   initial: FormState;
   submitLabel: string;
   onCancel: () => void;
   onSubmit: (v: FormState) => Promise<string | null>;
+  avatarUrl: string | null;
+  userName: string;
 }) {
   const [v, setV] = useState<FormState>(initial);
   const [busy, setBusy] = useState(false);
@@ -132,6 +146,26 @@ function ReviewForm({
         />
       </label>
 
+      <div className="mt-4">
+        <ReviewPhotoUploader
+          value={v.photos}
+          max={REVIEW_MAX_PHOTOS}
+          onChange={(photos) => setV((p) => ({ ...p, photos }))}
+        />
+      </div>
+
+      {!avatarUrl && (
+        <div className="mt-4 rounded-[3px] border border-line-2 bg-surface-2/40 p-3">
+          <p className="text-[11.5px] text-ink-2">
+            Add a profile photo — it shows on your review and helps other
+            shoppers trust it.
+          </p>
+          <div className="mt-2">
+            <ProfilePhoto initial={null} name={userName} />
+          </div>
+        </div>
+      )}
+
       {error && (
         <p className="mt-2 flex items-center gap-1.5 text-[11.5px] text-error">
           <Icon name="alert" className="size-3.5" />
@@ -158,7 +192,7 @@ function ReviewForm({
         </button>
       </div>
       <p className="mt-3 text-[11px] leading-relaxed text-ink-3">
-        Reviews are checked by our team before they appear on the site. You&rsquo;ll
+        Reviews and photos are checked by our team before they appear. You&rsquo;ll
         be shown as your first name and last initial, with a Verified Buyer badge.
       </p>
     </div>
@@ -170,9 +204,13 @@ function ReviewForm({
 export function AccountReviews({
   reviewable,
   mine,
+  avatarUrl,
+  userName,
 }: {
   reviewable: ReviewableItem[];
   mine: MyReview[];
+  avatarUrl: string | null;
+  userName: string;
 }) {
   const router = useRouter();
   const [openSku, setOpenSku] = useState<string | null>(null);
@@ -261,10 +299,12 @@ export function AccountReviews({
                 </div>
                 {openSku === item.sku && (
                   <ReviewForm
-                    initial={{ rating: 0, title: "", body: "" }}
+                    initial={{ rating: 0, title: "", body: "", photos: [] }}
                     submitLabel="Submit review"
                     onCancel={() => setOpenSku(null)}
                     onSubmit={(v) => submitNew(item, v)}
+                    avatarUrl={avatarUrl}
+                    userName={userName}
                   />
                 )}
               </li>
@@ -319,10 +359,19 @@ export function AccountReviews({
                         rating: r.rating,
                         title: r.title,
                         body: r.body,
+                        photos: r.photos.map((p) => ({
+                          assetId: p.assetId,
+                          url: p.url,
+                          alt: p.alt,
+                          width: p.width,
+                          height: p.height,
+                        })),
                       }}
                       submitLabel="Save changes"
                       onCancel={() => setEditingId(null)}
                       onSubmit={(v) => saveEdit(r.id, v)}
+                      avatarUrl={avatarUrl}
+                      userName={userName}
                     />
                   ) : (
                     <>
@@ -330,6 +379,25 @@ export function AccountReviews({
                       <p className="mt-1 text-[12.5px] leading-relaxed text-ink-2">
                         {r.body}
                       </p>
+                      {r.photos.length > 0 && (
+                        <div className="mt-2.5 flex flex-wrap gap-1.5">
+                          {r.photos.map((p, i) => (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              key={i}
+                              src={
+                                cloudinaryVariant(p.url, {
+                                  w: 160,
+                                  h: 160,
+                                  fill: true,
+                                }) ?? p.url
+                              }
+                              alt=""
+                              className="size-14 rounded-[3px] border border-line-2 object-cover"
+                            />
+                          ))}
+                        </div>
+                      )}
                       {r.editable && (
                         <button
                           type="button"

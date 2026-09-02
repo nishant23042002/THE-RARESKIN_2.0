@@ -58,13 +58,20 @@ export function hasPhotography(images: FragranceImages): boolean {
  */
 export function cloudinaryVariant(
   url: string | null | undefined,
-  opts: { w?: number; h?: number } = {},
+  opts: { w?: number; h?: number; fill?: boolean } = {},
 ): string | null {
   if (!url) return null;
   if (!url.includes("res.cloudinary.com") || !url.includes("/upload/")) return url;
   const parts = ["f_auto", "q_auto"];
-  if (opts.w) parts.push(`w_${opts.w}`, "c_limit");
-  if (opts.h) parts.push(`h_${opts.h}`, "c_limit");
+  if (opts.fill) {
+    // square/rect crop to the given box, subject-aware — used for avatars
+    if (opts.w) parts.push(`w_${opts.w}`);
+    if (opts.h) parts.push(`h_${opts.h}`);
+    parts.push("c_fill", "g_auto");
+  } else {
+    if (opts.w) parts.push(`w_${opts.w}`, "c_limit");
+    if (opts.h) parts.push(`h_${opts.h}`, "c_limit");
+  }
   return url.replace("/upload/", `/upload/${parts.join(",")}/`);
 }
 

@@ -20,6 +20,23 @@ export function firstNameLastInitial(name: string | null | undefined): string {
   return lastInitial ? `${first} ${lastInitial}.` : first;
 }
 
+/**
+ * Monogram for the avatar placeholder. `"Nishant S."` → `"NS"`, single word →
+ * its first letter, empty → `"★"`.
+ */
+export function initialsFrom(name: string | null | undefined): string {
+  const parts = (name ?? "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  if (parts.length === 0) return "★";
+  if (parts.length === 1) return parts[0][0]!.toUpperCase();
+  return (parts[0][0]! + parts[parts.length - 1][0]!).toUpperCase().replace(
+    /[^A-Z0-9]/g,
+    "",
+  ) || "★";
+}
+
 /** Round to one decimal place for display (4.6666 → "4.7"). */
 export function formatRating(average: number): string {
   return (Math.round(average * 10) / 10).toFixed(1);

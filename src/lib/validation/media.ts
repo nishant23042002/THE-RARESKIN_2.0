@@ -15,7 +15,17 @@ export const MEDIA_FOLDERS = [
   "og",
   "invoices",
   "misc",
+  "reviews",
+  "avatars",
 ] as const;
+
+/** What a customer is uploading from the account area — maps to a folder + rules
+ *  server-side so the browser never picks a folder itself. */
+export const ACCOUNT_UPLOAD_PURPOSES = ["review-photo", "avatar"] as const;
+export const accountUploadInput = z.object({
+  purpose: z.enum(ACCOUNT_UPLOAD_PURPOSES),
+});
+export type AccountUploadInput = z.infer<typeof accountUploadInput>;
 
 export type MediaFormat = (typeof MEDIA_FORMATS)[number];
 export type MediaFolder = (typeof MEDIA_FOLDERS)[number];

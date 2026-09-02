@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Container } from "@/components/ui/container";
 import { AccountActions } from "@/components/account/account-actions";
 import { SignInMethods } from "@/components/account/sign-in-methods";
+import { ProfilePhoto } from "@/components/account/profile-photo";
 import { OrderRow } from "@/components/account/order-row";
 import { pageMeta } from "@/lib/seo";
 import { maskPhone } from "@/lib/auth";
@@ -52,14 +53,21 @@ export default async function AccountPage() {
     >
       <Container className="max-w-[860px]">
         <p className="eyebrow mb-3">Account</p>
-        <h1 className="text-[clamp(1.9rem,4.4vw,2.7rem)] leading-[1.1] tracking-[-0.01em]">
-          {user.name ? user.name : "Welcome"}
-        </h1>
-        <p className="mt-2.5 text-[13.5px] text-ink-2">
-          {overview.memberSince ? `Member since ${overview.memberSince} · ` : ""}
-          {maskPhone(user.phone)}
-          {user.email ? ` · ${user.email}` : ""}
-        </p>
+        <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-4">
+          <div className="min-w-0">
+            <h1 className="text-[clamp(1.9rem,4.4vw,2.7rem)] leading-[1.1] tracking-[-0.01em]">
+              {user.name ? user.name : "Welcome"}
+            </h1>
+            <p className="mt-2.5 text-[13.5px] text-ink-2">
+              {overview.memberSince
+                ? `Member since ${overview.memberSince} · `
+                : ""}
+              {maskPhone(user.phone)}
+              {user.email ? ` · ${user.email}` : ""}
+            </p>
+          </div>
+          <ProfilePhoto initial={user.avatarUrl} name={user.name} />
+        </div>
 
         {/* ── at-a-glance ─────────────────────────────────────────── */}
         <div className="mt-8 grid grid-cols-3 divide-x divide-line border-y border-line">

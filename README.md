@@ -295,10 +295,11 @@ before going live:
   Polls every 20 s; no extra infrastructure. See
   [`docs/notifications.md`](docs/notifications.md).
 - **Demo reviews** — `pnpm seed:reviews` adds 4 sample approved reviews (with
-  throwaway customer accounts + delivered orders) so the storefront + admin can
-  be seen with content; `flags.reviewsEnabled` is currently **on**. Remove both
-  before launch: `pnpm seed:reviews --remove`, then turn `reviewsEnabled` off
-  until real reviews exist.
+  throwaway customer accounts + delivered orders, two carrying product photos
+  and two customers with avatars) so the storefront + admin can be seen with
+  content; `flags.reviewsEnabled` is currently **on**. Remove both before
+  launch: `pnpm seed:reviews --remove`, then turn `reviewsEnabled` off until
+  real reviews exist. (Photo uploads need `CLOUDINARY_*` — already set.)
 - **Legal pages** — Shipping / Returns / Privacy / Terms carry real,
   brand-specific copy but should get a final legal review. Confirm the values
   chosen as sensible defaults: 7-day return window, 48-hour damage-report
@@ -312,12 +313,14 @@ before going live:
 - **Packaging copy** — the PDP "What's in the box" answer describes a
   recyclable carton + a wear card; confirm this matches the actual packaging.
 - **Reviews** — verified buyers review a product from **`/account/reviews`**
-  once their order is `delivered`; every review is moderated in
+  once their order is `delivered`, with an optional profile photo (set on
+  `/account`) and up to 3 product photos; every review is moderated in
   **`/admin/reviews`** before it shows. A `review-request` email goes out ~5
-  days after delivery (daily cron). The PDP "Impressions" deck, the homepage
-  block and the star ratings render only while **`flags.reviewsEnabled`** is on
-  in Site Settings — currently **on** for the demo (see "Demo reviews" above);
-  turn it off after removing the demo data and leave it off until real reviews
-  exist. See [`docs/reviews.md`](docs/reviews.md).
+  days after delivery (daily cron). The PDP "Impressions" section (avatars +
+  photo strips + a lightbox), the homepage animated marquee and the star
+  ratings render only while **`flags.reviewsEnabled`** is on in Site Settings —
+  currently **on** for the demo (see "Demo reviews" above); turn it off after
+  removing the demo data and leave it off until real reviews exist. See
+  [`docs/reviews.md`](docs/reviews.md).
 - **Indexing** — `metadata.robots` in `layout.tsx` is `index: true`. Set it to
   `false` if you want the site hidden from search until launch.

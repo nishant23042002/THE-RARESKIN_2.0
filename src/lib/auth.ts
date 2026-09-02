@@ -11,6 +11,8 @@ export interface SessionUser {
   phone: string;
   name: string;
   email: string | null;
+  /** customer-set profile photo, or null */
+  avatarUrl: string | null;
   role: UserRole;
   isStaff: boolean;
 }

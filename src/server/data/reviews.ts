@@ -7,11 +7,14 @@ import {
   Order,
   Product,
   Review,
+  User,
   type OrderDoc,
   type ProductDoc,
   type ReviewDoc,
+  type UserDoc,
 } from "@/server/models";
 import { isFragranceSlug, DISCOVERY_SET_SLUG } from "@/lib/catalog";
+import { initialsFrom } from "@/lib/reviews";
 import type { ReviewStatus } from "@/lib/validation/review";
 
 /**
@@ -41,12 +44,26 @@ export interface ReviewSummary {
   distribution: [number, number, number, number, number];
 }
 
+export interface ReviewPhoto {
+  /** the MediaAsset id — carried so the owner's edit form can keep a photo */
+  assetId: string;
+  url: string;
+  width?: number;
+  height?: number;
+  alt: string;
+}
+
 export interface PublicReview {
   id: string;
   authorName: string;
+  /** monogram for the avatar placeholder, e.g. "NS" */
+  initials: string;
+  /** live-joined from the customer's account, or null → show initials */
+  avatarUrl: string | null;
   rating: number;
   title: string;
   body: string;
+  photos: ReviewPhoto[];
   publishedAt: string;
 }
 
@@ -80,6 +97,7 @@ export interface MyReview {
   rating: number;
   title: string;
   body: string;
+  photos: ReviewPhoto[];
   status: ReviewStatus;
   createdAt: string;
   editable: boolean;
@@ -104,15 +122,38 @@ function pickImage(media: ProductDoc["media"] | undefined): string | null {
   );
 }
 
-function toPublic(r: ReviewDoc): PublicReview {
+function reviewPhotos(r: ReviewDoc): ReviewPhoto[] {
+  return (r.photos ?? []).map((p) => ({
+    assetId: String(p.assetId),
+    url: p.url,
+    width: p.width,
+    height: p.height,
+    alt: p.alt || "",
+  }));
+}
+
+function toPublic(r: ReviewDoc, avatarUrl: string | null): PublicReview {
   return {
     id: String(r._id),
     authorName: r.authorName,
+    initials: initialsFrom(r.authorName),
+    avatarUrl,
     rating: r.rating,
     title: r.title,
     body: r.body,
+    photos: reviewPhotos(r),
     publishedAt: (r.publishedAt ?? r.createdAt).toISOString(),
   };
+}
+
+/** avatarUrl by user-id string for a set of reviews. */
+async function avatarsFor(rows: ReviewDoc[]): Promise<Map<string, string | null>> {
+  const ids = [...new Set(rows.map((r) => String(r.userId)))];
+  if (ids.length === 0) return new Map();
+  const users = await User.find({ _id: { $in: ids } })
+    .select("avatarUrl")
+    .lean<Pick<UserDoc, "_id" | "avatarUrl">[]>();
+  return new Map(users.map((u) => [String(u._id), u.avatarUrl ?? null]));
 }
 
 /** Aggregate a set of approved reviews into a summary. */
@@ -145,9 +186,10 @@ export function getProductReviews(slug: string): Promise<ProductReviews> {
         .sort({ publishedAt: -1 })
         .limit(60)
         .lean<ReviewDoc[]>();
+      const avatars = await avatarsFor(rows);
       return {
         summary: summarise(rows),
-        items: rows.map(toPublic),
+        items: rows.map((r) => toPublic(r, avatars.get(String(r.userId)) ?? null)),
       };
     },
     ["reviews:product", slug],
@@ -167,13 +209,16 @@ export const getFeaturedReviews = unstable_cache(
       .lean<ReviewDoc[]>();
 
     const slugs = [...new Set(rows.map((r) => r.productSlug))];
-    const products = await Product.find({ slug: { $in: slugs } })
-      .select("slug name")
-      .lean<Pick<ProductDoc, "slug" | "name">[]>();
+    const [products, avatars] = await Promise.all([
+      Product.find({ slug: { $in: slugs } })
+        .select("slug name")
+        .lean<Pick<ProductDoc, "slug" | "name">[]>(),
+      avatarsFor(rows),
+    ]);
     const nameBySlug = new Map(products.map((p) => [p.slug, p.name]));
 
     return rows.map((r) => ({
-      ...toPublic(r),
+      ...toPublic(r, avatars.get(String(r.userId)) ?? null),
       productName: nameBySlug.get(r.productSlug) ?? r.productSlug,
       productSlug: r.productSlug,
       href: hrefForSlug(r.productSlug),
@@ -294,6 +339,7 @@ export async function getMyReviews(userId: string): Promise<MyReview[]> {
     rating: r.rating,
     title: r.title,
     body: r.body,
+    photos: reviewPhotos(r),
     status: r.status,
     createdAt: r.createdAt.toISOString(),
     editable: r.status === "pending",
