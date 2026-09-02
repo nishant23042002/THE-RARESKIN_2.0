@@ -6,7 +6,8 @@ import { couponInput } from "@/lib/validation/commerce";
 import { toPaise, toRupees } from "@/lib/money";
 
 /**
- * Tiny coupon editor for before the admin dashboard exists (Phase H).
+ * Scripted coupon editor. The primary editor is now `/admin/coupons` (Phase
+ * G3a); this stays for bulk / CI edits and quick local pokes.
  *
  *   pnpm coupon list
  *   pnpm coupon add WELCOME10 percent 10 --min 0 --per-user 1 --max 0

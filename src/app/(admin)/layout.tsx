@@ -39,6 +39,18 @@ const NAV: {
     icon: "box",
     canSee: canManageCatalogue,
   },
+  {
+    href: "/admin/coupons",
+    label: "Coupons",
+    icon: "tag",
+    canSee: (role) => roleRankFor(role) >= roleRankFor("admin"),
+  },
+  {
+    href: "/admin/settings",
+    label: "Settings",
+    icon: "gear",
+    canSee: (role) => roleRankFor(role) >= roleRankFor("admin"),
+  },
 ];
 
 export default async function AdminLayout({

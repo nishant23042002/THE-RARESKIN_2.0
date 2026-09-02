@@ -245,3 +245,27 @@ export const couponInput = z.object({
   note: shortText(200).optional(),
 });
 export type CouponInput = z.infer<typeof couponInput>;
+
+/**
+ * Partial patch from the admin coupon edit form. `code` is immutable (orders
+ * snapshot `coupon.code`), so it's dropped. Date fields accept `null` to clear.
+ */
+export const couponUpdateInput = z.object({
+  type: z.enum(COUPON_TYPES).optional(),
+  value: z.number().min(0).optional(),
+  minSubtotalPaise: paise.optional(),
+  maxUses: z.number().int().min(0).optional(),
+  usesPerUser: z.number().int().min(0).optional(),
+  startsAt: z.coerce.date().nullable().optional(),
+  endsAt: z.coerce.date().nullable().optional(),
+  stackable: z.boolean().optional(),
+  status: z.enum(COUPON_STATUSES).optional(),
+  note: shortText(200).nullable().optional(),
+});
+export type CouponUpdateInput = z.infer<typeof couponUpdateInput>;
+
+/** `POST /api/admin/coupons/[code]` — quick status toggle. */
+export const couponActionInput = z.object({
+  action: z.literal("status"),
+  status: z.enum(COUPON_STATUSES),
+});

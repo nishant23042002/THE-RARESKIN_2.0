@@ -2,7 +2,9 @@ import Link from "next/link";
 import { Container } from "@/components/ui/container";
 import { Logo } from "@/components/ui/logo";
 import { PaymentMarks, IndiaFlag } from "@/components/ui/payment-marks";
+import { SocialLinks } from "./social-links";
 import { getCatalogNav } from "@/server/data/catalog";
+import { getSiteSettings } from "@/server/data/settings";
 
 type Column = { title: string; links: { label: string; href: string }[] };
 
@@ -36,7 +38,10 @@ const STATIC_COLUMNS: Column[] = [
 
 export async function Footer() {
   const year = new Date().getFullYear();
-  const nav = await getCatalogNav();
+  const [nav, settings] = await Promise.all([
+    getCatalogNav(),
+    getSiteSettings(),
+  ]);
 
   const COLUMNS: Column[] = [
     {
@@ -75,6 +80,7 @@ export async function Footer() {
           >
             The Letter <span aria-hidden>&rarr;</span>
           </Link>
+          <SocialLinks social={settings.social} className="mt-7 flex flex-wrap gap-x-4 gap-y-1 text-[10.5px] tracking-[0.1em] text-ink-3 uppercase" />
         </div>
 
         <nav

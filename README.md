@@ -274,8 +274,12 @@ before going live:
   `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` are set, the
   `/api/auth/google/callback` redirect URI is registered in Google Cloud, and
   `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=1`. See [`docs/auth.md`](docs/auth.md).
-- **Coupons** — created with `pnpm coupon add …` for now (the coupon UI is
-  Phase G3). None ship by default.
+- **Coupons** — created + edited in `/admin/coupons` (`pnpm coupon` stays for
+  bulk / CI). None ship by default.
+- **Go live** — the storefront shows a **holding page** until `storeLive` is
+  flipped on in `/admin/settings` (signed-in staff always see the real site).
+  `checkoutEnabled` is a separate switch. Both flips need a phone OTP. Set the
+  announcement-bar messages and footer social links there too.
 - **Stock** — every product seeds at `stock: 0`; set real levels in
   `/admin/catalogue/<slug>/edit` (or `pnpm catalog set <slug> stock <n>`) before
   launch.

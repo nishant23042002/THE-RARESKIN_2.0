@@ -1,9 +1,11 @@
 # Admin — "Studio" (Phase G)
 
-The operator console at `/admin`. Phase G ships in three sub-phases: **G1** —
-the shell, RBAC, sudo re-auth, order management, new-device email; **G2** —
-catalogue editor + product photography + stock ledger; **G3** (still to come) —
-coupons, customers, staff, Site Settings.
+The operator console at `/admin`. Phase G: **G1** — the shell, RBAC, sudo
+re-auth, order management, new-device email; **G2** — catalogue editor +
+product photography + stock ledger; **G2.5** — the 403 "no access" page +
+Google account linking; **G3a** — coupons + Site Settings editor (and wiring
+its loose ends: announcement bar, footer social, the holding page); **G3b**
+(still to come) — customers, staff, product delete.
 
 ## Route groups
 
@@ -173,6 +175,58 @@ strip. Hero scene / quiz stay on vectors (bespoke animated art). The DAL
 (`imagesFor` in `src/server/data/catalog.ts`) returns a real Cloudinary URL or
 `null`; `cloudinaryVariant()` (`src/lib/catalog.ts`) rewrites the delivery URL
 for `f_auto,q_auto` + a width cap.
+
+## Coupons (G3a)
+
+`/admin/coupons` — `admin`+ only. Replaces `pnpm coupon` as the primary editor
+(the script stays for bulk / CI).
+
+- **List** (`src/server/admin/coupons.ts` `listCoupons`) — every code with an
+  *effective* status (`expired` once `endsAt` passes, `scheduled` before
+  `startsAt`, `paused`, `active`), redemption count, per-user cap, window.
+  Inline active⇄paused toggle per row.
+- **Create / edit** (`coupon-form.tsx`) — `code` (immutable after create — orders
+  snapshot `coupon.code`), `type` (`percent` / `fixed` — ₹ in the form, paise in
+  the DB — / `free_shipping`), value, min subtotal, max total uses, uses per
+  customer, an optional start/end window, `stackable`, status, internal note.
+  `couponInput` / `couponUpdateInput` are the contracts. One POST/PATCH on save.
+- **No delete** — pause (or let the window expire) is the lifecycle; redemption
+  history lives on the orders that carry the code. `usedCount` is bumped
+  atomically inside the order transaction (`src/server/payments/process.ts`);
+  per-user use is counted from the customer's non-cancelled orders.
+- Every write records a `coupon.create` / `coupon.update` / `coupon.status_change`
+  audit row with before/after. No cache tag — `validateCoupon`
+  (`src/server/commerce/coupons.ts`) reads live.
+
+## Site Settings (G3a)
+
+`/admin/settings` — `admin`+ only. Edits the one `siteSettings` singleton
+(`key: "singleton"`); `siteSettingsInput` is the contract, the DAL
+(`getSiteSettings`, tag `settings`) parses every read back through Zod so a
+document that predates a field still gets its default.
+
+- **`getSettingsForEdit()` reads the DB directly** (not the cached DAL) so the
+  form always shows ground truth — a stale cache would otherwise be silently
+  re-persisted on save.
+- **`updateSiteSettings`** deep-merges the patch onto the current settings,
+  re-parses the whole result, `$set`s the singleton (`upsert`), then
+  `revalidateTag("settings", { expire: 0 })` + `revalidatePath("/")`. The audit
+  row records only the sections that actually changed.
+- **Sudo:** a patch that flips `flags.storeLive` or `flags.maintenanceMode`
+  needs a fresh phone OTP (`assertSudo` in `PATCH /api/admin/settings`, `<SudoGate>`
+  on the form).
+- **Sections:** launch switches (`flags`), announcement bar, shipping, COD, GST,
+  contact, social links.
+
+### What each field drives
+
+| section | effect |
+| --- | --- |
+| `flags.storeLive` / `flags.maintenanceMode` | `(store)/layout.tsx` shows a **holding page** (`holding-page.tsx`) for the whole storefront — *except* signed-in staff, who keep working it. The holding page carries its own minimal "team member sign-in" (`holding-staff-signin.tsx`) since the normal modal isn't mounted there. `/admin` is a separate route group and is never gated. |
+| `flags.checkoutEnabled` / `codEnabled` / etc. | consumed by the checkout engine + storefront (unchanged from before). |
+| `announcements` / `announcementRotateSeconds` | `<AnnouncementBar>` rotates the configured active messages; **clear them all** to fall back to the built-in set. |
+| `social.*` | a "Follow" block in the footer + the holding page (`social-links.tsx`) — only the links you set appear. |
+| `shipping` / `cod` / `gst` / `contact` | already flow through the checkout engine + email (`getSiteSettings` in `src/server/commerce/orders.ts`, `order-context.ts`). |
 
 ## Verifying locally
 

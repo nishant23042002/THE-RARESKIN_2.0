@@ -1,21 +1,30 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import Link from "next/link";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { gsap, useGSAP } from "@/lib/gsap";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { useScrolled } from "@/hooks/use-scrolled";
 
 /**
- * Rotating promo bar. One line, changes every ~4.2s with a short blur-lifted
- * fade; pauses on hover and while the tab is hidden. Collapses to nothing once
- * the visitor scrolls, and does not return — a first-impression element, not a
- * permanent fixture (matches the "Campaign" prototype).
+ * Rotating promo bar. One line, changes every few seconds with a short
+ * blur-lifted fade; pauses on hover and while the tab is hidden. Collapses to
+ * nothing once the visitor scrolls, and does not return — a first-impression
+ * element, not a permanent fixture (matches the "Campaign" prototype).
+ *
+ * Messages come from Site Settings (`announcements`) when any are configured;
+ * otherwise the built-in `FALLBACK` set is used.
  */
 
-const ROTATE_MS = 4200;
+const DEFAULT_ROTATE_MS = 4200;
+
+export interface AnnouncementItem {
+  text: string;
+  href?: string;
+}
 
 // Kept short so they hold one line down to ~360px; `truncate` is the backstop.
-const MESSAGES: ReactNode[] = [
+const FALLBACK: ReactNode[] = [
   <>
     <b className="font-normal">Launch offer</b>
     <span className="mx-2 text-gilt">₹799</span>
@@ -30,7 +39,32 @@ const MESSAGES: ReactNode[] = [
   <>Extrait de Parfum. Nothing lighter.</>,
 ];
 
-export function AnnouncementBar() {
+export function AnnouncementBar({
+  messages,
+  rotateSeconds,
+}: {
+  messages?: AnnouncementItem[];
+  rotateSeconds?: number;
+} = {}) {
+  const items: ReactNode[] = useMemo(() => {
+    const active = (messages ?? []).filter((m) => m.text.trim());
+    if (active.length === 0) return FALLBACK;
+    return active.map((m, i) =>
+      m.href ? (
+        <Link key={i} href={m.href} className="hover:underline">
+          {m.text}
+        </Link>
+      ) : (
+        <span key={i}>{m.text}</span>
+      ),
+    );
+  }, [messages]);
+
+  const rotateMs =
+    rotateSeconds && rotateSeconds >= 3
+      ? rotateSeconds * 1000
+      : DEFAULT_ROTATE_MS;
+
   const [index, setIndex] = useState(0);
   const pausedRef = useRef(false);
   const barRef = useRef<HTMLDivElement>(null);
@@ -38,13 +72,15 @@ export function AnnouncementBar() {
   const reduced = useReducedMotion();
   const scrolled = useScrolled();
 
+  const count = items.length;
   useEffect(() => {
+    if (count <= 1) return;
     const id = window.setInterval(() => {
       if (document.hidden || pausedRef.current) return;
-      setIndex((i) => (i + 1) % MESSAGES.length);
-    }, ROTATE_MS);
+      setIndex((i) => (i + 1) % count);
+    }, rotateMs);
     return () => window.clearInterval(id);
-  }, []);
+  }, [count, rotateMs]);
 
   // incoming message
   useGSAP(
@@ -110,7 +146,7 @@ export function AnnouncementBar() {
           ref={msgRef}
           className="col-start-1 row-start-1 max-w-[92vw] truncate px-4 text-center text-[12px] leading-none tracking-[0.15em] uppercase"
         >
-          {MESSAGES[index]}
+          {items[index % count]}
         </p>
       </div>
     </div>
