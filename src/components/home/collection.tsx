@@ -14,7 +14,13 @@ import type { Fragrance } from "@/lib/catalog";
  * each card arrives, not all at once), and a single light sheen sweeps across
  * each card the first time it lands. Reduced motion: everything just present.
  */
-export function Collection({ fragrances }: { fragrances: Fragrance[] }) {
+export function Collection({
+  fragrances,
+  showRating = false,
+}: {
+  fragrances: Fragrance[];
+  showRating?: boolean;
+}) {
   const sectionRef = useRef<HTMLElement>(null);
 
   useGSAP(
@@ -91,7 +97,12 @@ export function Collection({ fragrances }: { fragrances: Fragrance[] }) {
 
       <div className="grid flex-1 grid-cols-1 gap-1.5 max-sm:content-start sm:grid-cols-3 sm:grid-rows-1">
         {fragrances.map((f, i) => (
-          <ProductCard key={f.slug} fragrance={f} index={i} />
+          <ProductCard
+            key={f.slug}
+            fragrance={f}
+            index={i}
+            showRating={showRating}
+          />
         ))}
       </div>
     </section>

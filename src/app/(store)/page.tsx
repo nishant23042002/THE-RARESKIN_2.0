@@ -1,15 +1,23 @@
 import { notFound } from "next/navigation";
 import { Hero } from "@/components/home/hero";
+import { AssuranceStrip } from "@/components/home/assurance-strip";
 import { ImpressionMarquee } from "@/components/home/impression-marquee";
 import { Collection } from "@/components/home/collection";
 import { Quiz } from "@/components/home/quiz";
 import { DiscoverySet } from "@/components/home/discovery-set";
 import { WhyExtrait } from "@/components/home/why-extrait";
+import { MadeDeliberately } from "@/components/home/made-deliberately";
 import { TheIdea } from "@/components/home/the-idea";
 import { Reviews } from "@/components/home/reviews";
+import { InstagramStrip } from "@/components/home/instagram-strip";
 import { Newsletter } from "@/components/home/newsletter";
+import { cloudinaryVariant } from "@/lib/catalog";
 import { getStorefrontCatalog } from "@/server/data/catalog";
-import { getFeaturedReviews } from "@/server/data/reviews";
+import {
+  getFeaturedReviews,
+  getReviewShowcasePhotos,
+  type ShowcasePhoto,
+} from "@/server/data/reviews";
 import { getSiteSettings } from "@/server/data/settings";
 
 /**
@@ -27,20 +35,62 @@ export default async function HomePage() {
   // result as a misconfiguration rather than shipping a blank page.
   if (fragrances.length === 0 || !discoverySet) notFound();
 
-  const featuredReviews = settings.flags.reviewsEnabled
-    ? await getFeaturedReviews(6)
-    : [];
+  const reviewsOn = settings.flags.reviewsEnabled;
+  const [featuredReviews, showcasePhotos] = await Promise.all([
+    reviewsOn ? getFeaturedReviews(6) : Promise.resolve([]),
+    reviewsOn ? getReviewShowcasePhotos(12) : Promise.resolve([]),
+  ]);
+
+  // Site-wide review average, denormalised onto each product.
+  const ratingCount = fragrances.reduce((s, f) => s + f.rating.count, 0);
+  const ratingAverage =
+    ratingCount > 0
+      ? fragrances.reduce((s, f) => s + f.rating.average * f.rating.count, 0) /
+        ratingCount
+      : 0;
+  const rating =
+    reviewsOn && ratingCount > 0
+      ? { average: ratingAverage, count: ratingCount }
+      : null;
+
+  const savePercent = (() => {
+    const f = fragrances[0];
+    if (!f || f.mrp <= 0 || f.price >= f.mrp) return 0;
+    return Math.round((1 - f.price / f.mrp) * 100);
+  })();
+
+  // "@THERARESKIN" strip: real customer photos first, topped up with packshots
+  // so the band is always full even before reviews arrive.
+  const packshots: ShowcasePhoto[] = fragrances
+    .map((f): ShowcasePhoto | null => {
+      const url = cloudinaryVariant(f.images.flat ?? f.images.hero, { w: 480 });
+      return url ? { url, alt: f.name, href: `/fragrances/${f.slug}` } : null;
+    })
+    .filter((p): p is ShowcasePhoto => p !== null);
+  const strip: ShowcasePhoto[] = [];
+  const seen = new Set<string>();
+  for (const p of [...showcasePhotos, ...packshots]) {
+    if (seen.has(p.url)) continue;
+    seen.add(p.url);
+    strip.push(p);
+  }
 
   return (
     <main id="main">
       <Hero fragrances={fragrances} />
+      <AssuranceStrip rating={rating} savePercent={savePercent} />
       <ImpressionMarquee fragrances={fragrances} />
-      <Collection fragrances={fragrances} />
+      <Collection fragrances={fragrances} showRating={reviewsOn} />
       <Quiz fragrances={fragrances} />
       <DiscoverySet set={discoverySet} fragrances={fragrances} />
       <WhyExtrait />
+      <MadeDeliberately />
       <TheIdea />
       <Reviews reviews={featuredReviews} />
+      <InstagramStrip
+        photos={strip}
+        profileHref={settings.social.instagram}
+      />
       <Newsletter />
     </main>
   );

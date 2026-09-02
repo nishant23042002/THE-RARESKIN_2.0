@@ -308,6 +308,11 @@ before going live:
 - **FAQ** — verify the assertions ("bottled in India by Velocity Ventures
   Group", "ingredient list printed on every carton", phone hours). Add an
   animal-testing / vegan statement when the position is set.
+- **Homepage "Made deliberately" band** — `made-deliberately.tsx` states
+  "Extrait concentration", "IFRA-compliant", "No added phthalates" and
+  "Bottled in Roha, Maharashtra". Confirm each with the perfumer / QA before
+  launch and adjust the copy in that file. The animal-testing line is
+  deliberately omitted until the position is set (see FAQ item above).
 - **Founder portrait** — `/the-idea` has a 4:5 placeholder card awaiting the
   real photo.
 - **Packaging copy** — the PDP "What's in the box" answer describes a

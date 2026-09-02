@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { CSSProperties } from "react";
 import { Flacon } from "@/components/ui/flacon";
+import { Stars } from "@/components/ui/stars";
 import { AddToBagButton } from "@/components/cart/add-to-bag-button";
 import { cloudinaryVariant, formatINR, type Fragrance } from "@/lib/catalog";
 
@@ -14,10 +15,14 @@ import { cloudinaryVariant, formatINR, type Fragrance } from "@/lib/catalog";
 export function ProductCard({
   fragrance: f,
   index,
+  showRating = false,
 }: {
   fragrance: Fragrance;
   index: number;
+  /** show the star line when reviews are live and this scent has any */
+  showRating?: boolean;
 }) {
+  const rated = showRating && f.rating.count > 0;
   return (
     <article
       data-card
@@ -90,6 +95,12 @@ export function ProductCard({
         <p className="mt-2 text-[8.5px] leading-[1.9] tracking-[0.08em] uppercase opacity-65">
           {f.notes.join(" · ")}
         </p>
+        {rated && (
+          <span className="mt-3 inline-flex items-center gap-1.5 text-[9.5px] tracking-[0.1em] uppercase opacity-80">
+            <Stars value={f.rating.average} starClassName="size-3" />
+            {f.rating.average.toFixed(1)} · {f.rating.count}
+          </span>
+        )}
         <div className="mt-[clamp(16px,2vw,24px)] flex flex-col items-start gap-3.5">
           <span className="text-[12px] tracking-[0.06em]">
             {formatINR(f.price)}

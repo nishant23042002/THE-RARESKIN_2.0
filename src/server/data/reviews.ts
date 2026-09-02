@@ -228,6 +228,50 @@ export const getFeaturedReviews = unstable_cache(
   { tags: [REVIEWS_TAG], revalidate: REVALIDATE_SECONDS },
 );
 
+export interface ShowcasePhoto {
+  url: string;
+  alt: string;
+  /** the product's PDP, when the slug maps to one */
+  href: string | null;
+}
+
+/**
+ * Customer photos from approved reviews, newest first, one per distinct image —
+ * the raw material for the homepage "@THERARESKIN" strip. Falls back to nothing
+ * when there are none; the caller tops it up with packshots.
+ */
+export const getReviewShowcasePhotos = unstable_cache(
+  async (limit = 12): Promise<ShowcasePhoto[]> => {
+    await dbConnect();
+    const rows = await Review.find({
+      status: "approved",
+      "photos.0": { $exists: true },
+    })
+      .sort({ publishedAt: -1 })
+      .limit(limit * 2)
+      .select("productSlug photos")
+      .lean<Pick<ReviewDoc, "productSlug" | "photos">[]>();
+
+    const seen = new Set<string>();
+    const out: ShowcasePhoto[] = [];
+    for (const r of rows) {
+      for (const p of r.photos ?? []) {
+        if (!p.url || seen.has(p.url)) continue;
+        seen.add(p.url);
+        out.push({
+          url: p.url,
+          alt: p.alt || "A customer's photo",
+          href: hrefForSlug(r.productSlug),
+        });
+        if (out.length >= limit) return out;
+      }
+    }
+    return out;
+  },
+  ["reviews:showcase-photos"],
+  { tags: [REVIEWS_TAG], revalidate: REVALIDATE_SECONDS },
+);
+
 // ── account (uncached) ─────────────────────────────────────────────────
 
 /** Did this user receive a delivery containing this product? */
