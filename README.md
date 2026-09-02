@@ -300,6 +300,15 @@ before going live:
   content; `flags.reviewsEnabled` is currently **on**. Remove both before
   launch: `pnpm seed:reviews --remove`, then turn `reviewsEnabled` off until
   real reviews exist. (Photo uploads need `CLOUDINARY_*` — already set.)
+- **Demo campaign** — the "Launch offer — ₹799" offer card is **on** in Site
+  Settings (`campaign`) so the corner card can be seen. Edit or turn it off in
+  `Admin → Settings → Running offer`; the vector flacons in the card become real
+  packshots once product photos are uploaded.
+- **@THERARESKIN strip** — the homepage Instagram band is filled with
+  placeholder lifestyle photos (`DUMMY_INSTAGRAM` in `(store)/page.tsx`). Swap
+  for a real feed / curated set, and set the Instagram URL in Site Settings →
+  Social so "Follow →" links out. Real customer review photos already feed in
+  ahead of the placeholders.
 - **Legal pages** — Shipping / Returns / Privacy / Terms carry real,
   brand-specific copy but should get a final legal review. Confirm the values
   chosen as sensible defaults: 7-day return window, 48-hour damage-report
@@ -313,8 +322,10 @@ before going live:
   "Bottled in Roha, Maharashtra". Confirm each with the perfumer / QA before
   launch and adjust the copy in that file. The animal-testing line is
   deliberately omitted until the position is set (see FAQ item above).
-- **Founder portrait** — `/the-idea` has a 4:5 placeholder card awaiting the
-  real photo.
+- **Founder portrait** — two placeholders await the real photo: the `/the-idea`
+  page card, and the homepage "first letter" card (`FounderPortrait` in
+  `home/founder-note.tsx` — drop a file at `/public/brand/founder.jpg` and swap
+  the panel body for the `<img>` noted in the comment).
 - **Packaging copy** — the PDP "What's in the box" answer describes a
   recyclable carton + a wear card; confirm this matches the actual packaging.
 - **Reviews** — verified buyers review a product from **`/account/reviews`**

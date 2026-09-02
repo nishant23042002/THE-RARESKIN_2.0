@@ -95,6 +95,7 @@ export function SettingsForm({ settings }: { settings: S }) {
     return siteSettingsUpdateInput.parse({
       announcements: s.announcements.filter((a) => a.text.trim()),
       announcementRotateSeconds: s.announcementRotateSeconds,
+      campaign: s.campaign,
       shipping: s.shipping,
       cod: s.cod,
       gst: s.gst,
@@ -313,6 +314,77 @@ export function SettingsForm({ settings }: { settings: S }) {
               }
             />
           </Field>
+        </FormSection>
+
+        {/* ── Campaign ────────────────────────────────────────────── */}
+        <FormSection title="Running offer">
+          <Row>
+            <Field
+              label="Show the offer card"
+              hint="A small dismissible card, bottom-left, site-wide"
+            >
+              <Toggle
+                stateText
+                checked={s.campaign.active}
+                onChange={(e) =>
+                  patchGroup("campaign", { active: e.target.checked })
+                }
+              />
+            </Field>
+            <Field
+              label="Offer code"
+              hint="lower-case, hyphens — also the dismissal key; change it for a new offer"
+            >
+              <TextInput
+                value={s.campaign.code}
+                placeholder="b1g1-diwali"
+                onChange={(e) =>
+                  patchGroup("campaign", {
+                    code: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""),
+                  })
+                }
+              />
+            </Field>
+          </Row>
+          <Field label="Headline" hint="Shown on the collapsed pill — keep it short">
+            <TextInput
+              value={s.campaign.label}
+              placeholder="Buy 1, get 1 free"
+              onChange={(e) =>
+                patchGroup("campaign", { label: e.target.value })
+              }
+            />
+          </Field>
+          <Field label="Detail" hint="The line shown when the card is expanded">
+            <TextArea
+              rows={2}
+              value={s.campaign.detail}
+              placeholder="Add any two extraits to your bag — the second is on us until Sunday."
+              onChange={(e) =>
+                patchGroup("campaign", { detail: e.target.value })
+              }
+            />
+          </Field>
+          <Row>
+            <Field label="Link (optional)" hint="Where “See the offer” goes">
+              <TextInput
+                value={s.campaign.href}
+                placeholder="/discovery-set"
+                onChange={(e) =>
+                  patchGroup("campaign", { href: e.target.value })
+                }
+              />
+            </Field>
+            <Field label="Ends on (optional)" hint="YYYY-MM-DD">
+              <TextInput
+                value={s.campaign.endsAt}
+                placeholder="2026-11-02"
+                onChange={(e) =>
+                  patchGroup("campaign", { endsAt: e.target.value })
+                }
+              />
+            </Field>
+          </Row>
         </FormSection>
 
         {/* ── Shipping ────────────────────────────────────────────── */}

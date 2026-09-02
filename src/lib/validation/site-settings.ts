@@ -23,6 +23,31 @@ const announcementMessage = z.object({
   active: z.boolean().default(true),
 });
 
+/**
+ * A running promotion — "Buy 1 Get 1", a festive drop, a first-order code. One
+ * at a time. Surfaced site-wide as a small, dismissible corner card (see
+ * `campaign-note.tsx`); `code` keys the per-visitor dismissal, so bumping it
+ * brings the card back for a new offer.
+ */
+const campaignSettings = z.object({
+  active: z.boolean().default(false),
+  /** short id — also the dismissal key. e.g. "b1g1-diwali" */
+  code: z
+    .string()
+    .trim()
+    .max(32)
+    .regex(/^[a-z0-9-]*$/, "lower-case letters, digits and hyphens only")
+    .default(""),
+  /** the headline on the collapsed pill, e.g. "Buy 1, get 1 free" */
+  label: shortText(40).default(""),
+  /** the line shown when it expands */
+  detail: shortText(160).default(""),
+  /** where "See the offer" goes; empty → the card has no CTA */
+  href: z.string().max(200).default(""),
+  /** ISO date; empty → no "ends" line */
+  endsAt: z.string().max(40).default(""),
+});
+
 const shippingSettings = z.object({
   /** free shipping across India above this order value; 0 = always free */
   freeAbovePaise: paise.default(0),
@@ -99,6 +124,7 @@ const featureFlags = featureFlagsShape
 export const siteSettingsInput = z.object({
   announcements: z.array(announcementMessage).max(8).default([]),
   announcementRotateSeconds: z.number().int().min(3).max(60).default(6),
+  campaign: campaignSettings.prefault({}),
   shipping: shippingSettings.prefault({}),
   cod: codSettings.prefault({}),
   gst: gstSettings.prefault({}),
@@ -121,6 +147,7 @@ export type SiteSettingsInput = z.infer<typeof siteSettingsInput>;
 export const siteSettingsUpdateInput = z.object({
   announcements: z.array(announcementMessage).max(8).optional(),
   announcementRotateSeconds: z.number().int().min(3).max(60).optional(),
+  campaign: campaignSettings.optional(),
   shipping: shippingSettings.optional(),
   cod: codSettings.optional(),
   gst: gstSettings.optional(),

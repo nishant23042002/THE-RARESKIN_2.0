@@ -10,19 +10,18 @@ import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import type { ShowcasePhoto } from "@/server/data/reviews";
 
 /**
- * "@THERARESKIN" — a slow horizontal band of real customer photos (topped up
- * with packshots when there aren't enough yet), same seamless-loop mechanic as
- * the announcement bar. The visual-proof layer that sits between the written
- * reviews and the newsletter. Pauses on hover; a plain swipeable strip under
- * reduced motion.
+ * "@THERARESKIN" — a slow horizontal band of Instagram-style posts (portrait
+ * cards, the way a feed photo actually sits), same seamless-loop mechanic as the
+ * announcement bar. The visual-proof layer between the written reviews and the
+ * newsletter. Pauses on hover; a plain swipeable strip under reduced motion.
  */
 
 const TILE =
-  "relative block aspect-square w-[clamp(128px,20vw,196px)] shrink-0 overflow-hidden rounded-[4px] border border-line bg-surface-2";
+  "relative block aspect-[4/5] w-[clamp(150px,23vw,232px)] shrink-0 overflow-hidden rounded-[4px] border border-line bg-surface-2";
 
 function Tile({ photo, profileHref }: { photo: ShowcasePhoto; profileHref?: string }) {
   const src =
-    cloudinaryVariant(photo.url, { w: 400, h: 400, fill: true }) ?? photo.url;
+    cloudinaryVariant(photo.url, { w: 420, h: 525, fill: true }) ?? photo.url;
   const img = (
     // eslint-disable-next-line @next/next/no-img-element
     <img
@@ -106,7 +105,7 @@ export function InstagramStrip({
   if (base.length === 0) return null;
 
   return (
-    <section className="overflow-hidden border-t border-line py-[clamp(40px,7vw,76px)]">
+    <section className="overflow-hidden border-t border-line py-[clamp(52px,9vw,108px)]">
       <Container className="mb-[clamp(20px,3vw,34px)] flex items-baseline justify-between gap-4">
         <div>
           <span className="eyebrow mb-2 block">On the skin</span>

@@ -389,6 +389,59 @@
     display: none;
   }
 
+  /* campaign corner card — the pill catches a slow gilt sweep every few
+     seconds so it stays noticed without moving; the detail card rises once. */
+  .campaign-pill {
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s var(--ease-out-strong);
+  }
+  .campaign-pill:hover {
+    transform: translateY(-1px);
+  }
+  .campaign-pill::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      100deg,
+      transparent 40%,
+      rgba(216, 154, 77, 0.28) 50%,
+      transparent 60%
+    );
+    transform: translateX(-120%);
+    animation: campaign-sweep 7s ease-in-out 2s infinite;
+    pointer-events: none;
+  }
+  @keyframes campaign-sweep {
+    0%,
+    82%,
+    100% {
+      transform: translateX(-120%);
+    }
+    92% {
+      transform: translateX(120%);
+    }
+  }
+  .campaign-rise {
+    animation: campaign-rise 0.34s var(--ease-out-strong);
+  }
+  @keyframes campaign-rise {
+    from {
+      opacity: 0;
+      transform: translateY(8px) scale(0.98);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .campaign-pill::after {
+      animation: none;
+      opacity: 0;
+    }
+    .campaign-rise {
+      animation: none;
+    }
+  }
+
   /* ---- quiz: one stage, panels cross-fade + slide, height animates to the
      active panel so the card never jumps ---- */
   .quiz-stage {

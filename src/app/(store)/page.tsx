@@ -7,7 +7,7 @@ import { Quiz } from "@/components/home/quiz";
 import { DiscoverySet } from "@/components/home/discovery-set";
 import { WhyExtrait } from "@/components/home/why-extrait";
 import { MadeDeliberately } from "@/components/home/made-deliberately";
-import { TheIdea } from "@/components/home/the-idea";
+import { FounderNote } from "@/components/home/founder-note";
 import { Reviews } from "@/components/home/reviews";
 import { InstagramStrip } from "@/components/home/instagram-strip";
 import { Newsletter } from "@/components/home/newsletter";
@@ -38,7 +38,7 @@ export default async function HomePage() {
   const reviewsOn = settings.flags.reviewsEnabled;
   const [featuredReviews, showcasePhotos] = await Promise.all([
     reviewsOn ? getFeaturedReviews(6) : Promise.resolve([]),
-    reviewsOn ? getReviewShowcasePhotos(12) : Promise.resolve([]),
+    getReviewShowcasePhotos(12),
   ]);
 
   // Site-wide review average, denormalised onto each product.
@@ -59,17 +59,31 @@ export default async function HomePage() {
     return Math.round((1 - f.price / f.mrp) * 100);
   })();
 
-  // "@THERARESKIN" strip: real customer photos first, topped up with packshots
-  // so the band is always full even before reviews arrive.
+  // "@THERARESKIN" strip: real customer photos first, then a set of placeholder
+  // lifestyle shots, then packshots — so the band is always full while the real
+  // feed fills in. DUMMY_INSTAGRAM is demo content; swap for a real feed / curated
+  // set before launch (see README).
+  const DUMMY_INSTAGRAM: ShowcasePhoto[] = [
+    "rareskin-ig-a",
+    "rareskin-ig-b",
+    "rareskin-ig-c",
+    "rareskin-ig-d",
+    "rareskin-ig-e",
+    "rareskin-ig-f",
+  ].map((seed) => ({
+    url: `https://picsum.photos/seed/${seed}/640/800`,
+    alt: "THE RARESKIN, worn",
+    href: null,
+  }));
   const packshots: ShowcasePhoto[] = fragrances
     .map((f): ShowcasePhoto | null => {
-      const url = cloudinaryVariant(f.images.flat ?? f.images.hero, { w: 480 });
+      const url = cloudinaryVariant(f.images.flat ?? f.images.hero, { w: 560 });
       return url ? { url, alt: f.name, href: `/fragrances/${f.slug}` } : null;
     })
     .filter((p): p is ShowcasePhoto => p !== null);
   const strip: ShowcasePhoto[] = [];
   const seen = new Set<string>();
-  for (const p of [...showcasePhotos, ...packshots]) {
+  for (const p of [...showcasePhotos, ...DUMMY_INSTAGRAM, ...packshots]) {
     if (seen.has(p.url)) continue;
     seen.add(p.url);
     strip.push(p);
@@ -85,7 +99,7 @@ export default async function HomePage() {
       <DiscoverySet set={discoverySet} fragrances={fragrances} />
       <WhyExtrait />
       <MadeDeliberately />
-      <TheIdea />
+      <FounderNote />
       <Reviews reviews={featuredReviews} />
       <InstagramStrip
         photos={strip}

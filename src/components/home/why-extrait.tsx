@@ -50,7 +50,7 @@ export function WhyExtrait() {
   return (
     <section
       id="why"
-      className="flex min-h-svh flex-col justify-center scroll-mt-[calc(var(--announce-h)+var(--header-h)+16px)] py-[clamp(56px,10vw,112px)]"
+      className="scroll-mt-[calc(var(--announce-h)+var(--header-h)+16px)] border-t border-line py-[clamp(60px,10vw,120px)]"
     >
       <Container className="grid gap-x-16 gap-y-12 lg:grid-cols-[0.9fr_1.1fr]">
         <div className="lg:sticky lg:top-[calc(var(--announce-h)+var(--header-h)+44px)] lg:self-start">

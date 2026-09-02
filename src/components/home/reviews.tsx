@@ -151,7 +151,7 @@ export function Reviews({ reviews }: { reviews: FeaturedReview[] }) {
   };
 
   return (
-    <section className="scroll-mt-[calc(var(--announce-h)+var(--header-h)+16px)] border-t border-line py-[clamp(40px,7vh,76px)]">
+    <section className="scroll-mt-[calc(var(--announce-h)+var(--header-h)+16px)] border-t border-line py-[clamp(52px,9vw,108px)]">
       <Container>
         <Reveal className="mb-[clamp(22px,4vh,40px)]">
           <span className="eyebrow mb-3 block">In their words</span>

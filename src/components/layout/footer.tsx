@@ -13,7 +13,7 @@ const STATIC_COLUMNS: Column[] = [
     title: "Discover",
     links: [
       { label: "Why Extrait", href: "/#why" },
-      { label: "The Idea", href: "/#idea" },
+      { label: "The founder's note", href: "/#founder" },
       { label: "Find your match", href: "/#quiz" },
     ],
   },

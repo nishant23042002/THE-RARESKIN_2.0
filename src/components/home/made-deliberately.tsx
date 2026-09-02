@@ -39,7 +39,7 @@ const CLAIMS: { icon: IconName; label: string; sub: string }[] = [
 
 export function MadeDeliberately() {
   return (
-    <section className="scroll-mt-[calc(var(--announce-h)+var(--header-h)+16px)] border-t border-line py-[clamp(44px,8vw,88px)]">
+    <section className="scroll-mt-[calc(var(--announce-h)+var(--header-h)+16px)] border-t border-line bg-surface py-[clamp(60px,10vw,120px)]">
       <Container>
         <Reveal className="max-w-[46ch]">
           <span className="eyebrow mb-3 block">Made deliberately</span>

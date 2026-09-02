@@ -12,6 +12,7 @@ import { HoldingPage } from "@/components/layout/holding-page";
 import { CartDrawer } from "@/components/cart/cart-drawer";
 import { CartToast } from "@/components/cart/cart-toast";
 import { CartBar } from "@/components/cart/cart-bar";
+import { CampaignNote } from "@/components/layout/campaign-note";
 import { getCatalogNav, getBagSuggestions } from "@/server/data/catalog";
 import { getSiteSettings } from "@/server/data/settings";
 import { getCurrentUser } from "@/server/auth";
@@ -64,6 +65,17 @@ export default async function StoreLayout({
             <CartDrawer />
             <CartToast />
             <CartBar />
+            <CampaignNote
+              campaign={settings.campaign}
+              products={bagSuggestions
+                .filter((s) => s.fragrance)
+                .slice(0, 3)
+                .map((s) => ({
+                  name: s.name,
+                  image: s.image,
+                  fragrance: s.fragrance,
+                }))}
+            />
             <SignInModalMount />
             <SignInAutoPrompt />
           </RouteTransitionProvider>

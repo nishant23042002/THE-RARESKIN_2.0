@@ -36,8 +36,8 @@ export function Newsletter() {
   }
 
   return (
-    <section id="letter" className="bg-w4 text-w0">
-      <Container className="py-[clamp(72px,12vw,130px)] text-center">
+    <section id="letter" className="border-t border-line bg-w4 text-w0">
+      <Container className="py-[clamp(72px,11vw,128px)] text-center">
         <span className="eyebrow text-w0/68">The Letter</span>
         <h2 className="serif-italic mx-2 mt-3.5 mb-2 text-[clamp(1.7rem,3.8vw,2.6rem)]">
           One note when something new arrives.

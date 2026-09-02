@@ -154,6 +154,15 @@ function buildSettings() {
       { text: "Extrait de Parfum. Nothing lighter.", active: true },
     ],
     announcementRotateSeconds: 4,
+    campaign: {
+      active: true,
+      code: "launch-799",
+      label: "Launch offer — ₹799",
+      detail:
+        "Each of the three extraits is ₹799 through launch, down from ₹1,199. Free shipping, cash on delivery, 7-day returns.",
+      href: "/#shop",
+      endsAt: "",
+    },
     shipping: {
       freeAbovePaise: 0,
       flatRatePaise: 0,

@@ -78,7 +78,7 @@ export function Collection({
     <section
       ref={sectionRef}
       id="shop"
-      className="flex min-h-svh flex-col pt-[calc(var(--header-h)+clamp(8px,2vw,24px))]"
+      className="flex flex-col pt-[calc(var(--header-h)+clamp(8px,2vw,24px))] pb-[clamp(2px,1vw,10px)]"
     >
       <Container className="border-t border-line pt-[clamp(16px,2vw,24px)] pb-[clamp(18px,2.6vw,30px)]">
         <p className="eyebrow mb-[clamp(10px,1.4vw,16px)]">The Collection</p>
@@ -95,7 +95,7 @@ export function Collection({
         </div>
       </Container>
 
-      <div className="grid flex-1 grid-cols-1 gap-1.5 max-sm:content-start sm:grid-cols-3 sm:grid-rows-1">
+      <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-3 sm:grid-rows-1">
         {fragrances.map((f, i) => (
           <ProductCard
             key={f.slug}

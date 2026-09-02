@@ -39,6 +39,15 @@ const siteSettingsSchema = new Schema<SiteSettingsDoc>(
     },
     announcementRotateSeconds: { type: Number, default: 6 },
 
+    campaign: {
+      active: { type: Boolean, default: false },
+      code: { type: String, default: "" },
+      label: { type: String, default: "" },
+      detail: { type: String, default: "" },
+      href: { type: String, default: "" },
+      endsAt: { type: String, default: "" },
+    },
+
     shipping: {
       freeAbovePaise: { type: Number, default: 0 },
       flatRatePaise: { type: Number, default: 0 },
