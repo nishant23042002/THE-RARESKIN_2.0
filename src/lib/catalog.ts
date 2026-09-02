@@ -37,12 +37,35 @@ export function formatINR(rupees: number): string {
 }
 
 export interface FragranceImages {
-  /** full-bleed campaign / hero scene */
-  hero: string;
-  /** packshot on a plain ground */
-  flat: string;
-  /** carton or lifestyle */
-  box: string;
+  /** full-bleed campaign / hero scene — null until real photography is attached */
+  hero: string | null;
+  /** packshot on a plain ground — null until real photography is attached */
+  flat: string | null;
+  /** carton or lifestyle — null until real photography is attached */
+  box: string | null;
+}
+
+/** Any real Fragrance/Set image is present. */
+export function hasPhotography(images: FragranceImages): boolean {
+  return Boolean(images.hero || images.flat || images.box);
+}
+
+/**
+ * Rewrite a Cloudinary delivery URL to request an on-the-fly variant
+ * (`f_auto,q_auto` + an optional width/height cap). Non-Cloudinary URLs and
+ * `null` pass straight through, so callers can hand it a raw `media.*.url`.
+ * Isomorphic — mirrors `pdfSafeImage` in `src/server/invoice/data.ts`.
+ */
+export function cloudinaryVariant(
+  url: string | null | undefined,
+  opts: { w?: number; h?: number } = {},
+): string | null {
+  if (!url) return null;
+  if (!url.includes("res.cloudinary.com") || !url.includes("/upload/")) return url;
+  const parts = ["f_auto", "q_auto"];
+  if (opts.w) parts.push(`w_${opts.w}`, "c_limit");
+  if (opts.h) parts.push(`h_${opts.h}`, "c_limit");
+  return url.replace("/upload/", `/upload/${parts.join(",")}/`);
 }
 
 export interface Fragrance {
@@ -102,6 +125,8 @@ export interface DiscoverySetInfo {
   /** store credit toward a first full-size bottle, rupees */
   creditRupees: number;
   components: { slug: FragranceSlug; volumeMl: number }[];
+  /** real packshot when one is attached, else null → the vector treatment */
+  image: string | null;
   available: boolean;
   seo: { metaTitle: string | null; metaDescription: string | null };
 }
@@ -172,11 +197,3 @@ export const FRAGRANCE_PALETTE: Record<
   },
 };
 
-/** Placeholder image paths, used until real Cloudinary photography is attached. */
-export function placeholderImages(slug: string): FragranceImages {
-  return {
-    hero: `/images/${slug}/hero.jpg`,
-    flat: `/images/${slug}/flat.jpg`,
-    box: `/images/${slug}/box.jpg`,
-  };
-}

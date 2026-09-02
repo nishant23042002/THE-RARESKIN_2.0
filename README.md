@@ -229,12 +229,12 @@ the payload and return `{ ok: true }` without delivering anything. Replace the
 
 ### Product photography
 
-Upload packshots / campaign images through the admin (Phase G) — they land in
-Cloudinary and attach to a product's `media` field, and the catalogue DAL
-serves them automatically. Until then the `<Flacon>` / `<HeroScene>` vector
-placeholders stand in, sized to the final aspect ratios; swap them for
-`next/image` in `components/product/pdp-gallery.tsx` and
-`components/home/hero-scene.tsx` once real assets exist.
+Upload packshots through **`/admin/catalogue/<slug>/edit`** → Images (needs
+`CLOUDINARY_*`). An uploaded `hero`/`flat`/`box` immediately replaces the vector
+`<Flacon>` on the PDP gallery, the home collection cards, the Discovery Set
+vials, and the bag cross-sell — everywhere else (the animated `<HeroScene>`, the
+quiz) stays on vectors, a deliberate later polish. Aspect ratios are already the
+final ones.
 
 ---
 
@@ -263,14 +263,22 @@ before going live:
   `CRON_SECRET`, then flip `flags.checkoutEnabled` in Site Settings. Until then
   the checkout drawer shows "opens with launch" for customers; in dev it uses
   the simulate-payment panel.
-- **Admin** — `/admin` ("Studio") covers order management end to end (fulfil,
-  refund, cancel, notes) with role-gated access + phone-OTP sudo re-auth for
-  dangerous actions. See [`docs/admin.md`](docs/admin.md). Catalogue and coupon
-  UIs land in Phase G2 / G3; until then use the scripts below.
+- **Admin** — `/admin` ("Studio"): order management end to end (fulfil, refund,
+  cancel, notes) and the **catalogue editor** (full record, product photos,
+  ledgered stock adjustments), role-gated + phone-OTP sudo for dangerous
+  actions. A non-staff account gets a real 403 "no access" screen. See
+  [`docs/admin.md`](docs/admin.md). The coupon / customer / staff / settings UIs
+  are Phase G3.
+- **Google sign-in (optional)** — "Continue with Google" for staff/customers who
+  link a Google account from `/account` or `/admin/account`. Off until
+  `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` are set, the
+  `/api/auth/google/callback` redirect URI is registered in Google Cloud, and
+  `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=1`. See [`docs/auth.md`](docs/auth.md).
 - **Coupons** — created with `pnpm coupon add …` for now (the coupon UI is
   Phase G3). None ship by default.
-- **Stock** — every product seeds at `stock: 0`; set real levels with
-  `pnpm catalog set <slug> stock <n>` (catalogue UI is Phase G2) before launch.
+- **Stock** — every product seeds at `stock: 0`; set real levels in
+  `/admin/catalogue/<slug>/edit` (or `pnpm catalog set <slug> stock <n>`) before
+  launch.
 - **Contact & newsletter** — connect the API stubs to a real inbox / ESP.
 - **Legal pages** — Shipping / Returns / Privacy / Terms carry real,
   brand-specific copy but should get a final legal review. Confirm the values

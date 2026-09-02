@@ -29,8 +29,13 @@ export {
 export {
   commitStockForOrder,
   restoreStockForOrder,
+  adjustStock,
 } from "./inventory";
-export type { StockLine, StockCommitResult } from "./inventory";
+export type {
+  StockLine,
+  StockCommitResult,
+  AdjustStockResult,
+} from "./inventory";
 
 export { quoteOrder, placeOrder, creditBalanceFor } from "./orders";
 export type {

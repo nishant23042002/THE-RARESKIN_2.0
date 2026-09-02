@@ -17,6 +17,17 @@ export interface SessionUser {
 
 export const SESSION_COOKIE = "__Host-rrs.session";
 
+/** What the account "Sign-in methods" UI needs. No tokens, no Google `sub` —
+ *  safe to hand to a client component. Built server-side by `getSignInMethods`. */
+export interface SignInMethodsView {
+  phone: string;
+  google:
+    | { email: string; name: string | null; linkedAt: string; lastUsedAt: string | null }
+    | null;
+  /** whether Google linking is available on this environment at all */
+  googleConfigured: boolean;
+}
+
 /**
  * OTP code length. **Must equal the "Code Length" set on your Twilio Verify
  * Service** (Console → Verify → Services → Settings) — Twilio generates codes at
@@ -57,6 +68,20 @@ export function normalizeIndianMobile(input: string): string | null {
   else if (ten.length === 11 && ten.startsWith("0")) ten = ten.slice(1);
   if (!INDIAN_MOBILE.test(ten)) return null;
   return `+91${ten}`;
+}
+
+/**
+ * Sanitise a post-sign-in redirect target. Only a same-origin path is allowed —
+ * a leading `/` but **not** `//` or `/\` (both resolve to another origin in a
+ * browser), and no control characters. Anything else falls back to `/account`.
+ */
+export function safeNextPath(value: string | null | undefined): string {
+  if (!value) return "/account";
+  const v = value.trim();
+  if (!v.startsWith("/")) return "/account";
+  if (v.startsWith("//") || v.startsWith("/\\")) return "/account";
+  if (/[\x00-\x1f]/.test(v)) return "/account";
+  return v;
 }
 
 /** `+919011285958` → `+91 90112 •••58` for display in confirmations. */

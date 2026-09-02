@@ -65,6 +65,21 @@ export interface UserDoc {
     secret: string | null;
     backupCodes: string[];
   };
+  /**
+   * A linked Google account, for "Continue with Google" sign-in. Only ever
+   * *linked* to an account that already exists (phone-first) — never a signup
+   * path. `sub` is Google's stable account id and the join key.
+   */
+  google: {
+    sub: string;
+    email: string;
+    emailVerified: boolean;
+    name: string | null;
+    picture: string | null;
+    hostedDomain: string | null;
+    linkedAt: Date;
+    lastUsedAt: Date | null;
+  } | null;
   lastLoginAt: Date | null;
   lastLoginIp: string | null;
   createdAt: Date;
@@ -111,6 +126,22 @@ const userSchema = new Schema<UserDoc>(
       secret: { type: String, default: null },
       backupCodes: { type: [String], default: [] },
     },
+    google: {
+      type: new Schema(
+        {
+          sub: { type: String, required: true },
+          email: { type: String, required: true, lowercase: true, trim: true },
+          emailVerified: { type: Boolean, default: false },
+          name: { type: String, default: null },
+          picture: { type: String, default: null },
+          hostedDomain: { type: String, default: null },
+          linkedAt: { type: Date, default: Date.now },
+          lastUsedAt: { type: Date, default: null },
+        },
+        { _id: false },
+      ),
+      default: null,
+    },
     lastLoginAt: { type: Date, default: null },
     lastLoginIp: { type: String, default: null },
   },
@@ -120,6 +151,16 @@ const userSchema = new Schema<UserDoc>(
 // Serves admin "staff" / "suspended" filters and `{ role }` prefix lookups.
 userSchema.index({ role: 1, status: 1 }, { name: "role_status" });
 userSchema.index({ createdAt: -1 }, { name: "createdAt_desc" });
+// One Google account links to at most one user. Partial so the (many) rows with
+// `google: null` don't collide (same reasoning as `email_unique` above).
+userSchema.index(
+  { "google.sub": 1 },
+  {
+    unique: true,
+    partialFilterExpression: { "google.sub": { $type: "string" } },
+    name: "google_sub_unique",
+  },
+);
 
 export const User: Model<UserDoc> =
   (models.User as Model<UserDoc>) ?? model<UserDoc>("User", userSchema);

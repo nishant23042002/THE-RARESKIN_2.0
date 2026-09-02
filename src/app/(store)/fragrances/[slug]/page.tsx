@@ -157,7 +157,7 @@ export default async function FragrancePage({
           className="mt-[clamp(20px,3vw,34px)] grid gap-[clamp(28px,4vw,60px)] pb-[clamp(48px,8vw,90px)] lg:grid-cols-2 lg:items-start"
           style={{ "--frag": f.accent } as CSSProperties}
         >
-          <PdpGallery slug={f.slug} name={f.name} />
+          <PdpGallery slug={f.slug} name={f.name} images={f.images} />
 
           <div>
             <h1 className="text-[clamp(2rem,4.4vw,2.9rem)] font-light tracking-[0.1em]">

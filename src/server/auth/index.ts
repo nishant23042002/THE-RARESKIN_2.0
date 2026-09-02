@@ -23,6 +23,7 @@ export {
 export type { AuthContext, SessionSummary } from "./session";
 export { sendOtp, checkOtp, recentOtpFailures } from "./otp";
 export { upsertVerifiedUser } from "./user";
+export { getSignInMethods } from "./identities";
 export { checkRate } from "./rate-limit";
 export type { RateRule, RateResult } from "./rate-limit";
 export { verifyTurnstile, isTurnstileConfigured } from "./turnstile";

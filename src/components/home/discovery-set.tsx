@@ -3,7 +3,12 @@ import { Container } from "@/components/ui/container";
 import { Flacon } from "@/components/ui/flacon";
 import { Reveal } from "@/components/ui/reveal";
 import { AddToBagButton } from "@/components/cart/add-to-bag-button";
-import { formatINR, type DiscoverySetInfo, type Fragrance } from "@/lib/catalog";
+import {
+  cloudinaryVariant,
+  formatINR,
+  type DiscoverySetInfo,
+  type Fragrance,
+} from "@/lib/catalog";
 
 /**
  * The Discovery Set — a dark two-column band: the pitch + credit logic + a
@@ -72,9 +77,26 @@ export function DiscoverySet({
               key={f.slug}
               className="flex flex-col items-center gap-4 border border-white/[0.13] bg-white/[0.02] px-2.5 py-[clamp(18px,2.6vw,30px)] text-center"
             >
-              <span className="block w-[58%] max-w-[76px]" style={vialShadow}>
-                <Flacon fragrance={f.slug} />
-              </span>
+              {(() => {
+                const photo = cloudinaryVariant(f.images.flat ?? f.images.hero, {
+                  w: 220,
+                });
+                return photo ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={photo}
+                    alt={f.name}
+                    className="block w-[72%] max-w-[104px]"
+                    style={vialShadow}
+                    loading="lazy"
+                    decoding="async"
+                  />
+                ) : (
+                  <span className="block w-[58%] max-w-[76px]" style={vialShadow}>
+                    <Flacon fragrance={f.slug} />
+                  </span>
+                );
+              })()}
               <figcaption className="flex flex-col gap-1.5">
                 <span className="text-[0.92rem] tracking-[0.12em]">{f.name}</span>
                 <span className="text-[8px] tracking-[0.18em] text-w0/65 uppercase">

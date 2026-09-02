@@ -1,6 +1,6 @@
 import "server-only";
 
-import { notFound, redirect } from "next/navigation";
+import { forbidden, redirect } from "next/navigation";
 
 import { getAuth, roleRank } from "./index";
 import type { AuthContext } from "./session";
@@ -9,10 +9,16 @@ import type { UserRole } from "@/lib/validation/user";
 /**
  * Admin-area guards.
  *
- * A signed-out visitor is sent to the sign-in modal; a signed-in **non-staff**
- * account gets a plain 404 (`notFound()`) rather than a redirect, so `/admin`'s
- * existence is never disclosed to a customer. Section-level access is a rank
- * comparison against `roleRank` — `admin` and `superadmin` clear everything.
+ * A signed-out visitor is sent to the sign-in modal; a signed-in account that
+ * isn't staff (or is staff but under-ranked for a section) gets a real **403**
+ * via `forbidden()` — Next renders the nearest `forbidden.tsx` (a styled
+ * "no access" screen) and sends a `403` status with `noindex`. Section-level
+ * access is a rank comparison against `roleRank` — `admin` and `superadmin`
+ * clear everything.
+ *
+ * `forbidden()` needs `experimental.authInterrupts` (set in `next.config.ts`)
+ * and must be called on the render path — every guard here is `await`ed by a
+ * layout, page or route handler, so the throw is always caught by a boundary.
  *
  * Dangerous actions additionally require a fresh `sudo` re-auth (a phone OTP
  * that sets `session.sudoUntil`); `assertSudo` throws `SudoRequiredError`, which
@@ -27,26 +33,43 @@ export class SudoRequiredError extends Error {
   }
 }
 
-/** No session → sign-in; session but not staff → 404. */
+/** No session → sign-in; session but not staff → 403. */
 export async function requireStaff(): Promise<AuthContext> {
   const ctx = await getAuth();
   if (!ctx) {
     redirect(`/?signin=1&next=${encodeURIComponent("/admin")}`);
   }
-  if (!ctx.user.isStaff) notFound();
+  if (!ctx.user.isStaff) forbidden();
   return ctx;
 }
 
-/** `requireStaff` + at least `min` on the role ladder (else 404). */
+/** `requireStaff` + at least `min` on the role ladder (else 403). */
 export async function requireAdminRole(min: UserRole): Promise<AuthContext> {
   const ctx = await requireStaff();
-  if (roleRank[ctx.user.role] < roleRank[min]) notFound();
+  if (roleRank[ctx.user.role] < roleRank[min]) forbidden();
   return ctx;
 }
 
 /** The numeric rank for a role — for role-gating nav / UI. */
 export function roleRankFor(role: UserRole): number {
   return roleRank[role] ?? 0;
+}
+
+/**
+ * `support` and `catalog_manager` sit at the same rank but are parallel
+ * specialisations — a rank check alone lets `support` into the catalogue, which
+ * isn't their job. Catalogue work needs the `catalog_manager` role itself, or
+ * `operations`+ (a more senior operator who also covers stock).
+ */
+export function canManageCatalogue(role: UserRole): boolean {
+  return role === "catalog_manager" || roleRank[role] >= roleRank.operations;
+}
+
+/** `requireStaff` + `canManageCatalogue` (else 403). */
+export async function requireCatalogueRole(): Promise<AuthContext> {
+  const ctx = await requireStaff();
+  if (!canManageCatalogue(ctx.user.role)) forbidden();
+  return ctx;
 }
 
 /** True when the session is inside its elevated `sudo` window. */

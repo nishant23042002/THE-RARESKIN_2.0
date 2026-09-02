@@ -29,3 +29,11 @@ export const sudoConfirmInput = z.object({
     .regex(new RegExp(`^\\d{${OTP_LENGTH}}$`), `Enter the ${OTP_LENGTH}-digit code`),
 });
 export type SudoConfirmInput = z.infer<typeof sudoConfirmInput>;
+
+/** Query of `GET /api/auth/google/start`. `next` is sanitised again server-side
+ *  via `safeNextPath`; the callback trusts only its own signed cookies. */
+export const googleStartQuery = z.object({
+  mode: z.enum(["link", "signin"]).default("signin"),
+  next: z.string().max(512).optional(),
+});
+export type GoogleStartQuery = z.infer<typeof googleStartQuery>;

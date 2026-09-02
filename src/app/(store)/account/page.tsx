@@ -2,11 +2,12 @@ import Link from "next/link";
 
 import { Container } from "@/components/ui/container";
 import { AccountActions } from "@/components/account/account-actions";
+import { SignInMethods } from "@/components/account/sign-in-methods";
 import { OrderRow } from "@/components/account/order-row";
 import { pageMeta } from "@/lib/seo";
 import { maskPhone } from "@/lib/auth";
 import { formatPaise } from "@/lib/money";
-import { requireUser, listUserSessions } from "@/server/auth";
+import { requireUser, listUserSessions, getSignInMethods } from "@/server/auth";
 import { listUserOrders } from "@/server/data/orders";
 import { listAddresses } from "@/server/data/addresses";
 import { getAccountOverview } from "@/server/data/account";
@@ -23,15 +24,15 @@ export const dynamic = "force-dynamic";
 
 export default async function AccountPage() {
   const { user, session } = await requireUser("/account");
-  const [sessions, orders, addresses, creditPaise, overview] = await Promise.all(
-    [
+  const [sessions, orders, addresses, creditPaise, overview, signInMethods] =
+    await Promise.all([
       listUserSessions(user.id, session._id),
       listUserOrders(user.id),
       listAddresses(user.id),
       getStoreCreditBalance(user.id),
       getAccountOverview(user.id),
-    ],
-  );
+      getSignInMethods(user.id),
+    ]);
   const recent = orders.slice(0, 4);
   const defaultAddress = addresses.find((a) => a.isDefault) ?? addresses[0];
 
@@ -163,6 +164,11 @@ export default async function AccountPage() {
               )}
             </p>
           </section>
+        </div>
+
+        {/* ── sign-in methods ────────────────────────────────────── */}
+        <div className="mt-10">
+          <SignInMethods methods={signInMethods} />
         </div>
 
         {/* ── devices ────────────────────────────────────────────── */}

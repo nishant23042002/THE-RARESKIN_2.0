@@ -5,8 +5,10 @@ import { getEnv } from "@/server/env";
 import { toPaise, toRupees } from "@/lib/money";
 
 /**
- * Tiny catalogue editor for before the admin dashboard exists (Phase G).
- * Every write bumps the cache so the change is live within seconds.
+ * Scripted catalogue edits. The primary editor is now `/admin/catalogue`
+ * (Phase G2 — full record, images, stock ledger); this stays for bulk /
+ * scripted / CI changes. Every write bumps the cache so the change is live
+ * within seconds.
  *
  *   pnpm catalog list
  *   pnpm catalog set <slug> price 749          # rupees

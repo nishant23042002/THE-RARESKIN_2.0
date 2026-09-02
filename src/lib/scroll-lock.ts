@@ -25,3 +25,13 @@ export function unlockScroll(key: string): void {
   holders.delete(key);
   sync();
 }
+
+/**
+ * Force-release every holder. The storefront and the admin share one `<body>`;
+ * if a storefront overlay unmounts across a route-group navigation without
+ * running its release, the lock leaks. The admin calls this on entry.
+ */
+export function resetScrollLock(): void {
+  holders.clear();
+  sync();
+}

@@ -11,6 +11,11 @@ import { SignInModal } from "./sign-in-modal";
 export function SignInModalMount() {
   const { signIn, closeSignIn } = useAuth();
   return (
-    <SignInModal open={signIn.open} next={signIn.next} onClose={closeSignIn} />
+    <SignInModal
+      open={signIn.open}
+      next={signIn.next}
+      authError={signIn.error}
+      onClose={closeSignIn}
+    />
   );
 }

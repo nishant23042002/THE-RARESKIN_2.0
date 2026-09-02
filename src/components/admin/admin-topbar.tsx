@@ -65,6 +65,13 @@ export function AdminTopbar({
 
       <div className="flex items-center gap-2.5">
         <Link
+          href="/admin/account"
+          className="inline-flex items-center gap-1.5 text-[11px] tracking-[0.06em] text-ink-2 uppercase hover:text-ink"
+        >
+          <Icon name="lock" className="size-3" />
+          Account
+        </Link>
+        <Link
           href="/"
           className="inline-flex items-center gap-1.5 text-[11px] tracking-[0.06em] text-ink-2 uppercase hover:text-ink"
         >

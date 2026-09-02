@@ -12,6 +12,12 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  // `forbidden()` / `unauthorized()` from `next/navigation` — the admin guards
+  // render a real 403 for a signed-in account that lacks access (see
+  // `src/server/auth/admin.ts`, `src/app/forbidden.tsx`).
+  experimental: {
+    authInterrupts: true,
+  },
   // Native Node.js require for the DB / media SDKs — they use Node built-ins and
   // must not be bundled into the Server Components graph.
   serverExternalPackages: [

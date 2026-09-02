@@ -26,3 +26,26 @@ export {
   cancelOrderByAdmin,
 } from "./order-actions";
 export type { ActionResult } from "./order-actions";
+
+export {
+  listProducts,
+  getProductForEdit,
+  getCatalogueOverview,
+  fragranceSlugOptions,
+} from "./catalog";
+export type {
+  AdminProductRow,
+  ProductEditDTO,
+  MediaRefDTO,
+} from "./catalog";
+
+export {
+  createProduct,
+  updateProduct,
+  setProductStatus,
+  adjustProductStock,
+  reorderProducts,
+  duplicateProduct,
+  bumpCatalogCache,
+} from "./catalog-actions";
+export type { CatalogActionResult } from "./catalog-actions";

@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 
-import { requireStaff, roleRankFor } from "@/server/auth/admin";
+import {
+  requireStaff,
+  roleRankFor,
+  canManageCatalogue,
+} from "@/server/auth/admin";
 import { AdminShell } from "@/components/admin/admin-shell";
 import type { AdminNavItem } from "@/components/admin/admin-nav";
 import type { IconName } from "@/components/ui/icon";
@@ -11,9 +15,30 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-const NAV: (AdminNavItem & { min: UserRole; icon: IconName })[] = [
-  { href: "/admin", label: "Dashboard", icon: "grid", min: "support" },
-  { href: "/admin/orders", label: "Orders", icon: "list", min: "support" },
+const NAV: {
+  href: string;
+  label: string;
+  icon: IconName;
+  canSee: (role: UserRole) => boolean;
+}[] = [
+  {
+    href: "/admin",
+    label: "Dashboard",
+    icon: "grid",
+    canSee: () => true,
+  },
+  {
+    href: "/admin/orders",
+    label: "Orders",
+    icon: "list",
+    canSee: (role) => roleRankFor(role) >= roleRankFor("support"),
+  },
+  {
+    href: "/admin/catalogue",
+    label: "Catalogue",
+    icon: "box",
+    canSee: canManageCatalogue,
+  },
 ];
 
 export default async function AdminLayout({
@@ -22,10 +47,9 @@ export default async function AdminLayout({
   children: React.ReactNode;
 }) {
   const ctx = await requireStaff();
-  const rank = roleRankFor(ctx.user.role);
-  const nav: AdminNavItem[] = NAV.filter(
-    (n) => rank >= roleRankFor(n.min),
-  ).map(({ href, label, icon }) => ({ href, label, icon }));
+  const nav: AdminNavItem[] = NAV.filter((n) => n.canSee(ctx.user.role)).map(
+    ({ href, label, icon }) => ({ href, label, icon }),
+  );
 
   const sudoUntil = ctx.session.sudoUntil
     ? new Date(ctx.session.sudoUntil).toISOString()

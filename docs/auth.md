@@ -153,6 +153,41 @@ No Twilio / Turnstile / Upstash account needed:
 Try it: run the app, click **Sign in**, enter any Indian mobile number, then
 the dev code.
 
+## Google account linking ("Continue with Google")
+
+Optional, off by default. Google can **only sign into / link an account that
+already exists** (phone-first) — there is no Google signup. The join key is
+Google's stable `sub`, stored in `user.google` (partial-unique index
+`google_sub_unique`).
+
+- **Link** — from `/account` or `/admin/account` → *Link Google account* →
+  `GET /api/auth/google/start?mode=link` → Google consent →
+  `GET /api/auth/google/callback`. The callback requires a live session + a
+  verified Google email, refuses a `sub` already on another user or a Google
+  email that is another account's verified email, then writes `user.google`
+  (and fills `user.email` / `emailVerifiedAt` if empty). Audit `auth.google_link`.
+- **Sign in** — the modal's *Continue with Google* button (`mode=signin`).
+  The callback finds the user by `google.sub`, else by a verified-email match
+  (linking on that first match). No match → `/?signin=1&auth_error=google-no-match`
+  and the modal explains "sign in by phone first, then link Google". Staff +
+  a non-empty `GOOGLE_STAFF_HOSTED_DOMAINS` + a `hd` not in the list →
+  `auth_error=google-staff-domain`. Otherwise `createSession`, `auth.login
+  {method:"google"}`, new-device email as usual.
+- **Unlink** — `POST /api/auth/account/google/unlink`. The phone is always on
+  file, so unlinking never locks anyone out.
+
+OAuth is hand-rolled (`src/server/auth/google.ts`) — authorization-code + PKCE
+(S256) + `state` + `nonce`, no dependency. The `id_token` payload is decoded and
+its `iss`/`aud`/`exp`/`nonce` checked; the signature is **not** JWKS-verified
+because the token is fetched by us directly from Google's token endpoint over
+TLS (sufficient for the code flow, per Google's docs — noted inline).
+
+**Env** (`GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` blank → disabled
+everywhere; `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=1` shows the button;
+`GOOGLE_STAFF_HOSTED_DOMAINS` optional). Redirect URI to register in Google
+Cloud console: `<origin>/api/auth/google/callback` (localhost + prod). Rate
+rule `auth:google:ip` (20 / 15 min).
+
 ## Production readiness
 
 | Item | Needed for |
@@ -161,6 +196,7 @@ the dev code.
 | **India DLT** — registered entity, sender ID, approved template | any SMS to Indian numbers (weeks of lead time — start now) |
 | `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN` / `TWILIO_VERIFY_SERVICE_SID` | — |
 | Cloudflare Turnstile keys | bot protection on the OTP form |
+| Google OAuth client (optional) | "Continue with Google" — set `GOOGLE_CLIENT_ID/SECRET`, register the `/api/auth/google/callback` redirect URI, then `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=1` |
 | Upstash Redis | rate limiting that holds across serverless instances |
 | Set a fraud ceiling on Twilio (max verifications / number / day) | SMS-pumping fraud |
 
@@ -176,9 +212,9 @@ production OTP can send you must, on a DLT portal (Jio / Airtel / Vi / BSNL):
 
 ## Not in this phase
 
-- New-device sign-in email alerts. The email pipeline now exists (Phase F,
-  `src/server/email/`); this just needs a `notifyNewDevice` template + a hook in
-  `createSession`. The device is already recorded on the session and shown in
-  `/account`.
+- ~~New-device sign-in email alerts~~ — done in Phase G1 (`notifyNewDevice`,
+  fired from the OTP verify + Google callback routes).
 - ~~Guest cart merge on login~~ — done in Phase D (`docs/checkout.md`).
-- Admin 2FA (TOTP) + sudo re-auth — Phase G.
+- ~~Admin sudo re-auth~~ — done in Phase G1. Admin 2FA (TOTP) still deferred
+  (`user.twoFactor` fields exist for it).
+- ~~Google account linking~~ — done in Phase G2.5 (see above).

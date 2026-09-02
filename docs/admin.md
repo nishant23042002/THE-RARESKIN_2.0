@@ -1,9 +1,9 @@
 # Admin — "Studio" (Phase G)
 
-The operator console at `/admin`. Phase G ships in three sub-phases; this
-document covers **G1**: the shell, RBAC, sudo re-auth, order management, and the
-new-device sign-in email. G2 (catalogue + media) and G3 (coupons, customers,
-staff, Site Settings) extend it.
+The operator console at `/admin`. Phase G ships in three sub-phases: **G1** —
+the shell, RBAC, sudo re-auth, order management, new-device email; **G2** —
+catalogue editor + product photography + stock ledger; **G3** (still to come) —
+coupons, customers, staff, Site Settings.
 
 ## Route groups
 
@@ -24,18 +24,52 @@ a normal client transition.
 
 ## RBAC
 
+**Authentication ≠ authorization.** The shop has one login — phone + OTP, the
+same one used at checkout. Anyone can *authenticate*; what they can *do* is their
+`User.role`, which defaults to `customer` for everyone who signs up. So a
+customer who types `/admin` goes: `proxy.ts` (middleware, cookie-only) bounces
+them to sign-in → they log in and get a **customer** session → `requireStaff()`
+runs server-side in `(admin)/layout.tsx`, validates the session against Mongo
+(not revoked / expired, user active, role not drifted), sees `isStaff === false`
+→ `forbidden()`. They get a **403** and a styled "no access" screen
+(`src/components/admin/no-access.tsx`) that names the signed-in account and
+offers *Back to the store* / *Use a different account* — the same shape a
+production admin (Shopify et al.) shows. Every `/api/admin/*` route re-checks
+independently (defense in depth) and returns a bare `403`. Middleware
+deliberately does no DB work, per the Next.js security guidance — the real gate
+is the layout/route.
+
+`forbidden()` needs `experimental.authInterrupts` (in `next.config.ts`). The
+interrupt is caught by the nearest `forbidden.tsx`: a non-staff account on
+`/admin` trips the guard in `(admin)/layout.tsx`, and a layout's own interrupt
+resolves to the **parent** boundary — the root `src/app/forbidden.tsx`
+("You don't have access to Studio", no chrome). A staff member who opens a
+section above their role (e.g. `support` on `/admin/catalogue`) trips the guard
+in that *page* instead — caught by `src/app/(admin)/forbidden.tsx`, rendered
+inside the admin shell ("This part of Studio is off-limits").
+
+Staff access is granted by a `superadmin` setting `User.role` (via `mongosh` /
+the seed for now; the Phase G3 staff UI later). A post-sign-in `?next=` redirect
+is sanitised (`safeNextPath` — same-origin path only) so a crafted link can't
+bounce a signed-in user off-site.
+
 `src/server/auth/admin.ts`:
 
 | guard | behaviour |
 | --- | --- |
-| `requireStaff()` | no session → sign-in redirect; signed-in **non-staff** → `notFound()` (a 404, so `/admin` is never disclosed to a customer) |
-| `requireAdminRole(min)` | `requireStaff` + rank ≥ `min` on the `roleRank` ladder, else 404 |
+| `requireStaff()` | no session → sign-in redirect; signed-in **non-staff** → `forbidden()` (a real 403 + the "no access" screen) |
+| `requireAdminRole(min)` | `requireStaff` + rank ≥ `min` on the `roleRank` ladder, else `forbidden()` |
+| `requireCatalogueRole()` | `requireStaff` + `canManageCatalogue` — the catalogue's guard (see below), else `forbidden()` |
 | `assertSudo(ctx)` | throws `SudoRequiredError` unless `session.sudoUntil` is live |
 
 Role ladder (`src/server/auth/index.ts`): `customer 0 · support 1 ·
 catalog_manager 1 · operations 2 · admin 3 · superadmin 4`. Section minimums:
 view orders/customers `support`, fulfil orders `operations`, refunds + cancels +
 (G3) coupons/staff/settings `admin`, escalate a role to `admin`+ `superadmin`.
+
+`support` and `catalog_manager` are the same rank but parallel — a plain rank
+check would let `support` into the catalogue. `canManageCatalogue(role)` is the
+real gate: the `catalog_manager` role itself, or `operations`+.
 
 Every mutating admin action writes an `AuditLog` row (append-only) with the
 actor, before/after, IP and UA.
@@ -50,6 +84,16 @@ is unset); `POST /api/admin/sudo/confirm` verifies it and sets
 `409 { error: "sudo-required" }`; the client `<SudoGate>` dialog handles the
 start→confirm→retry loop. TOTP 2FA is deferred (the `user.twoFactor` fields
 exist for it).
+
+## Account & security (`/admin/account`)
+
+Linked from the top bar. Shows the staff member's name / role / masked phone /
+email, a **Sign-in methods** panel (`<SignInMethods>`, shared with the
+storefront `/account`) — phone is always primary; Google can be linked once and
+then used instead of an OTP (see `docs/auth.md`) — and their signed-in devices
+with "Sign out of all devices". Google linking degrades gracefully: with
+`GOOGLE_CLIENT_ID`/`SECRET` unset the panel shows "Not available on this
+environment" and the routes 503.
 
 ## Order management
 
@@ -82,11 +126,59 @@ After an OTP verify creates a session for an **existing** account
 `new-device` template — only when the account has an email on file, deduped per
 (user, day, device+ip). It runs in `after()` and never blocks sign-in.
 
+## Catalogue (G2)
+
+`/admin/catalogue` — the primary catalogue editor (`pnpm catalog` stays for
+scripted / CI edits). `catalog_manager` or `operations`+.
+
+- **List** (`src/server/admin/catalog.ts` `listProducts`) — every product, all
+  statuses. Inline status change per row; drag rows + "Save order" to re-sequence
+  the collection grid (`order` field).
+- **Edit** `[slug]/edit` — the whole record in one form: identity (`slug` / SKU
+  locked — carts and orders reference them), story, notes, pricing (₹ in the
+  form, paise in the DB), inventory flags, images, SEO, the brand palette
+  (collapsed), and — for `kind: set` — the vials + store-credit rule. One PATCH
+  on save; the server flattens it to a `$set` so a nested field never nukes a
+  sibling. `productUpdateInput` is the contract.
+- **Create** `new` — the full `productCreateInput` (kind, slug, SKU + everything
+  above). Lands as `draft`. "Duplicate" on an edit page clones to a draft.
+- **Preview** — a "Preview" button on the form renders a storefront-PDP mockup
+  from the *current, unsaved* form state (photo included, vector fallback
+  otherwise) so a `draft` can be reviewed before it goes `active`.
+- **Stock** — a separate panel on the edit page, its own endpoint. A signed
+  delta + a reason (`restock` / `correction` / `damage` / `return` / `write_off`)
+  + a note → guarded `$inc` (can't go below zero) + a `stockLedger` row. The
+  reasons map onto the ledger enum (`restock`→restock, `return`→return, else
+  →adjustment) with the specific reason kept in the row's `note`.
+- Every write bumps the storefront cache — `revalidateTag("catalog")` +
+  `revalidateTag("product:<slug>", { expire: 0 })` — so a change is live on the
+  next request.
+
+### Product photography
+
+`upload-field.tsx` runs a signed direct upload: `POST /api/admin/media/sign`
+(wraps `signUpload`, folder `rareskin/products`, transformation pinned
+server-side) → browser PUTs straight to Cloudinary → `POST /api/admin/media/confirm`
+re-validates the echo and writes a `MediaAsset` → the form attaches the returned
+`mediaRef` to `media.{hero,flat,box,og}` / `media.gallery` / `seo.ogImageRef`.
+"Remove" just drops the ref (the Cloudinary asset is left — it may be reused;
+orphan cleanup is a later media-library concern). Needs Cloudinary configured
+(`CLOUDINARY_*`).
+
+**Storefront surfaces** that render an uploaded photo (vector `<Flacon>`
+fallback when none): the PDP gallery (`pdp-gallery.tsx` — each non-null
+`hero/flat/box` is a slide), the home collection cards (`product-card.tsx`), the
+Discovery Set component vials (`discovery-set.tsx`), and the bag cross-sell
+strip. Hero scene / quiz stay on vectors (bespoke animated art). The DAL
+(`imagesFor` in `src/server/data/catalog.ts`) returns a real Cloudinary URL or
+`null`; `cloudinaryVariant()` (`src/lib/catalog.ts`) rewrites the delivery URL
+for `f_auto,q_auto` + a width cap.
+
 ## Verifying locally
 
 Blank `RAZORPAY_KEY_ID` / `TWILIO_*` / `RESEND_API_KEY` in `.env.local` to force
 the dev fallbacks (OTP `AUTH_DEV_OTP`, payments via `/api/payments/dev-simulate`,
-email to `.mail/<key>.html`). Sign in as the seeded superadmin, place orders
-through the drawer + dev-simulate, then exercise the flows above. The full
-refund happy-path (partial + full, visible in the Razorpay dashboard) needs real
-test keys.
+email to `.mail/<key>.html`). **Keep `CLOUDINARY_*` set** — the image upload
+flow needs it. Sign in as the seeded superadmin, place orders through the drawer
++ dev-simulate, then exercise the flows above. The full refund happy-path
+(partial + full, visible in the Razorpay dashboard) needs real test keys.

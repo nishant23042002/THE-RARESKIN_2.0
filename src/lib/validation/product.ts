@@ -82,6 +82,25 @@ const seo = z.object({
   ogImageRef: mediaRef.optional(),
 });
 
+/**
+ * Update variants that also accept `null` — the admin form owns the whole
+ * `media` / `seo` object and sends `null` to clear a slot (the server flattens
+ * to a `$set` of `null`).
+ */
+const mediaUpdate = z.object({
+  hero: mediaRef.nullable().optional(),
+  flat: mediaRef.nullable().optional(),
+  box: mediaRef.nullable().optional(),
+  gallery: z.array(mediaRef).max(12).optional(),
+  og: mediaRef.nullable().optional(),
+});
+
+const seoUpdate = z.object({
+  metaTitle: shortText(70).nullable().optional(),
+  metaDescription: shortText(180).nullable().optional(),
+  ogImageRef: mediaRef.nullable().optional(),
+});
+
 /** Fields shared by every product kind. */
 const productBase = z.object({
   slug,
@@ -164,8 +183,8 @@ export const productUpdateInput = z.object({
   volumeMl: z.number().int().positive().max(1000).optional(),
   hsnCode: hsnCode.optional(),
   inventory: inventory.partial().optional(),
-  media: media.optional(),
-  seo: seo.optional(),
+  media: mediaUpdate.optional(),
+  seo: seoUpdate.optional(),
   order: z.number().int().min(0).max(9999).optional(),
   components: z.array(setComponent).min(2).max(6).optional(),
   credit: storeCreditRule.optional(),
@@ -183,3 +202,17 @@ export const stockAdjustmentInput = z.object({
   note: shortText(240).optional(),
 });
 export type StockAdjustmentInput = z.infer<typeof stockAdjustmentInput>;
+
+/** `POST /api/admin/catalogue/[slug]/stock` — the productId comes from the path. */
+export const stockAdjustmentBody = stockAdjustmentInput.omit({ productId: true });
+
+/** `POST /api/admin/catalogue/[slug]` — a quick action on one product. */
+export const productActionInput = z.discriminatedUnion("action", [
+  z.object({ action: z.literal("status"), status: z.enum(PRODUCT_STATUSES) }),
+  z.object({ action: z.literal("duplicate") }),
+]);
+
+/** `POST /api/admin/catalogue/reorder` — the full ordering of product slugs. */
+export const productReorderInput = z.object({
+  slugs: z.array(slug).min(1).max(50),
+});

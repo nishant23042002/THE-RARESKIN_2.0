@@ -24,15 +24,23 @@ import { SignInForm } from "./sign-in-form";
 export function SignInModal({
   open,
   next,
+  authError = null,
   onClose,
 }: {
   open: boolean;
   next: string;
+  authError?: string | null;
   onClose: () => void;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const scrimRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+
+  // Studio (staff) sign-in is a different message from the shopper sign-in — the
+  // guard bounced them here as `?next=/admin…`, and a new phone number here
+  // makes a *customer*, not staff, so the "registered automatically" copy would
+  // mislead. `next` is already `safeNextPath`-sanitised (same-origin path).
+  const isStudio = next.startsWith("/admin");
   const reduced = useReducedMotion();
   const lenis = useLenis();
   const { navigate } = useRouteTransition();
@@ -200,8 +208,17 @@ export function SignInModal({
               </button>
             </div>
 
-            <h2 className="serif mt-7 text-[clamp(1.5rem,4.6vw,1.85rem)] leading-[1.14] tracking-[-0.01em]">
-              Sign in to your account
+            {isStudio && (
+              <p className="mt-6 text-[10px] font-medium tracking-[0.22em] text-w0/55 uppercase">
+                Studio · Staff access
+              </p>
+            )}
+            <h2
+              className={`serif text-[clamp(1.5rem,4.6vw,1.85rem)] leading-[1.14] tracking-[-0.01em] ${
+                isStudio ? "mt-1.5" : "mt-7"
+              }`}
+            >
+              {isStudio ? "Sign in to Studio" : "Sign in to your account"}
             </h2>
 
             <span
@@ -212,10 +229,27 @@ export function SignInModal({
 
           {/* body */}
           <div className="px-6 py-7 sm:px-8">
-            <SignInForm onAuthenticated={handleAuthenticated} />
+            <SignInForm
+              onAuthenticated={handleAuthenticated}
+              next={next}
+              authError={authError}
+              variant={isStudio ? "studio" : "store"}
+            />
           </div>
 
           <div className="border-t border-line px-6 pt-4 pb-[calc(20px+env(safe-area-inset-bottom))] text-[10.5px] leading-[1.6] tracking-[0.02em] text-ink-3 sm:px-8 sm:pb-5">
+            {isStudio && (
+              <p className="mb-2 border-b border-line pb-3 text-[11px] tracking-[0.02em] text-ink-2">
+                Studio is for staff accounts.{" "}
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="underline underline-offset-2 hover:text-ink"
+                >
+                  Back to the store
+                </button>
+              </p>
+            )}
             By continuing, you agree to THE RARESKIN&rsquo;s{" "}
             <a
               href="/terms"

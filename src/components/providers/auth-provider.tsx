@@ -10,7 +10,7 @@ import {
   type ReactNode,
 } from "react";
 
-import type { SessionUser } from "@/lib/auth";
+import { safeNextPath, type SessionUser } from "@/lib/auth";
 
 type Status = "loading" | "authed" | "guest";
 
@@ -21,13 +21,33 @@ interface AuthValue {
   refresh: () => Promise<void>;
   signOut: () => Promise<void>;
   /** sign-in modal state — the modal itself is mounted from the layout */
-  signIn: { open: boolean; next: string };
+  signIn: { open: boolean; next: string; error: string | null };
   /** open the sign-in modal; `next` is where to land after a successful sign-in */
   openSignIn: (next?: string) => void;
   closeSignIn: () => void;
 }
 
 const AuthContext = createContext<AuthValue | null>(null);
+
+/** Map a `?auth_error=` code (set by the Google callback) to modal copy. */
+function googleAuthErrorText(code: string): string {
+  switch (code) {
+    case "google-no-match":
+      return "No account matches that Google email. Sign in with your phone first, then link Google from your account.";
+    case "google-staff-domain":
+      return "That Google account isn't allowed for staff sign-in. Use your work account, or sign in by phone.";
+    case "google-account-inactive":
+      return "That account isn't active. Contact support if you think this is a mistake.";
+    case "google-cancelled":
+      return "Google sign-in was cancelled.";
+    case "google-rate-limited":
+      return "Too many attempts. Wait a few minutes and try again.";
+    case "google-not-configured":
+      return "Google sign-in isn't available right now. Please use your phone number.";
+    default:
+      return "Google sign-in couldn't be completed. Please try again, or use your phone number.";
+  }
+}
 
 const CACHE_KEY = "rareskin:auth:v1";
 
@@ -71,13 +91,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { user: cached, status: cached ? "authed" : "loading" };
     },
   );
-  const [signIn, setSignIn] = useState<{ open: boolean; next: string }>({
+  const [signIn, setSignIn] = useState<{
+    open: boolean;
+    next: string;
+    error: string | null;
+  }>({
     open: false,
     next: "/account",
+    error: null,
   });
 
   const openSignIn = useCallback((next = "/account") => {
-    setSignIn({ open: true, next: next.startsWith("/") ? next : "/account" });
+    setSignIn({ open: true, next: safeNextPath(next), error: null });
   }, []);
   const closeSignIn = useCallback(
     () => setSignIn((s) => ({ ...s, open: false })),
@@ -133,12 +158,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (deepLinkHandled.current || typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
-    if (params.get("signin") === null) return;
+    const authError = params.get("auth_error");
+    if (params.get("signin") === null && !authError) return;
     deepLinkHandled.current = true;
 
-    const next = params.get("next") || "/account";
+    const next = safeNextPath(params.get("next"));
+    const error = authError ? googleAuthErrorText(authError) : null;
     params.delete("signin");
     params.delete("next");
+    params.delete("auth_error");
     const qs = params.toString();
     window.history.replaceState(
       null,
@@ -147,14 +175,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
     // deferred out of the effect body (lint); `setTimeout` fires even when the
     // tab is backgrounded, unlike `requestAnimationFrame`
-    window.setTimeout(
-      () =>
-        setSignIn({
-          open: true,
-          next: next.startsWith("/") ? next : "/account",
-        }),
-      0,
-    );
+    window.setTimeout(() => setSignIn({ open: true, next, error }), 0);
   }, []);
 
   return (

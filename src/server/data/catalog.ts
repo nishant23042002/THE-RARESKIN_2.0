@@ -8,7 +8,6 @@ import { toRupees } from "@/lib/money";
 import {
   DISCOVERY_SET_SLUG,
   isFragranceSlug,
-  placeholderImages,
   type BagSuggestion,
   type CatalogNavItem,
   type DiscoverySetInfo,
@@ -34,12 +33,17 @@ const productTag = (slug: string) => `product:${slug}`;
 // Long TTL — content changes come through on-demand revalidation, not the clock.
 const REVALIDATE_SECONDS = 60 * 60 * 24;
 
+/** A stored media URL, but only if it's a real (Cloudinary) URL — a leftover
+ *  local placeholder path resolves to null so the vector treatment shows. */
+function realPackshot(url: string | undefined): string | null {
+  return url && /^https?:\/\//.test(url) ? url : null;
+}
+
 function imagesFor(doc: ProductDoc): FragranceImages {
-  const fallback = placeholderImages(doc.slug);
   return {
-    hero: doc.media?.hero?.url ?? fallback.hero,
-    flat: doc.media?.flat?.url ?? fallback.flat,
-    box: doc.media?.box?.url ?? fallback.box,
+    hero: realPackshot(doc.media?.hero?.url),
+    flat: realPackshot(doc.media?.flat?.url),
+    box: realPackshot(doc.media?.box?.url),
   };
 }
 
@@ -107,6 +111,8 @@ function toDiscoverySet(doc: ProductDoc): DiscoverySetInfo {
     vialCount: components.length || 3,
     creditRupees: doc.credit ? toRupees(doc.credit.amount) : toRupees(doc.pricing.price),
     components,
+    image:
+      realPackshot(doc.media?.flat?.url) ?? realPackshot(doc.media?.hero?.url),
     available: doc.status === "active",
     seo: {
       metaTitle: doc.seo?.metaTitle ?? null,
@@ -183,14 +189,8 @@ export async function getCatalogNav(): Promise<CatalogNavItem[]> {
 /**
  * The whole range as one-tap cross-sell cards for the bag drawer. The drawer
  * filters out whatever is already in the bag, so a shopper always sees a way to
- * complete the set.
+ * complete the set. `f.images.*` is already real-or-null (see `imagesFor`).
  */
-/** A real uploaded packshot (Cloudinary), or null when it's still the local
- *  placeholder path — so the drawer can fall back to the vector flacon. */
-function realPackshot(url: string | undefined): string | null {
-  return url && /^https?:\/\//.test(url) ? url : null;
-}
-
 export async function getBagSuggestions(): Promise<BagSuggestion[]> {
   const { fragrances, discoverySet } = await getStorefrontCatalog();
 
@@ -201,7 +201,7 @@ export async function getBagSuggestions(): Promise<BagSuggestion[]> {
       slug: f.slug,
       name: f.name,
       fragrance: f.slug,
-      image: realPackshot(f.images.flat) ?? realPackshot(f.images.hero),
+      image: f.images.flat ?? f.images.hero,
       meta: `Extrait · ${f.volumeMl} ml`,
       price: f.price,
       mrp: f.mrp,

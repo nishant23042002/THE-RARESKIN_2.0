@@ -55,6 +55,17 @@ const schema = z.object({
   // ── Auth — Cloudflare Turnstile (bot check on the OTP form) ─────────────
   TURNSTILE_SECRET_KEY: z.string().min(1).optional(),
 
+  // ── Auth — Google OAuth ("Continue with Google" for linked accounts) ───
+  // Both blank → Google sign-in is disabled everywhere (like Twilio/Razorpay).
+  // Register the redirect URI `<origin>/api/auth/google/callback` in the Google
+  // Cloud console (localhost + prod). `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=1` shows
+  // the button (client can't read the server keys).
+  GOOGLE_CLIENT_ID: z.string().min(1).optional(),
+  GOOGLE_CLIENT_SECRET: z.string().min(1).optional(),
+  /** Optional comma-separated Workspace domains staff must sign in from (the
+   *  Google `hd` claim). Empty = any Google account may be linked/used. */
+  GOOGLE_STAFF_HOSTED_DOMAINS: z.string().optional(),
+
   // ── Rate limiting — Upstash Redis (falls back to in-process locally) ────
   UPSTASH_REDIS_REST_URL: z.string().min(1).optional(),
   UPSTASH_REDIS_REST_TOKEN: z.string().min(1).optional(),
@@ -137,6 +148,16 @@ export function getCloudinaryEnv(): {
 }
 
 export const isProduction = () => getEnv().NODE_ENV === "production";
+
+/** True when Cloudinary signed uploads + delivery can run (all three keys set). */
+export const isCloudinaryConfigured = () => {
+  const env = getEnv();
+  return Boolean(
+    env.CLOUDINARY_CLOUD_NAME &&
+      env.CLOUDINARY_API_KEY &&
+      env.CLOUDINARY_API_SECRET,
+  );
+};
 
 /** Twilio Verify config, asserted present and well-formed. */
 export function getTwilioEnv(): {
@@ -235,6 +256,36 @@ export function getRazorpayEnv(): {
 }
 
 export const getCronSecret = () => getEnv().CRON_SECRET ?? null;
+
+// ── Google OAuth ───────────────────────────────────────────────────────
+
+/** True when the authorization-code flow can run (both keys set). */
+export const isGoogleAuthConfigured = () => {
+  const env = getEnv();
+  return Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);
+};
+
+/** Google OAuth credentials, asserted present. Call from the Google code path. */
+export function getGoogleEnv(): { clientId: string; clientSecret: string } {
+  const env = getEnv();
+  if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) {
+    throw new Error(
+      "Google OAuth is not configured. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET.",
+    );
+  }
+  return {
+    clientId: env.GOOGLE_CLIENT_ID,
+    clientSecret: env.GOOGLE_CLIENT_SECRET,
+  };
+}
+
+/** Parsed `GOOGLE_STAFF_HOSTED_DOMAINS` — lowercased, empty array when unset. */
+export function googleStaffDomains(): string[] {
+  return (getEnv().GOOGLE_STAFF_HOSTED_DOMAINS ?? "")
+    .split(",")
+    .map((d) => d.trim().toLowerCase())
+    .filter(Boolean);
+}
 
 // ── Transactional email — Resend ───────────────────────────────────────
 

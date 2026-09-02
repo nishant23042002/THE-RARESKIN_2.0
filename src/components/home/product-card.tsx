@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { CSSProperties } from "react";
 import { Flacon } from "@/components/ui/flacon";
 import { AddToBagButton } from "@/components/cart/add-to-bag-button";
-import { formatINR, type Fragrance } from "@/lib/catalog";
+import { cloudinaryVariant, formatINR, type Fragrance } from "@/lib/catalog";
 
 /**
  * One oversized fragrance card in the full-bleed 3-up collection grid. The
@@ -55,12 +55,29 @@ export function ProductCard({
         aria-label={`Open ${f.name}`}
         className="relative z-[2] grid flex-1 place-items-center py-[4%]"
       >
-        <span
-          className="block w-[clamp(84px,26%,148px)] transition-transform duration-500 ease-[var(--ease-brand)] group-hover:-translate-y-1.5 group-hover:scale-[1.03] group-active:scale-[0.97]"
-          style={{ filter: `drop-shadow(0 26px 34px ${f.juice}55)` }}
-        >
-          <Flacon fragrance={f.slug} />
-        </span>
+        {(() => {
+          const photo = cloudinaryVariant(f.images.flat ?? f.images.hero, {
+            w: 640,
+          });
+          return photo ? (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img
+              src={photo}
+              alt={f.name}
+              className="block w-[clamp(120px,42%,240px)] transition-transform duration-500 ease-[var(--ease-brand)] group-hover:-translate-y-1.5 group-hover:scale-[1.03] group-active:scale-[0.97]"
+              style={{ filter: `drop-shadow(0 26px 34px ${f.juice}55)` }}
+              loading="lazy"
+              decoding="async"
+            />
+          ) : (
+            <span
+              className="block w-[clamp(84px,26%,148px)] transition-transform duration-500 ease-[var(--ease-brand)] group-hover:-translate-y-1.5 group-hover:scale-[1.03] group-active:scale-[0.97]"
+              style={{ filter: `drop-shadow(0 26px 34px ${f.juice}55)` }}
+            >
+              <Flacon fragrance={f.slug} />
+            </span>
+          );
+        })()}
       </Link>
 
       <div className="relative z-[2]">
